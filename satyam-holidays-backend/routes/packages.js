@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const packageService = require("../services/packageService");
 const cacheService = require("../utils/cache");
@@ -71,6 +72,9 @@ router.get("/stats/overview", async (req, res) => {
 
 // Get package by ID (after all specific routes)
 router.get("/:id", async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return res.status(400).json({ success: false, message: "Invalid ID format" });
+  }
   try {
     const pkg = await packageService.getPackageById(req.params.id);
 
@@ -114,6 +118,9 @@ router.post("/", auth, async (req, res) => {
 
 // Update package
 router.put("/:id", auth, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return res.status(400).json({ success: false, message: "Invalid ID format" });
+  }
   try {
     const pkg = await packageService.updatePackage(req.params.id, req.body);
     if (!pkg) {
@@ -135,6 +142,9 @@ router.put("/:id", auth, async (req, res) => {
 
 // Delete package
 router.delete("/:id", auth, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return res.status(400).json({ success: false, message: "Invalid ID format" });
+  }
   try {
     const pkg = await packageService.deletePackage(req.params.id);
     if (!pkg) {
