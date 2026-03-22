@@ -26,8 +26,9 @@ const logger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
 
-// In production, also write to files
-if (NODE_ENV === "production") {
+// In production (non-serverless), also write to files.
+// Skip on Vercel — its filesystem is read-only; logs are captured via console.
+if (NODE_ENV === "production" && !process.env.VERCEL) {
   logger.add(
     new winston.transports.File({
       filename: "logs/error.log",
