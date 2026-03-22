@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+.env
+.env.local
+.git
+.gitignore
+.dockerignore
+README.md
+MONGODB_SETUP.md
+QUICK_START.md
+__tests__
+jest.config.js
+.vscode

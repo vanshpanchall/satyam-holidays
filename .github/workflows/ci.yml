@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "npm"
+
+      - name: Install root deps
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Install backend deps
+        run: npm ci
+        working-directory: satyam-holidays-backend
+
+      - name: Install frontend deps
+        run: npm ci
+        working-directory: satyam-holidays-react
+
+      - name: Backend tests
+        env:
+          NODE_ENV: test
+        run: npm test --silent -- --runInBand
+        working-directory: satyam-holidays-backend
+
+      - name: Frontend build
+        run: npm run build --silent
+        working-directory: satyam-holidays-react

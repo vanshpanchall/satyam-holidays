@@ -1,0 +1,62 @@
+version: "3.9"
+services:
+  mongo:
+    image: mongo:6
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+  backend:
+    build: ./satyam-holidays-backend
+    depends_on:
+      - mongo
+    env_file:
+      - ./satyam-holidays-backend/.env
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      MONGODB_URI: mongodb://mongo:27017/satyam-holidays
+      # Gmail fallback (App Password required)
+      EMAIL_USER: "${EMAIL_USER:-}"
+      EMAIL_PASS: "${EMAIL_PASS:-}"
+      # Preferred: SMTP provider
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_SECURE: "${SMTP_SECURE:-false}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+      # Dev-only preview (set to true only for dev)
+      ETHEREAL_ENABLE: "${ETHEREAL_ENABLE:-false}"
+      EMAIL_SEND_IN_DEV: "${EMAIL_SEND_IN_DEV:-false}"
+      # Branding (optional)
+      EMAIL_BRAND_LOGO_URL: "${EMAIL_BRAND_LOGO_URL:-}"
+      EMAIL_BRAND_PRIMARY: "${EMAIL_BRAND_PRIMARY:-#f59e0b}"
+      EMAIL_BRAND_SECONDARY: "${EMAIL_BRAND_SECONDARY:-#ea580c}"
+      EMAIL_LOCALE: "${EMAIL_LOCALE:-en}"
+      # CORS
+      CORS_ORIGIN: "${CORS_ORIGIN:-http://localhost:3000,http://localhost:5173,http://localhost:8080}"
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./satyam-holidays-react
+      args:
+        REACT_APP_API_BASE: "${REACT_APP_API_BASE:-http://localhost:5000}"
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  mongo-data:

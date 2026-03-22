@@ -1,0 +1,30 @@
+{
+  "name": "satyam-holidays-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Root scripts to run backend and frontend together",
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c green,cyan \"npm --prefix satyam-holidays-backend run dev\" \"npm --prefix satyam-holidays-react run start:3001\"",
+    "dev:backend": "npm --prefix satyam-holidays-backend run dev",
+    "dev:frontend": "npm --prefix satyam-holidays-react run start:3001",
+    "test": "echo \"No root tests configured\"",
+    "lint": "eslint \"satyam-holidays-**/*.{js,jsx}\"",
+    "format": "prettier --write .",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.34.1",
+    "prettier": "^3.3.3",
+    "husky": "^9.1.3",
+    "lint-staged": "^15.2.10"
+  },
+  "lint-staged": {
+    "*.{js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
+}
