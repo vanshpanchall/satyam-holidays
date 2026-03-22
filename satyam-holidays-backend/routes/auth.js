@@ -11,7 +11,6 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 if (!JWT_SECRET) {
   logger.error("FATAL: JWT_SECRET environment variable is required");
-  if (process.env.NODE_ENV !== "test") process.exit(1);
 }
 if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
   logger.warn("ADMIN_EMAIL or ADMIN_PASSWORD not set — admin login will be disabled");
@@ -23,6 +22,13 @@ const adminPasswordHash = ADMIN_PASSWORD ? bcrypt.hashSync(ADMIN_PASSWORD, 10) :
 
 // POST /api/auth/login
 router.post("/login", async (req, res) => {
+  if (!JWT_SECRET) {
+    return res.status(500).json({
+      success: false,
+      message: "Server configuration error: JWT secret is missing",
+    });
+  }
+
   const { email, password } = req.body;
 
   // Validate inputs
