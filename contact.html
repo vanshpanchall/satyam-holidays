@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Us – Satyam Holidays</title>
+  <meta name="description" content="Get in touch with Satyam Holidays. Book a tour, get a free quote or reach our 24/7 customer support team." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar scrolled">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo">Satyam<span>Holidays</span></a>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About Us</a></li>
+        <li><a href="packages.html">Packages</a></li>
+        <li><a href="contact.html">Contact</a></li>
+        <li><a href="contact.html" class="nav-cta">Book Now</a></li>
+      </ul>
+      <div class="hamburger" aria-label="Toggle menu" role="button" tabindex="0">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== PAGE HERO ===== -->
+  <div class="page-hero">
+    <div class="bg" style="background-image:url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1600&auto=format&fit=crop');"></div>
+    <div class="page-hero-content">
+      <h1>Contact Us</h1>
+      <div class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span class="sep">/</span>
+        <span>Contact</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONTACT SECTION ===== -->
+  <section class="contact-section">
+    <div class="container">
+      <p class="section-subtitle" style="color:var(--primary);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem;">Get In Touch</p>
+      <h2 class="section-title">We'd Love to <span class="highlight">Hear From You</span></h2>
+      <p class="section-subtitle">Have a question about a package, need a custom itinerary, or just want to say hello? Reach out!</p>
+
+      <div class="contact-wrapper">
+
+        <!-- Info Pane -->
+        <div class="contact-info-pane">
+          <h3>Contact Information</h3>
+          <p>Reach us through any of the channels below — we typically respond within a few hours.</p>
+
+          <div class="c-detail">
+            <div class="icon"><i class="fa fa-location-dot"></i></div>
+            <div class="text">
+              <strong>Our Office</strong>
+              <span>123 Travel Lane, Connaught Place,<br>New Delhi – 110001, India</span>
+            </div>
+          </div>
+          <div class="c-detail">
+            <div class="icon"><i class="fa fa-phone"></i></div>
+            <div class="text">
+              <strong>Call Us</strong>
+              <span>+91 98765 43210<br>+91 11 4567 8901</span>
+            </div>
+          </div>
+          <div class="c-detail">
+            <div class="icon"><i class="fa fa-envelope"></i></div>
+            <div class="text">
+              <strong>Email Us</strong>
+              <span>info@satyamholidays.com<br>bookings@satyamholidays.com</span>
+            </div>
+          </div>
+          <div class="c-detail">
+            <div class="icon"><i class="fa fa-clock"></i></div>
+            <div class="text">
+              <strong>Working Hours</strong>
+              <span>Monday – Saturday: 9:00 AM – 7:00 PM<br>Sunday: 10:00 AM – 2:00 PM</span>
+            </div>
+          </div>
+
+          <div class="contact-social">
+            <p>Follow us on social media</p>
+            <div class="social-links">
+              <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+              <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+              <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+              <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Pane -->
+        <div class="contact-form-pane">
+          <h3>Send Us a Message</h3>
+          <p>Fill in the form below and we'll get back to you with a personalised travel plan.</p>
+
+          <form id="contactForm" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="firstName">First Name *</label>
+                <input type="text" id="firstName" name="firstName" placeholder="John" required />
+              </div>
+              <div class="form-group">
+                <label for="lastName">Last Name *</label>
+                <input type="text" id="lastName" name="lastName" placeholder="Doe" required />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" name="email" placeholder="john@example.com" required />
+              </div>
+              <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" name="phone" placeholder="+91 98765 43210" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="tourType">Interested In</label>
+              <select id="tourType" name="tourType">
+                <option value="">Select a tour type</option>
+                <option>Honeymoon Package</option>
+                <option>Family Holiday</option>
+                <option>Adventure Tour</option>
+                <option>International Package</option>
+                <option>Pilgrimage Tour</option>
+                <option>Custom Itinerary</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="destination">Preferred Destination</label>
+                <input type="text" id="destination" name="destination" placeholder="e.g., Maldives, Bali, Kashmir" />
+              </div>
+              <div class="form-group">
+                <label for="travelDate">Travel Date</label>
+                <input type="date" id="travelDate" name="travelDate" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="travellers">Number of Travellers</label>
+              <select id="travellers" name="travellers">
+                <option value="">Select</option>
+                <option>1</option>
+                <option>2 (Couple)</option>
+                <option>3–4</option>
+                <option>5–8 (Group)</option>
+                <option>9+ (Large Group)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="message">Your Message</label>
+              <textarea id="message" name="message" placeholder="Tell us about your dream holiday, budget, special requirements..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+              Send Message &nbsp;<i class="fa fa-paper-plane"></i>
+            </button>
+
+            <div class="success-msg" id="successMsg">
+              <i class="fa fa-circle-check"></i> Thank you! Your message has been sent. Our team will contact you within 24 hours.
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== MAP ===== -->
+  <div style="height:400px;background:#e8e8e8;overflow:hidden;">
+    <iframe
+      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3501.953099637853!2d77.21641731508197!3d28.632660982415155!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cfd37b741d057%3A0xcdee88e47393c3f1!2sConnaught%20Place%2C%20New%20Delhi!5e0!3m2!1sen!2sin!4v1620000000000"
+      width="100%" height="400" style="border:0;" allowfullscreen="" loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+      title="Satyam Holidays office location">
+    </iframe>
+  </div>
+
+  <!-- ===== FAQ ===== -->
+  <section style="background:var(--light-bg);padding:80px 0;">
+    <div class="container">
+      <h2 class="section-title">Frequently Asked <span class="highlight">Questions</span></h2>
+      <p class="section-subtitle">Quick answers to common travel queries.</p>
+
+      <div style="max-width:800px;margin:0 auto;">
+        <details style="background:var(--white);border-radius:var(--radius);padding:20px 24px;margin-bottom:12px;box-shadow:var(--shadow);">
+          <summary style="font-weight:600;cursor:pointer;color:var(--dark);">How do I book a tour package?</summary>
+          <p style="margin-top:12px;font-size:.92rem;color:#666;">Simply fill in the contact form above or call us. Our travel expert will get in touch within 24 hours to discuss your requirements and share a customised itinerary and quote.</p>
+        </details>
+        <details style="background:var(--white);border-radius:var(--radius);padding:20px 24px;margin-bottom:12px;box-shadow:var(--shadow);">
+          <summary style="font-weight:600;cursor:pointer;color:var(--dark);">What is included in the package price?</summary>
+          <p style="margin-top:12px;font-size:.92rem;color:#666;">Each package clearly lists what's included (accommodation, meals, transfers, flights, etc.). We ensure complete transparency — no hidden charges whatsoever.</p>
+        </details>
+        <details style="background:var(--white);border-radius:var(--radius);padding:20px 24px;margin-bottom:12px;box-shadow:var(--shadow);">
+          <summary style="font-weight:600;cursor:pointer;color:var(--dark);">Can I customise a package?</summary>
+          <p style="margin-top:12px;font-size:.92rem;color:#666;">Absolutely! All our packages can be fully customised to match your budget, travel dates, group size and personal preferences.</p>
+        </details>
+        <details style="background:var(--white);border-radius:var(--radius);padding:20px 24px;margin-bottom:12px;box-shadow:var(--shadow);">
+          <summary style="font-weight:600;cursor:pointer;color:var(--dark);">What is the cancellation policy?</summary>
+          <p style="margin-top:12px;font-size:.92rem;color:#666;">We offer flexible cancellation options. Cancellations made 30+ days before departure receive a full refund. Cancellations within 7–30 days attract a partial charge. Please contact us for specific terms.</p>
+        </details>
+        <details style="background:var(--white);border-radius:var(--radius);padding:20px 24px;margin-bottom:12px;box-shadow:var(--shadow);">
+          <summary style="font-weight:600;cursor:pointer;color:var(--dark);">Do you provide visa assistance?</summary>
+          <p style="margin-top:12px;font-size:.92rem;color:#666;">Yes! We provide complete visa assistance for international packages including document preparation, application tracking and guidance throughout the process.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA BANNER ===== -->
+  <div class="cta-banner">
+    <div class="container">
+      <h2>Start Planning Your Dream Holiday</h2>
+      <p>Let our experts build the perfect itinerary — tailored just for you.</p>
+      <a href="#contactForm" class="btn btn-outline">Book Now &nbsp;<i class="fa fa-arrow-right"></i></a>
+    </div>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <div class="logo" style="margin-bottom:16px;font-size:1.4rem;">Satyam<span>Holidays</span></div>
+          <p>Your trusted travel partner since 2010. We create unforgettable journeys tailored to your dreams, budget and style.</p>
+          <div class="social-links">
+            <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="index.html"><i class="fa fa-chevron-right"></i> Home</a></li>
+            <li><a href="about.html"><i class="fa fa-chevron-right"></i> About Us</a></li>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Tour Packages</a></li>
+            <li><a href="contact.html"><i class="fa fa-chevron-right"></i> Contact</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Popular Tours</h4>
+          <ul>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Maldives Honeymoon</a></li>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Bali Family Tour</a></li>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Kashmir Trip</a></li>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Europe Grand Tour</a></li>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Dubai Getaway</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Contact Us</h4>
+          <ul class="contact-info">
+            <li><i class="fa fa-location-dot"></i> 123 Travel Lane, Connaught Place, New Delhi – 110001</li>
+            <li><i class="fa fa-phone"></i> +91 98765 43210</li>
+            <li><i class="fa fa-envelope"></i> info@satyamholidays.com</li>
+            <li><i class="fa fa-clock"></i> Mon – Sat: 9:00 AM – 7:00 PM</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2025 Satyam Holidays. All rights reserved.</p>
+        <p>Designed with <i class="fa fa-heart" style="color:var(--primary)"></i> for travellers worldwide</p>
+      </div>
+    </div>
+  </footer>
+
+  <button class="scroll-top" aria-label="Scroll to top"><i class="fa fa-arrow-up"></i></button>
+  <script src="js/main.js"></script>
+</body>
+</html>

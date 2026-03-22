@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Satyam Holidays – Your Dream Vacation Awaits</title>
+  <meta name="description" content="Satyam Holidays offers premium tour packages to exotic destinations worldwide. Book your dream vacation today." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo">Satyam<span>Holidays</span></a>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About Us</a></li>
+        <li><a href="packages.html">Packages</a></li>
+        <li><a href="contact.html">Contact</a></li>
+        <li><a href="contact.html" class="nav-cta">Book Now</a></li>
+      </ul>
+      <div class="hamburger" aria-label="Toggle menu" role="button" tabindex="0">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero" id="home">
+    <div class="hero-bg"></div>
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">✈ Trusted by 50,000+ Travellers</div>
+        <h1>Explore the World<br>With <span style="color:var(--secondary)">Satyam Holidays</span></h1>
+        <p>Premium holiday packages to the world's most beautiful destinations — crafted for memories that last a lifetime.</p>
+        <div class="hero-btns">
+          <a href="packages.html" class="btn btn-primary">Explore Packages</a>
+          <a href="about.html" class="btn btn-outline">Our Story</a>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-bar">
+          <div class="search-group">
+            <label for="dest">Destination</label>
+            <input id="dest" type="text" placeholder="Where do you want to go?" />
+          </div>
+          <div class="search-group">
+            <label for="duration">Duration</label>
+            <select id="duration">
+              <option value="">Any duration</option>
+              <option>3–5 Days</option>
+              <option>6–8 Days</option>
+              <option>9–12 Days</option>
+              <option>13+ Days</option>
+            </select>
+          </div>
+          <div class="search-group">
+            <label for="budget">Budget (per person)</label>
+            <select id="budget">
+              <option value="">Any budget</option>
+              <option>Under ₹20,000</option>
+              <option>₹20,000 – ₹40,000</option>
+              <option>₹40,000 – ₹80,000</option>
+              <option>₹80,000+</option>
+            </select>
+          </div>
+          <a href="packages.html" class="btn btn-primary">
+            <i class="fa fa-search"></i> Search
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="hero-stats container" style="position:relative;bottom:auto;display:flex;margin-top:30px;">
+      <div class="stat-card">
+        <span class="num" data-target="50" data-suffix="K+">50K+</span>
+        <span class="label">Happy Travellers</span>
+      </div>
+      <div class="stat-card">
+        <span class="num" data-target="120" data-suffix="+">120+</span>
+        <span class="label">Destinations</span>
+      </div>
+      <div class="stat-card">
+        <span class="num" data-target="15" data-suffix="+">15+</span>
+        <span class="label">Years Experience</span>
+      </div>
+      <div class="stat-card">
+        <span class="num" data-target="98" data-suffix="%">98%</span>
+        <span class="label">Satisfaction Rate</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TRUST BAR ===== -->
+  <div class="trust-bar">
+    <div class="marquee-track">
+      <span class="trust-item"><i class="fa fa-shield-halved"></i> 100% Secure Booking</span>
+      <span class="trust-item"><i class="fa fa-headset"></i> 24/7 Customer Support</span>
+      <span class="trust-item"><i class="fa fa-rotate-left"></i> Flexible Cancellation</span>
+      <span class="trust-item"><i class="fa fa-award"></i> Award-Winning Service</span>
+      <span class="trust-item"><i class="fa fa-plane"></i> 120+ Destinations</span>
+      <span class="trust-item"><i class="fa fa-hotel"></i> Handpicked Hotels</span>
+      <!-- duplicate for seamless loop -->
+      <span class="trust-item"><i class="fa fa-shield-halved"></i> 100% Secure Booking</span>
+      <span class="trust-item"><i class="fa fa-headset"></i> 24/7 Customer Support</span>
+      <span class="trust-item"><i class="fa fa-rotate-left"></i> Flexible Cancellation</span>
+      <span class="trust-item"><i class="fa fa-award"></i> Award-Winning Service</span>
+      <span class="trust-item"><i class="fa fa-plane"></i> 120+ Destinations</span>
+      <span class="trust-item"><i class="fa fa-hotel"></i> Handpicked Hotels</span>
+    </div>
+  </div>
+
+  <!-- ===== POPULAR DESTINATIONS ===== -->
+  <section class="destinations" id="destinations">
+    <div class="container">
+      <p class="section-subtitle" style="color:var(--primary);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem;">Top Picks</p>
+      <h2 class="section-title">Popular <span class="highlight">Destinations</span></h2>
+      <p class="section-subtitle">Discover the world's most sought-after travel destinations hand-selected by our experts.</p>
+
+      <div class="dest-grid">
+
+        <div class="dest-card">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop" alt="Kashmir" loading="lazy" />
+            <span class="badge">Trending</span>
+          </div>
+          <div class="card-body">
+            <h3>Kashmir, India</h3>
+            <div class="meta">
+              <span><i class="fa fa-clock"></i> 6 Days</span>
+              <span><i class="fa fa-star" style="color:#f9c74f"></i> 4.9</span>
+            </div>
+            <div class="price">₹28,999 <span>/ person</span></div>
+          </div>
+        </div>
+
+        <div class="dest-card">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&auto=format&fit=crop" alt="Bali" loading="lazy" />
+            <span class="badge">Best Seller</span>
+          </div>
+          <div class="card-body">
+            <h3>Bali, Indonesia</h3>
+            <div class="meta">
+              <span><i class="fa fa-clock"></i> 7 Days</span>
+              <span><i class="fa fa-star" style="color:#f9c74f"></i> 4.8</span>
+            </div>
+            <div class="price">₹45,999 <span>/ person</span></div>
+          </div>
+        </div>
+
+        <div class="dest-card">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600&auto=format&fit=crop" alt="Maldives" loading="lazy" />
+            <span class="badge">Luxury</span>
+          </div>
+          <div class="card-body">
+            <h3>Maldives</h3>
+            <div class="meta">
+              <span><i class="fa fa-clock"></i> 5 Days</span>
+              <span><i class="fa fa-star" style="color:#f9c74f"></i> 5.0</span>
+            </div>
+            <div class="price">₹89,999 <span>/ person</span></div>
+          </div>
+        </div>
+
+        <div class="dest-card">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1543731068-7e0f5beff43a?w=600&auto=format&fit=crop" alt="Thailand" loading="lazy" />
+            <span class="badge">Adventure</span>
+          </div>
+          <div class="card-body">
+            <h3>Bangkok, Thailand</h3>
+            <div class="meta">
+              <span><i class="fa fa-clock"></i> 8 Days</span>
+              <span><i class="fa fa-star" style="color:#f9c74f"></i> 4.7</span>
+            </div>
+            <div class="price">₹39,999 <span>/ person</span></div>
+          </div>
+        </div>
+
+        <div class="dest-card">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=600&auto=format&fit=crop" alt="Switzerland" loading="lazy" />
+            <span class="badge">Europe</span>
+          </div>
+          <div class="card-body">
+            <h3>Switzerland</h3>
+            <div class="meta">
+              <span><i class="fa fa-clock"></i> 10 Days</span>
+              <span><i class="fa fa-star" style="color:#f9c74f"></i> 4.9</span>
+            </div>
+            <div class="price">₹1,20,000 <span>/ person</span></div>
+          </div>
+        </div>
+
+        <div class="dest-card">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&auto=format&fit=crop" alt="Dubai" loading="lazy" />
+            <span class="badge">Hot Deal</span>
+          </div>
+          <div class="card-body">
+            <h3>Dubai, UAE</h3>
+            <div class="meta">
+              <span><i class="fa fa-clock"></i> 5 Days</span>
+              <span><i class="fa fa-star" style="color:#f9c74f"></i> 4.8</span>
+            </div>
+            <div class="price">₹55,000 <span>/ person</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="text-align:center;margin-top:40px;">
+        <a href="packages.html" class="btn btn-primary">View All Packages &nbsp;<i class="fa fa-arrow-right"></i></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURED PACKAGES ===== -->
+  <section class="packages-section" id="packages">
+    <div class="container">
+      <p class="section-subtitle" style="color:var(--primary);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem;">Curated For You</p>
+      <h2 class="section-title">Featured <span class="highlight">Tour Packages</span></h2>
+      <p class="section-subtitle">All-inclusive packages designed for every type of traveller.</p>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" data-category="all">All</button>
+        <button class="tab-btn" data-category="honeymoon">Honeymoon</button>
+        <button class="tab-btn" data-category="family">Family</button>
+        <button class="tab-btn" data-category="adventure">Adventure</button>
+        <button class="tab-btn" data-category="international">International</button>
+      </div>
+
+      <div class="pkg-grid">
+
+        <div class="pkg-card" data-category="honeymoon">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1544550581-5f7ceaf7f992?w=700&auto=format&fit=crop" alt="Maldives Honeymoon" loading="lazy" />
+            <div class="ribbon">Best Seller</div>
+          </div>
+          <div class="card-body">
+            <h3>Maldives Honeymoon Special</h3>
+            <div class="pkg-features">
+              <span><i class="fa fa-calendar"></i> 5N/6D</span>
+              <span><i class="fa fa-hotel"></i> 5-Star Resort</span>
+              <span><i class="fa fa-utensils"></i> All Meals</span>
+              <span><i class="fa fa-plane"></i> Flights Incl.</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="price">₹89,999 <small>/ couple</small></div>
+            <a href="contact.html" class="btn btn-primary">Book Now</a>
+          </div>
+        </div>
+
+        <div class="pkg-card" data-category="family">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=700&auto=format&fit=crop" alt="Bali Family Fun" loading="lazy" />
+            <div class="ribbon">Popular</div>
+          </div>
+          <div class="card-body">
+            <h3>Bali Family Fun Package</h3>
+            <div class="pkg-features">
+              <span><i class="fa fa-calendar"></i> 7N/8D</span>
+              <span><i class="fa fa-hotel"></i> 4-Star Hotel</span>
+              <span><i class="fa fa-utensils"></i> Breakfast</span>
+              <span><i class="fa fa-bus"></i> Transfers</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="price">₹45,999 <small>/ person</small></div>
+            <a href="contact.html" class="btn btn-primary">Book Now</a>
+          </div>
+        </div>
+
+        <div class="pkg-card" data-category="adventure">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=700&auto=format&fit=crop" alt="Himalayan Trek" loading="lazy" />
+          </div>
+          <div class="card-body">
+            <h3>Himalayan Trek Adventure</h3>
+            <div class="pkg-features">
+              <span><i class="fa fa-calendar"></i> 9N/10D</span>
+              <span><i class="fa fa-tent"></i> Camp Stay</span>
+              <span><i class="fa fa-utensils"></i> All Meals</span>
+              <span><i class="fa fa-person-hiking"></i> Guide Incl.</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="price">₹32,000 <small>/ person</small></div>
+            <a href="contact.html" class="btn btn-primary">Book Now</a>
+          </div>
+        </div>
+
+        <div class="pkg-card" data-category="international">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&auto=format&fit=crop" alt="Europe Tour" loading="lazy" />
+            <div class="ribbon">New</div>
+          </div>
+          <div class="card-body">
+            <h3>Europe Grand Tour</h3>
+            <div class="pkg-features">
+              <span><i class="fa fa-calendar"></i> 12N/13D</span>
+              <span><i class="fa fa-hotel"></i> 4-Star Hotels</span>
+              <span><i class="fa fa-utensils"></i> Breakfast</span>
+              <span><i class="fa fa-plane"></i> Flights Incl.</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="price">₹1,55,000 <small>/ person</small></div>
+            <a href="contact.html" class="btn btn-primary">Book Now</a>
+          </div>
+        </div>
+
+        <div class="pkg-card" data-category="honeymoon">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=700&auto=format&fit=crop" alt="Kashmir Honeymoon" loading="lazy" />
+          </div>
+          <div class="card-body">
+            <h3>Kashmir Honeymoon Bliss</h3>
+            <div class="pkg-features">
+              <span><i class="fa fa-calendar"></i> 6N/7D</span>
+              <span><i class="fa fa-hotel"></i> Houseboat + Hotel</span>
+              <span><i class="fa fa-utensils"></i> All Meals</span>
+              <span><i class="fa fa-bus"></i> Sightseeing</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="price">₹35,000 <small>/ couple</small></div>
+            <a href="contact.html" class="btn btn-primary">Book Now</a>
+          </div>
+        </div>
+
+        <div class="pkg-card" data-category="international">
+          <div class="img-wrap">
+            <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=700&auto=format&fit=crop" alt="Dubai Package" loading="lazy" />
+            <div class="ribbon">Hot Deal</div>
+          </div>
+          <div class="card-body">
+            <h3>Dubai Luxury Getaway</h3>
+            <div class="pkg-features">
+              <span><i class="fa fa-calendar"></i> 5N/6D</span>
+              <span><i class="fa fa-hotel"></i> 5-Star Hotel</span>
+              <span><i class="fa fa-utensils"></i> Breakfast</span>
+              <span><i class="fa fa-plane"></i> Flights Incl.</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="price">₹55,000 <small>/ person</small></div>
+            <a href="contact.html" class="btn btn-primary">Book Now</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== WHY CHOOSE US ===== -->
+  <section class="why-us">
+    <div class="container">
+      <p class="section-subtitle" style="color:var(--primary);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem;">Why Us</p>
+      <h2 class="section-title">Why Choose <span class="highlight">Satyam Holidays</span></h2>
+      <p class="section-subtitle">We go the extra mile to make your holiday extraordinary.</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa fa-shield-halved"></i></div>
+          <h3>100% Secure Booking</h3>
+          <p>Your payments and personal data are fully protected with bank-grade encryption.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa fa-headset"></i></div>
+          <h3>24/7 Support</h3>
+          <p>Our dedicated travel experts are available around the clock for any assistance.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa fa-tag"></i></div>
+          <h3>Best Price Guarantee</h3>
+          <p>Found a lower price? We'll match it — no questions asked.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa fa-rotate-left"></i></div>
+          <h3>Easy Cancellation</h3>
+          <p>Flexible cancellation policies so you can book with total confidence.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa fa-map-location-dot"></i></div>
+          <h3>Customised Itineraries</h3>
+          <p>Tailor-made tours designed around your preferences, pace and budget.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa fa-star"></i></div>
+          <h3>Handpicked Stays</h3>
+          <p>Every hotel and resort is personally vetted for quality and comfort.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PHOTO GALLERY ===== -->
+  <section class="gallery-section">
+    <div class="container">
+      <p class="section-subtitle" style="color:var(--secondary);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem;">Moments</p>
+      <h2 class="section-title">Travel <span style="color:var(--secondary)">Gallery</span></h2>
+      <p class="section-subtitle" style="color:rgba(255,255,255,.6);margin-bottom:2rem;">Real moments from real travellers.</p>
+      <div class="gallery-strip">
+        <div class="g-item tall">
+          <img src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&auto=format&fit=crop" alt="Travel moment" loading="lazy" />
+        </div>
+        <div class="g-item wide">
+          <img src="https://images.unsplash.com/photo-1501854140801-50d01698950b?w=800&auto=format&fit=crop" alt="Travel moment" loading="lazy" />
+        </div>
+        <div class="g-item">
+          <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&auto=format&fit=crop" alt="Travel moment" loading="lazy" />
+        </div>
+        <div class="g-item">
+          <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&auto=format&fit=crop" alt="Travel moment" loading="lazy" />
+        </div>
+        <div class="g-item">
+          <img src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&auto=format&fit=crop" alt="Travel moment" loading="lazy" />
+        </div>
+        <div class="g-item">
+          <img src="https://images.unsplash.com/photo-1543731068-7e0f5beff43a?w=400&auto=format&fit=crop" alt="Travel moment" loading="lazy" />
+        </div>
+        <div class="g-item">
+          <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&auto=format&fit=crop" alt="Travel moment" loading="lazy" />
+        </div>
+        <div class="g-item">
+          <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=400&auto=format&fit=crop" alt="Travel moment" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TESTIMONIALS ===== -->
+  <section class="testimonials">
+    <div class="container">
+      <p class="section-subtitle" style="color:var(--primary);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem;">Reviews</p>
+      <h2 class="section-title">What Our Travellers <span class="highlight">Say</span></h2>
+      <p class="section-subtitle">Real experiences from our valued customers.</p>
+      <div class="testi-grid">
+
+        <div class="testi-card">
+          <div class="stars">★★★★★</div>
+          <div class="quote">"</div>
+          <p>Satyam Holidays planned our Bali trip flawlessly. Every detail was taken care of — from the hotel to the sightseeing. Truly a stress-free vacation!</p>
+          <div class="testi-author">
+            <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Priya Sharma" />
+            <div class="info">
+              <strong>Priya Sharma</strong>
+              <span>Mumbai, India</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card">
+          <div class="stars">★★★★★</div>
+          <div class="quote">"</div>
+          <p>Our Europe tour was a dream come true. The team was incredibly helpful and the itinerary was perfectly balanced. Can't wait to book our next trip!</p>
+          <div class="testi-author">
+            <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Rahul Verma" />
+            <div class="info">
+              <strong>Rahul Verma</strong>
+              <span>Delhi, India</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card">
+          <div class="stars">★★★★★</div>
+          <div class="quote">"</div>
+          <p>Best honeymoon package ever! The Maldives resort was breathtaking. The Satyam team ensured every moment was special. Highly recommended!</p>
+          <div class="testi-author">
+            <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Anjali Mehta" />
+            <div class="info">
+              <strong>Anjali Mehta</strong>
+              <span>Pune, India</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA BANNER ===== -->
+  <div class="cta-banner">
+    <div class="container">
+      <h2>Ready for Your Dream Vacation?</h2>
+      <p>Let us craft the perfect holiday experience for you. Get a free, personalised quote today.</p>
+      <a href="contact.html" class="btn btn-outline">Get Free Quote &nbsp;<i class="fa fa-arrow-right"></i></a>
+    </div>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <div class="logo" style="margin-bottom:16px;font-size:1.4rem;">Satyam<span>Holidays</span></div>
+          <p>Your trusted travel partner since 2010. We create unforgettable journeys tailored to your dreams, budget and style.</p>
+          <div class="social-links">
+            <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="index.html"><i class="fa fa-chevron-right"></i> Home</a></li>
+            <li><a href="about.html"><i class="fa fa-chevron-right"></i> About Us</a></li>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Tour Packages</a></li>
+            <li><a href="contact.html"><i class="fa fa-chevron-right"></i> Contact</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Popular Tours</h4>
+          <ul>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Maldives Honeymoon</a></li>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Bali Family Tour</a></li>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Kashmir Trip</a></li>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Europe Grand Tour</a></li>
+            <li><a href="packages.html"><i class="fa fa-chevron-right"></i> Dubai Getaway</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Contact Us</h4>
+          <ul class="contact-info">
+            <li><i class="fa fa-location-dot"></i> 123 Travel Lane, Connaught Place, New Delhi – 110001</li>
+            <li><i class="fa fa-phone"></i> +91 98765 43210</li>
+            <li><i class="fa fa-envelope"></i> info@satyamholidays.com</li>
+            <li><i class="fa fa-clock"></i> Mon – Sat: 9:00 AM – 7:00 PM</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>© 2025 Satyam Holidays. All rights reserved.</p>
+        <p>Designed with <i class="fa fa-heart" style="color:var(--primary)"></i> for travellers worldwide</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scroll-to-top -->
+  <button class="scroll-top" aria-label="Scroll to top"><i class="fa fa-arrow-up"></i></button>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
