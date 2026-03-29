@@ -10,6 +10,7 @@ import * as Sentry from "@sentry/react";
 import { ToastProvider } from "./components/ToastProvider";
 import { ThemeProvider } from "./components/ThemeProvider";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { PageSkeleton } from "./components/SkeletonLoaders";
 import PageTransition from "./components/PageTransition";
 
 // Initialize Sentry (optional — only if DSN is set)
@@ -29,17 +30,12 @@ const AdminEnquiries = lazy(() => import("./pages/admin/AdminEnquiries"));
 const AdminPackages = lazy(() => import("./pages/admin/AdminPackages"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen bg-white dark:bg-navy-900">
-    <div className="loading-spinner w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-  </div>
-);
 const AnimatedRoutes = () => {
   const location = useLocation();
 
   return (
     <AnimatePresence mode="wait">
-      <Suspense fallback={<LoadingFallback />}>
+      <Suspense fallback={<PageSkeleton />}>
         <Routes location={location} key={location.pathname}>
           <Route
             path="/"

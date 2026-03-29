@@ -2,6 +2,14 @@ import React, { lazy, Suspense } from "react";
 import Meta from "./Meta";
 import Header from "./Header";
 import Hero from "./Hero";
+import {
+  ServicesSkeleton,
+  AboutSkeleton,
+  PackagesSkeleton,
+  EnquirySkeleton,
+  ContactSkeleton,
+  FooterSkeleton,
+} from "./SkeletonLoaders";
 
 const Services = lazy(() => import("./Services"));
 const About = lazy(() => import("./About"));
@@ -10,12 +18,6 @@ const InternationalPackages = lazy(() => import("./InternationalPackages"));
 const Enquiry = lazy(() => import("./Enquiry"));
 const Contact = lazy(() => import("./Contact"));
 const Footer = lazy(() => import("./Footer"));
-
-const SectionFallback = () => (
-  <div className="flex items-center justify-center py-16">
-    <div className="loading-spinner" />
-  </div>
-);
 
 const Home = () => {
   return (
@@ -27,16 +29,26 @@ const Home = () => {
       <Header />
       <main>
         <Hero />
-        <Suspense fallback={<SectionFallback />}>
+        <Suspense fallback={<ServicesSkeleton />}>
           <Services />
+        </Suspense>
+        <Suspense fallback={<AboutSkeleton />}>
           <About />
+        </Suspense>
+        <Suspense fallback={<PackagesSkeleton />}>
           <DomesticPackages />
+        </Suspense>
+        <Suspense fallback={<PackagesSkeleton />}>
           <InternationalPackages />
+        </Suspense>
+        <Suspense fallback={<EnquirySkeleton />}>
           <Enquiry />
+        </Suspense>
+        <Suspense fallback={<ContactSkeleton />}>
           <Contact />
         </Suspense>
       </main>
-      <Suspense fallback={null}>
+      <Suspense fallback={<FooterSkeleton />}>
         <Footer />
       </Suspense>
     </>
