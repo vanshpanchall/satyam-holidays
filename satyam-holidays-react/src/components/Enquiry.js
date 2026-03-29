@@ -5,8 +5,6 @@ import { useToast } from "./ToastProvider";
 import { useForm } from "react-hook-form";
 import { FaPaperPlane, FaCheck, FaExclamationTriangle } from "react-icons/fa";
 import siteConfig, { apiUrl } from "../config/siteConfig";
-import { motion } from "framer-motion";
-import { fadeUp, fadeLeft, fadeRight, viewport } from "../utils/motion";
 
 const Enquiry = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,13 +101,7 @@ const Enquiry = () => {
       <div className="container-custom relative z-10">
         <div className="max-w-4xl mx-auto">
           {/* Section Header */}
-          <motion.div
-            className="text-center mb-16"
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-            variants={fadeUp()}
-          >
+          <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-navy-900 dark:text-white mb-4">
               Send Us Your <span className="gradient-text">Enquiry</span>
             </h2>
@@ -117,16 +109,11 @@ const Enquiry = () => {
               Ready to start your journey? Fill out the form below and our travel experts will get
               back to you with the best packages and deals.
             </p>
-          </motion.div>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
             {/* Contact Information */}
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={viewport}
-              variants={fadeRight()}
-            >
+            <div>
               <div className="glass-card rounded-2xl p-8">
                 <h3 className="text-2xl font-bold text-navy-900 dark:text-white mb-6">
                   Get in Touch
@@ -209,15 +196,10 @@ const Enquiry = () => {
                   </ul>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* Enquiry Form */}
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={viewport}
-              variants={fadeLeft()}
-            >
+            <div>
               <div className="glass-card rounded-2xl p-8">
                 <h3 className="text-2xl font-bold text-navy-900 dark:text-white mb-6">
                   Send Enquiry
@@ -463,7 +445,7 @@ const Enquiry = () => {
                   </button>
                 </form>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </div>

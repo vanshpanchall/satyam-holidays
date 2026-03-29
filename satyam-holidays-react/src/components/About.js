@@ -1,7 +1,5 @@
 import React from "react";
 import { FaAward, FaUsers, FaGlobe, FaHeart } from "react-icons/fa";
-import { motion } from "framer-motion";
-import { fadeUp, fadeLeft, fadeRight, stagger, viewport } from "../utils/motion";
 
 const About = () => {
   const values = [
@@ -37,12 +35,7 @@ const About = () => {
       <div className="container-custom relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left Column - Content */}
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-            variants={fadeRight()}
-          >
+          <div>
             <h2 className="text-4xl md:text-5xl font-bold text-navy-900 dark:text-white mb-6">
               About <span className="gradient-text">Satyam Holidays</span>
             </h2>
@@ -84,16 +77,10 @@ const About = () => {
             >
               Learn More About Us
             </button>
-          </motion.div>
+          </div>
 
           {/* Right Column - Image/Visual */}
-          <motion.div
-            className="relative"
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-            variants={fadeLeft()}
-          >
+          <div className="relative">
             <div className="relative z-10">
               <div
                 className="glass-card rounded-3xl p-8 text-white"
@@ -142,17 +129,11 @@ const About = () => {
                 background: "radial-gradient(circle, rgba(245,158,11,0.3) 0%, transparent 70%)",
               }}
             ></div>
-          </motion.div>
+          </div>
         </div>
 
         {/* Values Section */}
-        <motion.div
-          className="mt-20"
-          initial="hidden"
-          whileInView="show"
-          viewport={viewport}
-          variants={stagger(0.08)}
-        >
+        <div className="mt-20">
           <div className="text-center mb-12">
             <h3 className="text-3xl font-bold text-navy-900 dark:text-white mb-4">Our Values</h3>
             <p className="text-lg text-navy-700 dark:text-navy-200 max-w-2xl mx-auto">
@@ -163,10 +144,9 @@ const About = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {values.map((value, index) => (
-              <motion.div
+              <div
                 key={index}
                 className="text-center p-6 rounded-2xl glass-card group"
-                variants={fadeUp(14)}
               >
                 <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center text-primary-500 mx-auto mb-4 group-hover:text-white transition-all duration-300"
@@ -180,28 +160,22 @@ const About = () => {
                   {value.title}
                 </h4>
                 <p className="text-navy-700 dark:text-navy-200">{value.description}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.div>
+        </div>
 
         {/* Mission Statement */}
-        <motion.div
-          className="mt-20 glass-card rounded-3xl p-8 md:p-12"
-          initial="hidden"
-          whileInView="show"
-          viewport={viewport}
-          variants={fadeUp()}
-        >
+        <div className="mt-20 glass-card rounded-3xl p-8 md:p-12">
           <div className="text-center max-w-4xl mx-auto">
             <h3 className="text-3xl font-bold text-navy-900 dark:text-white mb-6">Our Mission</h3>
             <p className="text-xl text-navy-700 dark:text-navy-200 leading-relaxed">
-              "To inspire and enable people to explore the world by providing exceptional travel
+              &ldquo;To inspire and enable people to explore the world by providing exceptional travel
               experiences that create lasting memories and foster a deeper understanding of diverse
-              cultures and destinations."
+              cultures and destinations.&rdquo;
             </p>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

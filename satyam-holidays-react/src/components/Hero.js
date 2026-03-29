@@ -1,7 +1,6 @@
 import React from "react";
 import { FaPlane, FaMapMarkedAlt, FaHeart } from "react-icons/fa";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { fadeUp, stagger, viewport } from "../utils/motion";
 
 const Hero = () => {
   const scrollToSection = (sectionId) => {
@@ -61,85 +60,55 @@ const Hero = () => {
       {/* Main content */}
       <div className="container-custom relative z-10">
         <motion.div style={{ y: yText }} className="text-center max-w-4xl mx-auto">
-          {/* Main heading with animation */}
-          <motion.h1
-            className="text-4xl md:text-6xl font-bold text-navy-900 dark:text-white mb-6 leading-tight"
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-            variants={fadeUp()}
-          >
+          {/* Main heading */}
+          <h1 className="text-4xl md:text-6xl font-bold text-navy-900 dark:text-white mb-6 leading-tight">
             <span className="block">Discover Amazing</span>
             <span className="block gradient-text">Adventures</span>
             <span className="block">With Us!</span>
-          </motion.h1>
+          </h1>
 
           {/* Subtitle */}
-          <motion.p
-            className="text-xl md:text-2xl text-navy-700 dark:text-navy-200 mb-8 leading-relaxed"
-
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-            variants={fadeUp()}
-          >
-            Experience the world's most beautiful destinations with our carefully crafted travel
+          <p className="text-xl md:text-2xl text-navy-700 dark:text-navy-200 mb-8 leading-relaxed">
+            Experience the world&apos;s most beautiful destinations with our carefully crafted travel
             packages. From spiritual journeys to exotic beaches, we make your dream vacation a
             reality.
-          </motion.p>
+          </p>
 
           {/* Call to action buttons */}
-          <motion.div
-            className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-            variants={stagger(0.1)}
-          >
-            <motion.button
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <button
               type="button"
               onClick={() => scrollToSection("packages")}
               className="btn btn-primary text-lg px-8 py-4 inline-flex items-center justify-center"
-              variants={fadeUp(12)}
             >
               <FaPlane className="mr-2" />
               Plan Your Trip
-            </motion.button>
-            <motion.button
+            </button>
+            <button
               type="button"
               onClick={() => scrollToSection("enquiry")}
               className="btn btn-outline text-lg px-8 py-4 inline-flex items-center justify-center"
-              variants={fadeUp(12)}
             >
               <FaMapMarkedAlt className="mr-2" />
               Enquiry Now
-            </motion.button>
-          </motion.div>
+            </button>
+          </div>
 
           {/* Stats section — glass cards */}
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16"
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-            variants={{
-              hidden: { opacity: 0 },
-              show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-            }}
-          >
-            <motion.div className="text-center glass-card rounded-2xl p-6" variants={fadeUp(12)}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
+            <div className="text-center glass-card rounded-2xl p-6">
               <div className="text-4xl font-bold gradient-text mb-2">500+</div>
               <div className="text-navy-700 dark:text-navy-200 font-medium">Happy Travelers</div>
-            </motion.div>
-            <motion.div className="text-center glass-card rounded-2xl p-6" variants={fadeUp(12)}>
+            </div>
+            <div className="text-center glass-card rounded-2xl p-6">
               <div className="text-4xl font-bold gradient-text mb-2">50+</div>
               <div className="text-navy-700 dark:text-navy-200 font-medium">Destinations</div>
-            </motion.div>
-            <motion.div className="text-center glass-card rounded-2xl p-6" variants={fadeUp(12)}>
+            </div>
+            <div className="text-center glass-card rounded-2xl p-6">
               <div className="text-4xl font-bold gradient-text mb-2">10+</div>
               <div className="text-navy-700 dark:text-navy-200 font-medium">Years Experience</div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </motion.div>
       </div>
 

@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { FaMapMarkerAlt, FaClock, FaStar, FaGlobe } from "react-icons/fa";
 import PackageDetailModal from "./PackageDetailModal";
-import { motion } from "framer-motion";
 import { apiUrl } from "../config/siteConfig";
-import { viewport as vp } from "../utils/motion";
 import PackageSkeleton from "./PackageSkeleton";
 
 const InternationalPackages = () => {
@@ -113,8 +111,8 @@ const InternationalPackages = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredPackages.map((pkg, index) => (
-              <motion.div
+            {filteredPackages.map((pkg) => (
+              <div
                 key={pkg.id}
                 className="glass-card rounded-2xl group cursor-pointer"
                 onClick={() => handlePackageClick(pkg)}
@@ -126,10 +124,6 @@ const InternationalPackages = () => {
                     handlePackageClick(pkg);
                   }
                 }}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={vp}
-                transition={{ duration: 0.4, ease: "easeOut" }}
               >
                 {/* Package Image */}
                 <div className="relative h-48 overflow-hidden rounded-t-xl">
@@ -208,7 +202,7 @@ const InternationalPackages = () => {
                     View Details
                   </button>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         )}

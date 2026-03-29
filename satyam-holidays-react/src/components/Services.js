@@ -1,7 +1,5 @@
 import React from "react";
 import { FaPlane, FaHotel, FaCar, FaPassport, FaCamera, FaHeadset } from "react-icons/fa";
-import { motion } from "framer-motion";
-import { fadeUp, stagger, viewport } from "../utils/motion";
 
 const Services = () => {
   const services = [
@@ -54,13 +52,7 @@ const Services = () => {
       <div className="absolute inset-0 mesh-gradient"></div>
       <div className="container-custom relative z-10">
         {/* Section Header */}
-        <motion.div
-          className="text-center mb-16"
-          initial="hidden"
-          whileInView="show"
-          viewport={viewport}
-          variants={fadeUp()}
-        >
+        <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-navy-900 dark:text-white mb-4">
             Our <span className="gradient-text">Services</span>
           </h2>
@@ -68,21 +60,14 @@ const Services = () => {
             We provide comprehensive travel solutions for all your vacation needs, ensuring a
             seamless and memorable travel experience.
           </p>
-        </motion.div>
+        </div>
 
         {/* Services Grid */}
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-          initial="hidden"
-          whileInView="show"
-          viewport={viewport}
-          variants={stagger(0.08)}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {services.map((service, index) => (
-            <motion.div
+            <div
               key={index}
               className="glass-card rounded-2xl p-8 group"
-              variants={fadeUp(14)}
             >
               {/* Icon */}
               <div
@@ -115,18 +100,12 @@ const Services = () => {
                   </li>
                 ))}
               </ul>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
 
         {/* Call to Action */}
-        <motion.div
-          className="text-center mt-16"
-          initial="hidden"
-          whileInView="show"
-          viewport={viewport}
-          variants={fadeUp()}
-        >
+        <div className="text-center mt-16">
           <div className="glass-card rounded-2xl p-8 max-w-2xl mx-auto">
             <h3 className="text-2xl font-bold text-navy-900 dark:text-white mb-4">
               Ready to Start Your Journey?
@@ -144,7 +123,7 @@ const Services = () => {
               Get Started Today
             </button>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

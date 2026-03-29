@@ -10,8 +10,6 @@ import {
   FaWhatsapp,
 } from "react-icons/fa";
 import siteConfig, { toWhatsAppLink } from "../config/siteConfig";
-import { motion } from "framer-motion";
-import { fadeUp, fadeLeft, fadeRight, viewport } from "../utils/motion";
 
 const Contact = () => {
   const socialLinks = [
@@ -51,13 +49,7 @@ const Contact = () => {
       <div className="absolute inset-0 mesh-gradient"></div>
       <div className="container-custom relative z-10">
         {/* Section Header */}
-        <motion.div
-          className="text-center mb-16"
-          initial="hidden"
-          whileInView="show"
-          viewport={viewport}
-          variants={fadeUp()}
-        >
+        <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
             Get in <span className="gradient-text">Touch</span>
           </h2>
@@ -65,16 +57,11 @@ const Contact = () => {
             Ready to start your journey? Contact us today and let our travel experts help you plan
             the perfect vacation.
           </p>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact Information */}
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-            variants={fadeRight()}
-          >
+          <div>
             <div className="glass-dark rounded-2xl p-8">
               <h3 className="text-2xl font-bold mb-8">Contact Information</h3>
 
@@ -166,15 +153,10 @@ const Contact = () => {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Map and Social Links */}
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={viewport}
-            variants={fadeLeft()}
-          >
+          <div>
             {/* Map Placeholder */}
             <div className="glass-dark rounded-2xl p-8 mb-8">
               <h3 className="text-2xl font-bold mb-6">Find Us</h3>
@@ -214,17 +196,11 @@ const Contact = () => {
                 ))}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {/* Quick Contact Cards */}
-        <motion.div
-          className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8"
-          initial="hidden"
-          whileInView="show"
-          viewport={viewport}
-          variants={{ hidden: { opacity: 1 }, show: { opacity: 1 } }}
-        >
+        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="glass-dark rounded-2xl p-6 text-center hover:shadow-glass-lg transition-all duration-300 group">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -277,16 +253,10 @@ const Contact = () => {
               Send Email
             </a>
           </div>
-        </motion.div>
+        </div>
 
         {/* Emergency Contact */}
-        <motion.div
-          className="mt-16 text-center"
-          initial="hidden"
-          whileInView="show"
-          viewport={viewport}
-          variants={fadeUp()}
-        >
+        <div className="mt-16 text-center">
           <div
             className="glass-dark rounded-2xl p-8 max-w-2xl mx-auto"
             style={{
@@ -314,7 +284,7 @@ const Contact = () => {
               </a>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
