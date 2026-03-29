@@ -1,7 +1,7 @@
 import React from "react";
 import { FaPlane, FaHotel, FaCar, FaPassport, FaCamera, FaHeadset } from "react-icons/fa";
 import { motion } from "framer-motion";
-import { fadeUp, stagger } from "../utils/motion";
+import { fadeUp, stagger, viewport } from "../utils/motion";
 
 const Services = () => {
   const services = [
@@ -56,11 +56,10 @@ const Services = () => {
         {/* Section Header */}
         <motion.div
           className="text-center mb-16"
-          data-aos="fade-up"
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.5 }}
-          variants={fadeUp(16, 0.45)}
+          viewport={viewport}
+          variants={fadeUp()}
         >
           <h2 className="text-4xl md:text-5xl font-bold text-navy-900 dark:text-white mb-4">
             Our <span className="gradient-text">Services</span>
@@ -76,15 +75,13 @@ const Services = () => {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
+          viewport={viewport}
           variants={stagger(0.08)}
         >
           {services.map((service, index) => (
             <motion.div
               key={index}
               className="glass-card rounded-2xl p-8 group"
-              data-aos="fade-up"
-              data-aos-delay={index * 100}
               variants={fadeUp(14)}
             >
               {/* Icon */}
@@ -125,11 +122,10 @@ const Services = () => {
         {/* Call to Action */}
         <motion.div
           className="text-center mt-16"
-          data-aos="fade-up"
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.4 }}
-          variants={fadeUp(12, 0.4)}
+          viewport={viewport}
+          variants={fadeUp()}
         >
           <div className="glass-card rounded-2xl p-8 max-w-2xl mx-auto">
             <h3 className="text-2xl font-bold text-navy-900 dark:text-white mb-4">

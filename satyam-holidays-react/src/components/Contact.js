@@ -11,7 +11,7 @@ import {
 } from "react-icons/fa";
 import siteConfig, { toWhatsAppLink } from "../config/siteConfig";
 import { motion } from "framer-motion";
-import { fadeUp, fadeLeft, fadeRight } from "../utils/motion";
+import { fadeUp, fadeLeft, fadeRight, viewport } from "../utils/motion";
 
 const Contact = () => {
   const socialLinks = [
@@ -53,11 +53,10 @@ const Contact = () => {
         {/* Section Header */}
         <motion.div
           className="text-center mb-16"
-          data-aos="fade-up"
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.5 }}
-          variants={fadeUp(14, 0.45)}
+          viewport={viewport}
+          variants={fadeUp()}
         >
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
             Get in <span className="gradient-text">Touch</span>
@@ -71,11 +70,10 @@ const Contact = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact Information */}
           <motion.div
-            data-aos="fade-right"
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.4 }}
-            variants={fadeRight(16, 0.45)}
+            viewport={viewport}
+            variants={fadeRight()}
           >
             <div className="glass-dark rounded-2xl p-8">
               <h3 className="text-2xl font-bold mb-8">Contact Information</h3>
@@ -172,11 +170,10 @@ const Contact = () => {
 
           {/* Map and Social Links */}
           <motion.div
-            data-aos="fade-left"
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.4 }}
-            variants={fadeLeft(16, 0.45)}
+            viewport={viewport}
+            variants={fadeLeft()}
           >
             {/* Map Placeholder */}
             <div className="glass-dark rounded-2xl p-8 mb-8">
@@ -223,10 +220,9 @@ const Contact = () => {
         {/* Quick Contact Cards */}
         <motion.div
           className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8"
-          data-aos="fade-up"
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.3 }}
+          viewport={viewport}
           variants={{ hidden: { opacity: 1 }, show: { opacity: 1 } }}
         >
           <div className="glass-dark rounded-2xl p-6 text-center hover:shadow-glass-lg transition-all duration-300 group">
@@ -286,11 +282,10 @@ const Contact = () => {
         {/* Emergency Contact */}
         <motion.div
           className="mt-16 text-center"
-          data-aos="fade-up"
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.4 }}
-          variants={fadeUp(16, 0.45)}
+          viewport={viewport}
+          variants={fadeUp()}
         >
           <div
             className="glass-dark rounded-2xl p-8 max-w-2xl mx-auto"

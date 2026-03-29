@@ -1,7 +1,7 @@
 import React from "react";
 import { FaPlane, FaMapMarkedAlt, FaHeart } from "react-icons/fa";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { fadeUp, stagger } from "../utils/motion";
+import { fadeUp, stagger, viewport } from "../utils/motion";
 
 const Hero = () => {
   const scrollToSection = (sectionId) => {
@@ -64,11 +64,10 @@ const Hero = () => {
           {/* Main heading with animation */}
           <motion.h1
             className="text-4xl md:text-6xl font-bold text-navy-900 dark:text-white mb-6 leading-tight"
-            data-aos="fade-up"
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.4 }}
-            variants={fadeUp(20, 0.5)}
+            viewport={viewport}
+            variants={fadeUp()}
           >
             <span className="block">Discover Amazing</span>
             <span className="block gradient-text">Adventures</span>
@@ -78,12 +77,11 @@ const Hero = () => {
           {/* Subtitle */}
           <motion.p
             className="text-xl md:text-2xl text-navy-700 dark:text-navy-200 mb-8 leading-relaxed"
-            data-aos="fade-up"
-            data-aos-delay="200"
+
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.5 }}
-            variants={fadeUp(16, 0.45)}
+            viewport={viewport}
+            variants={fadeUp()}
           >
             Experience the world's most beautiful destinations with our carefully crafted travel
             packages. From spiritual journeys to exotic beaches, we make your dream vacation a
@@ -93,11 +91,9 @@ const Hero = () => {
           {/* Call to action buttons */}
           <motion.div
             className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
-            data-aos="fade-up"
-            data-aos-delay="400"
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.5 }}
+            viewport={viewport}
             variants={stagger(0.1)}
           >
             <motion.button
@@ -123,11 +119,9 @@ const Hero = () => {
           {/* Stats section — glass cards */}
           <motion.div
             className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16"
-            data-aos="fade-up"
-            data-aos-delay="600"
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.3 }}
+            viewport={viewport}
             variants={{
               hidden: { opacity: 0 },
               show: { opacity: 1, transition: { staggerChildren: 0.1 } },

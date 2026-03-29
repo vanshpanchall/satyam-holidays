@@ -3,6 +3,7 @@ import { FaMapMarkerAlt, FaClock, FaStar, FaGlobe } from "react-icons/fa";
 import PackageDetailModal from "./PackageDetailModal";
 import { motion } from "framer-motion";
 import { apiUrl } from "../config/siteConfig";
+import { viewport as vp } from "../utils/motion";
 import PackageSkeleton from "./PackageSkeleton";
 
 const InternationalPackages = () => {
@@ -69,7 +70,7 @@ const InternationalPackages = () => {
       <div className="absolute inset-0 mesh-gradient"></div>
       <div className="container-custom relative z-10">
         {/* Section Header */}
-        <div className="text-center mb-16" data-aos="fade-up">
+        <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-navy-900 dark:text-white mb-4">
             International <span className="gradient-text">Packages</span>
           </h2>
@@ -80,7 +81,7 @@ const InternationalPackages = () => {
         </div>
 
         {/* Category Filter */}
-        <div className="flex flex-wrap justify-center gap-4 mb-12" data-aos="fade-up">
+        <div className="flex flex-wrap justify-center gap-4 mb-12">
           {categories.map((category) => (
             <button
               key={category.id}
@@ -116,8 +117,6 @@ const InternationalPackages = () => {
               <motion.div
                 key={pkg.id}
                 className="glass-card rounded-2xl group cursor-pointer"
-                data-aos="fade-up"
-                data-aos-delay={index * 100}
                 onClick={() => handlePackageClick(pkg)}
                 role="button"
                 tabIndex={0}
@@ -129,7 +128,7 @@ const InternationalPackages = () => {
                 }}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
+                viewport={vp}
                 transition={{ duration: 0.4, ease: "easeOut" }}
               >
                 {/* Package Image */}
@@ -215,7 +214,7 @@ const InternationalPackages = () => {
         )}
 
         {/* Call to Action */}
-        <div className="text-center mt-16" data-aos="fade-up">
+        <div className="text-center mt-16">
           <div className="glass-card rounded-2xl p-8 max-w-2xl mx-auto">
             <h3 className="text-2xl font-bold text-navy-900 dark:text-white mb-4">
               Ready for Your International Adventure?

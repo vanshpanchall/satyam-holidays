@@ -1,7 +1,7 @@
 import React from "react";
 import { FaAward, FaUsers, FaGlobe, FaHeart } from "react-icons/fa";
 import { motion } from "framer-motion";
-import { fadeUp, fadeLeft, fadeRight, stagger } from "../utils/motion";
+import { fadeUp, fadeLeft, fadeRight, stagger, viewport } from "../utils/motion";
 
 const About = () => {
   const values = [
@@ -38,11 +38,10 @@ const About = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left Column - Content */}
           <motion.div
-            data-aos="fade-right"
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.4 }}
-            variants={fadeRight(16, 0.45)}
+            viewport={viewport}
+            variants={fadeRight()}
           >
             <h2 className="text-4xl md:text-5xl font-bold text-navy-900 dark:text-white mb-6">
               About <span className="gradient-text">Satyam Holidays</span>
@@ -90,11 +89,10 @@ const About = () => {
           {/* Right Column - Image/Visual */}
           <motion.div
             className="relative"
-            data-aos="fade-left"
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.4 }}
-            variants={fadeLeft(16, 0.45)}
+            viewport={viewport}
+            variants={fadeLeft()}
           >
             <div className="relative z-10">
               <div
@@ -150,10 +148,9 @@ const About = () => {
         {/* Values Section */}
         <motion.div
           className="mt-20"
-          data-aos="fade-up"
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
+          viewport={viewport}
           variants={stagger(0.08)}
         >
           <div className="text-center mb-12">
@@ -169,8 +166,6 @@ const About = () => {
               <motion.div
                 key={index}
                 className="text-center p-6 rounded-2xl glass-card group"
-                data-aos="fade-up"
-                data-aos-delay={index * 100}
                 variants={fadeUp(14)}
               >
                 <div
@@ -193,11 +188,10 @@ const About = () => {
         {/* Mission Statement */}
         <motion.div
           className="mt-20 glass-card rounded-3xl p-8 md:p-12"
-          data-aos="fade-up"
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.4 }}
-          variants={fadeUp(16, 0.45)}
+          viewport={viewport}
+          variants={fadeUp()}
         >
           <div className="text-center max-w-4xl mx-auto">
             <h3 className="text-3xl font-bold text-navy-900 dark:text-white mb-6">Our Mission</h3>

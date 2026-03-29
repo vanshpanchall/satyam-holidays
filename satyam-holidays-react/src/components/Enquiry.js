@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { FaPaperPlane, FaCheck, FaExclamationTriangle } from "react-icons/fa";
 import siteConfig, { apiUrl } from "../config/siteConfig";
 import { motion } from "framer-motion";
-import { fadeUp, fadeLeft, fadeRight } from "../utils/motion";
+import { fadeUp, fadeLeft, fadeRight, viewport } from "../utils/motion";
 
 const Enquiry = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,11 +105,10 @@ const Enquiry = () => {
           {/* Section Header */}
           <motion.div
             className="text-center mb-16"
-            data-aos="fade-up"
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, amount: 0.5 }}
-            variants={fadeUp(14, 0.45)}
+            viewport={viewport}
+            variants={fadeUp()}
           >
             <h2 className="text-4xl md:text-5xl font-bold text-navy-900 dark:text-white mb-4">
               Send Us Your <span className="gradient-text">Enquiry</span>
@@ -123,11 +122,10 @@ const Enquiry = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
             {/* Contact Information */}
             <motion.div
-              data-aos="fade-right"
               initial="hidden"
               whileInView="show"
-              viewport={{ once: true, amount: 0.4 }}
-              variants={fadeRight(16, 0.45)}
+              viewport={viewport}
+              variants={fadeRight()}
             >
               <div className="glass-card rounded-2xl p-8">
                 <h3 className="text-2xl font-bold text-navy-900 dark:text-white mb-6">
@@ -215,11 +213,10 @@ const Enquiry = () => {
 
             {/* Enquiry Form */}
             <motion.div
-              data-aos="fade-left"
               initial="hidden"
               whileInView="show"
-              viewport={{ once: true, amount: 0.4 }}
-              variants={fadeLeft(16, 0.45)}
+              viewport={viewport}
+              variants={fadeLeft()}
             >
               <div className="glass-card rounded-2xl p-8">
                 <h3 className="text-2xl font-bold text-navy-900 dark:text-white mb-6">
