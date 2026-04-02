@@ -3,6 +3,7 @@ import { FaTimes, FaMapMarkerAlt, FaClock, FaStar, FaRupeeSign, FaCheck } from "
 import ReviewsSection from "./ReviewsSection";
 import Meta from "./Meta";
 import { motion, AnimatePresence } from "framer-motion";
+import { resolveImageUrl } from "../config/siteConfig";
 
 const scrollToEnquiry = () => {
   const el = document.getElementById("enquiry");
@@ -45,7 +46,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
       <Meta
         title={`${pkg.name} — ${pkg.location} | Satyam Holidays`}
         description={pkg.description}
-        image={pkg.image}
+        image={resolveImageUrl(pkg.image)}
         url={typeof window !== "undefined" ? window.location.href : undefined}
       />
       <AnimatePresence>
@@ -80,7 +81,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                 {/* Header Image */}
                 <div className="relative h-64 md:h-80 overflow-hidden rounded-t-2xl">
                   <img
-                    src={pkg.image}
+                    src={resolveImageUrl(pkg.image)}
                     alt={pkg.name}
                     className="w-full h-full object-cover"
                     loading="lazy"
@@ -172,7 +173,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                         {/* What's Included */}
                         <div>
                           <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
-                            What's Included
+                            What&apos;s Included
                           </h3>
                           <div className="glass-card rounded-lg p-4 dark:bg-navy-700/60">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

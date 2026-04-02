@@ -75,6 +75,7 @@ const enquiryRoutes = require("./routes/enquiries");
 const packageRoutes = require("./routes/packages");
 const reviewRoutes = require("./routes/reviews");
 const authRoutes = require("./routes/auth");
+const settingsRoutes = require("./routes/settings");
 
 // Security middleware
 app.use(helmet());
@@ -149,6 +150,7 @@ const limiter = rateLimit({
       req.method === "GET" &&
       (req.path.startsWith("/api/packages") ||
         req.path.startsWith("/api/reviews") ||
+        req.path.startsWith("/api/settings") ||
         req.path === "/api/health")
     )
       return true;
@@ -192,8 +194,15 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Static files
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Static files (backward compat for old local uploads)
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  },
+  express.static(path.join(__dirname, "uploads"))
+);
 
 // Database connection (cached for serverless)
 let cachedDb = null;
@@ -237,6 +246,7 @@ app.use("/api/enquiries", (req, res, next) => {
 app.use("/api/enquiries", enquiryRoutes);
 app.use("/api/packages", packageRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/settings", settingsRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

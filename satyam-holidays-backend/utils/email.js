@@ -1,24 +1,49 @@
 const nodemailer = require("nodemailer");
 const logger = require("./logger");
+const settingService = require("../services/settingService");
 const NODE_ENV = process.env.NODE_ENV || "development";
 
-// Brand Configuration
-const BRAND = {
-  NAME: "Satyam Holidays",
-  PRIMARY: "#f59e0b",
-  PRIMARY_DARK: "#d97706",
-  SECONDARY: "#ea580c",
-  DARK: "#1e293b",
-  LIGHT: "#f8fafc",
-  TEXT: "#334155",
-  TEXT_LIGHT: "#64748b",
-  BORDER: "#e2e8f0",
-  LOGO_URL: process.env.EMAIL_BRAND_LOGO_URL || "https://satyamholidays.com/satyam-logo.svg",
-  PHONE: "+91 98247 37137",
-  EMAIL: "satyamholidays19@gmail.com",
-  WEBSITE: "https://satyamholidays.com",
-  WHATSAPP: "919824737137",
-};
+function absoluteLogoUrl(logo, websiteBase) {
+  const fallback = process.env.EMAIL_BRAND_LOGO_URL || "https://satyamholidays.com/satyam-logo.svg";
+  if (!logo) return fallback;
+  if (String(logo).startsWith("http")) return logo;
+  const base = (websiteBase || process.env.PUBLIC_SITE_URL || "https://satyamholidays.com").replace(
+    /\/$/,
+    ""
+  );
+  const p = logo.startsWith("/") ? logo : `/${logo}`;
+  return `${base}${p}`;
+}
+
+function buildBrand(settings) {
+  const phones = settings["company.phones"];
+  const phoneDisplay =
+    Array.isArray(phones) && phones.length
+      ? phones[0]
+      : typeof phones === "string"
+        ? phones
+        : "+91 98247 37137";
+  const website = settings["company.website"] || "https://satyamholidays.com";
+  const waRaw = settings["company.whatsapp"] || "";
+  const whatsappDigits = String(waRaw).replace(/\D/g, "") || "919824737137";
+
+  return {
+    NAME: settings["company.name"] || "Satyam Holidays",
+    PRIMARY: settings["brand.primaryColor"] || process.env.EMAIL_BRAND_PRIMARY || "#f59e0b",
+    PRIMARY_DARK: process.env.EMAIL_BRAND_PRIMARY_DARK || "#d97706",
+    SECONDARY: process.env.EMAIL_BRAND_SECONDARY || "#ea580c",
+    DARK: "#1e293b",
+    LIGHT: "#f8fafc",
+    TEXT: "#334155",
+    TEXT_LIGHT: "#64748b",
+    BORDER: "#e2e8f0",
+    LOGO_URL: absoluteLogoUrl(settings["company.logo"], website),
+    PHONE: phoneDisplay,
+    EMAIL: settings["company.email"] || "satyamholidays19@gmail.com",
+    WEBSITE: website,
+    WHATSAPP: whatsappDigits,
+  };
+}
 
 let transporter = null;
 
@@ -65,8 +90,8 @@ async function ensureTransporter() {
   return null;
 }
 
-// Modern Email Base Template
-const baseTemplate = (content, title) => `
+function baseTemplate(content, title, brand) {
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -100,10 +125,10 @@ const baseTemplate = (content, title) => `
           <tr>
             <td align="center" style="padding:0 16px;">
               <p style="font-size:12px;color:#94a3b8;margin:0;">
-                © ${new Date().getFullYear()} ${BRAND.NAME}. All rights reserved.
+                © ${new Date().getFullYear()} ${brand.NAME}. All rights reserved.
               </p>
               <p style="font-size:12px;color:#94a3b8;margin:8px 0 0;">
-                ${BRAND.EMAIL} • ${BRAND.PHONE}
+                ${brand.EMAIL} • ${brand.PHONE}
               </p>
             </td>
           </tr>
@@ -114,17 +139,18 @@ const baseTemplate = (content, title) => `
 </body>
 </html>
 `;
+}
 
-// Email Templates
-const emailTemplates = {
-  "enquiry-notification": (data) => ({
-    subject: `New Enquiry from ${data.enquiry.name}${data.enquiry.destination ? ` - ${data.enquiry.destination}` : ""}`,
-    html: baseTemplate(
-      `
+function createEmailTemplates(brand) {
+  return {
+    "enquiry-notification": (data) => ({
+      subject: `New Enquiry from ${data.enquiry.name}${data.enquiry.destination ? ` - ${data.enquiry.destination}` : ""}`,
+      html: baseTemplate(
+        `
       <!-- Header -->
       <tr>
-        <td style="background:linear-gradient(135deg,${BRAND.PRIMARY},${BRAND.SECONDARY});padding:32px 24px;text-align:center;">
-          <img src="${BRAND.LOGO_URL}" alt="${BRAND.NAME}" style="height:48px;width:auto;margin-bottom:16px;" />
+        <td style="background:linear-gradient(135deg,${brand.PRIMARY},${brand.SECONDARY});padding:32px 24px;text-align:center;">
+          <img src="${brand.LOGO_URL}" alt="${brand.NAME}" style="height:48px;width:auto;margin-bottom:16px;" />
           <h1 style="color:#ffffff;font-size:24px;font-weight:700;margin:0;">New Enquiry Received</h1>
           <p style="color:rgba(255,255,255,0.9);font-size:14px;margin:8px 0 0;">A customer is interested in your services</p>
         </td>
@@ -139,14 +165,14 @@ const emailTemplates = {
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   <tr>
                     <td width="56" valign="top">
-                      <div style="width:48px;height:48px;background:linear-gradient(135deg,${BRAND.PRIMARY},${BRAND.SECONDARY});border-radius:50%;text-align:center;line-height:48px;color:#fff;font-weight:700;font-size:20px;">
+                      <div style="width:48px;height:48px;background:linear-gradient(135deg,${brand.PRIMARY},${brand.SECONDARY});border-radius:50%;text-align:center;line-height:48px;color:#fff;font-weight:700;font-size:20px;">
                         ${(data.enquiry.name || "?").charAt(0).toUpperCase()}
                       </div>
                     </td>
                     <td style="padding-left:12px;">
-                      <p style="font-size:18px;font-weight:600;color:${BRAND.DARK};margin:0;">${data.enquiry.name}</p>
-                      <p style="font-size:14px;color:${BRAND.TEXT_LIGHT};margin:4px 0 0;">${data.enquiry.email}</p>
-                      ${data.enquiry.phone ? `<p style="font-size:14px;color:${BRAND.TEXT_LIGHT};margin:4px 0 0;">${data.enquiry.phone}</p>` : ""}
+                      <p style="font-size:18px;font-weight:600;color:${brand.DARK};margin:0;">${data.enquiry.name}</p>
+                      <p style="font-size:14px;color:${brand.TEXT_LIGHT};margin:4px 0 0;">${data.enquiry.email}</p>
+                      ${data.enquiry.phone ? `<p style="font-size:14px;color:${brand.TEXT_LIGHT};margin:4px 0 0;">${data.enquiry.phone}</p>` : ""}
                     </td>
                   </tr>
                 </table>
@@ -160,9 +186,9 @@ const emailTemplates = {
               data.enquiry.destination
                 ? `
             <tr>
-              <td style="padding:12px 0;border-bottom:1px solid ${BRAND.BORDER};">
-                <p style="font-size:12px;color:${BRAND.TEXT_LIGHT};text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px;">Destination</p>
-                <p style="font-size:15px;color:${BRAND.DARK};font-weight:500;margin:0;text-transform:capitalize;">${data.enquiry.destination}</p>
+              <td style="padding:12px 0;border-bottom:1px solid ${brand.BORDER};">
+                <p style="font-size:12px;color:${brand.TEXT_LIGHT};text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px;">Destination</p>
+                <p style="font-size:15px;color:${brand.DARK};font-weight:500;margin:0;text-transform:capitalize;">${data.enquiry.destination}</p>
               </td>
             </tr>`
                 : ""
@@ -171,9 +197,9 @@ const emailTemplates = {
               data.enquiry.travelers
                 ? `
             <tr>
-              <td style="padding:12px 0;border-bottom:1px solid ${BRAND.BORDER};">
-                <p style="font-size:12px;color:${BRAND.TEXT_LIGHT};text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px;">Travelers</p>
-                <p style="font-size:15px;color:${BRAND.DARK};font-weight:500;margin:0;">${data.enquiry.travelers} person(s)</p>
+              <td style="padding:12px 0;border-bottom:1px solid ${brand.BORDER};">
+                <p style="font-size:12px;color:${brand.TEXT_LIGHT};text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px;">Travelers</p>
+                <p style="font-size:15px;color:${brand.DARK};font-weight:500;margin:0;">${data.enquiry.travelers} person(s)</p>
               </td>
             </tr>`
                 : ""
@@ -182,9 +208,9 @@ const emailTemplates = {
               data.enquiry.travelDate
                 ? `
             <tr>
-              <td style="padding:12px 0;border-bottom:1px solid ${BRAND.BORDER};">
-                <p style="font-size:12px;color:${BRAND.TEXT_LIGHT};text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px;">Travel Date</p>
-                <p style="font-size:15px;color:${BRAND.DARK};font-weight:500;margin:0;">${new Date(data.enquiry.travelDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p>
+              <td style="padding:12px 0;border-bottom:1px solid ${brand.BORDER};">
+                <p style="font-size:12px;color:${brand.TEXT_LIGHT};text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px;">Travel Date</p>
+                <p style="font-size:15px;color:${brand.DARK};font-weight:500;margin:0;">${new Date(data.enquiry.travelDate).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p>
               </td>
             </tr>`
                 : ""
@@ -193,9 +219,9 @@ const emailTemplates = {
               data.enquiry.budget
                 ? `
             <tr>
-              <td style="padding:12px 0;border-bottom:1px solid ${BRAND.BORDER};">
-                <p style="font-size:12px;color:${BRAND.TEXT_LIGHT};text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px;">Budget</p>
-                <p style="font-size:15px;color:${BRAND.DARK};font-weight:500;margin:0;">${data.enquiry.budget}</p>
+              <td style="padding:12px 0;border-bottom:1px solid ${brand.BORDER};">
+                <p style="font-size:12px;color:${brand.TEXT_LIGHT};text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px;">Budget</p>
+                <p style="font-size:15px;color:${brand.DARK};font-weight:500;margin:0;">${data.enquiry.budget}</p>
               </td>
             </tr>`
                 : ""
@@ -206,11 +232,11 @@ const emailTemplates = {
             data.enquiry.message
               ? `
           <!-- Message -->
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-left:4px solid ${BRAND.PRIMARY};border-radius:0 8px 8px 0;margin-bottom:24px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-left:4px solid ${brand.PRIMARY};border-radius:0 8px 8px 0;margin-bottom:24px;">
             <tr>
               <td style="padding:16px;">
-                <p style="font-size:12px;color:${BRAND.PRIMARY_DARK};text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin:0 0 8px;">Customer Message</p>
-                <p style="font-size:14px;color:${BRAND.TEXT};line-height:1.6;margin:0;white-space:pre-line;">${data.enquiry.message}</p>
+                <p style="font-size:12px;color:${brand.PRIMARY_DARK};text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin:0 0 8px;">Customer Message</p>
+                <p style="font-size:14px;color:${brand.TEXT};line-height:1.6;margin:0;white-space:pre-line;">${data.enquiry.message}</p>
               </td>
             </tr>
           </table>`
@@ -221,7 +247,7 @@ const emailTemplates = {
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;margin-bottom:24px;">
             <tr>
               <td style="padding:12px 16px;">
-                <p style="font-size:12px;color:${BRAND.TEXT_LIGHT};margin:0;">
+                <p style="font-size:12px;color:${brand.TEXT_LIGHT};margin:0;">
                   <strong>ID:</strong> ${data.enquiry._id} &nbsp;•&nbsp;
                   <strong>Received:</strong> ${new Date(data.enquiry.createdAt).toLocaleString("en-IN")}
                 </p>
@@ -233,26 +259,27 @@ const emailTemplates = {
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td align="center">
-                <a href="mailto:${data.enquiry.email}" style="display:inline-block;background:linear-gradient(135deg,${BRAND.PRIMARY},${BRAND.SECONDARY});color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;font-size:14px;">Reply to Customer</a>
-                ${data.enquiry.phone ? `<a href="tel:${data.enquiry.phone.replace(/[^0-9+]/g, "")}" style="display:inline-block;background:#ffffff;color:${BRAND.PRIMARY};text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;font-size:14px;border:2px solid ${BRAND.PRIMARY};margin-left:12px;">Call</a>` : ""}
+                <a href="mailto:${data.enquiry.email}" style="display:inline-block;background:linear-gradient(135deg,${brand.PRIMARY},${brand.SECONDARY});color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;font-size:14px;">Reply to Customer</a>
+                ${data.enquiry.phone ? `<a href="tel:${data.enquiry.phone.replace(/[^0-9+]/g, "")}" style="display:inline-block;background:#ffffff;color:${brand.PRIMARY};text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;font-size:14px;border:2px solid ${brand.PRIMARY};margin-left:12px;">Call</a>` : ""}
               </td>
             </tr>
           </table>
         </td>
       </tr>
     `,
-      "New Enquiry - Satyam Holidays"
-    ),
-  }),
+        `New Enquiry - ${brand.NAME}`,
+        brand
+      ),
+    }),
 
-  "enquiry-confirmation": (data) => ({
-    subject: "Thank you for your enquiry - Satyam Holidays",
-    html: baseTemplate(
-      `
+    "enquiry-confirmation": (data) => ({
+      subject: `Thank you for your enquiry - ${brand.NAME}`,
+      html: baseTemplate(
+        `
       <!-- Header -->
       <tr>
-        <td style="background:linear-gradient(135deg,${BRAND.PRIMARY},${BRAND.SECONDARY});padding:40px 24px;text-align:center;">
-          <img src="${BRAND.LOGO_URL}" alt="${BRAND.NAME}" style="height:56px;width:auto;margin-bottom:16px;" />
+        <td style="background:linear-gradient(135deg,${brand.PRIMARY},${brand.SECONDARY});padding:40px 24px;text-align:center;">
+          <img src="${brand.LOGO_URL}" alt="${brand.NAME}" style="height:56px;width:auto;margin-bottom:16px;" />
           <h1 style="color:#ffffff;font-size:28px;font-weight:700;margin:0;">Thank You!</h1>
           <p style="color:rgba(255,255,255,0.9);font-size:15px;margin:12px 0 0;">We've received your travel enquiry</p>
         </td>
@@ -260,19 +287,19 @@ const emailTemplates = {
       <!-- Content -->
       <tr>
         <td style="padding:32px 24px;">
-          <p style="font-size:16px;color:${BRAND.TEXT};line-height:1.7;margin:0 0 24px;">
+          <p style="font-size:16px;color:${brand.TEXT};line-height:1.7;margin:0 0 24px;">
             Hi <strong>${data.name}</strong>,
           </p>
-          <p style="font-size:15px;color:${BRAND.TEXT};line-height:1.7;margin:0 0 24px;">
-            Thank you for choosing Satyam Holidays! Our travel experts are reviewing your request and will contact you within 24 hours with personalized options.
+          <p style="font-size:15px;color:${brand.TEXT};line-height:1.7;margin:0 0 24px;">
+            Thank you for choosing ${brand.NAME}! Our travel experts are reviewing your request and will contact you within 24 hours with personalized options.
           </p>
 
           <!-- Reference Card -->
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:12px;margin-bottom:24px;">
             <tr>
               <td style="padding:20px;text-align:center;">
-                <p style="font-size:12px;color:${BRAND.PRIMARY_DARK};text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;">Your Reference Number</p>
-                <p style="font-size:20px;font-weight:700;color:${BRAND.DARK};font-family:monospace;margin:0;">${data.enquiryId}</p>
+                <p style="font-size:12px;color:${brand.PRIMARY_DARK};text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;">Your Reference Number</p>
+                <p style="font-size:20px;font-weight:700;color:${brand.DARK};font-family:monospace;margin:0;">${data.enquiryId}</p>
               </td>
             </tr>
           </table>
@@ -281,7 +308,7 @@ const emailTemplates = {
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:12px;margin-bottom:24px;">
             <tr>
               <td style="padding:24px;">
-                <p style="font-size:14px;font-weight:600;color:${BRAND.DARK};margin:0 0 16px;">What happens next?</p>
+                <p style="font-size:14px;font-weight:600;color:${brand.DARK};margin:0 0 16px;">What happens next?</p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   ${[
                     "Our team reviews your travel requirements",
@@ -293,10 +320,10 @@ const emailTemplates = {
                       (step, i) => `
                   <tr>
                     <td width="32" valign="top" style="padding:8px 0;">
-                      <div style="width:24px;height:24px;background:${BRAND.PRIMARY};border-radius:50%;text-align:center;line-height:24px;color:#fff;font-size:12px;font-weight:600;">${i + 1}</div>
+                      <div style="width:24px;height:24px;background:${brand.PRIMARY};border-radius:50%;text-align:center;line-height:24px;color:#fff;font-size:12px;font-weight:600;">${i + 1}</div>
                     </td>
                     <td style="padding:8px 0 8px 12px;">
-                      <p style="font-size:14px;color:${BRAND.TEXT};margin:0;">${step}</p>
+                      <p style="font-size:14px;color:${brand.TEXT};margin:0;">${step}</p>
                     </td>
                   </tr>
                   `
@@ -308,26 +335,31 @@ const emailTemplates = {
           </table>
 
           <!-- Contact -->
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${BRAND.BORDER};padding-top:24px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${brand.BORDER};padding-top:24px;">
             <tr>
               <td align="center">
-                <p style="font-size:14px;color:${BRAND.TEXT_LIGHT};margin:0 0 16px;">Need immediate assistance?</p>
-                <a href="https://wa.me/${BRAND.WHATSAPP}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;">Chat on WhatsApp</a>
-                <a href="tel:${BRAND.PHONE.replace(/\s/g, "")}" style="display:inline-block;background:#ffffff;color:${BRAND.DARK};text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;border:2px solid ${BRAND.BORDER};margin-left:8px;">Call Us</a>
+                <p style="font-size:14px;color:${brand.TEXT_LIGHT};margin:0 0 16px;">Need immediate assistance?</p>
+                <a href="https://wa.me/${brand.WHATSAPP}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;">Chat on WhatsApp</a>
+                <a href="tel:${brand.PHONE.replace(/\s/g, "")}" style="display:inline-block;background:#ffffff;color:${brand.DARK};text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;border:2px solid ${brand.BORDER};margin-left:8px;">Call Us</a>
               </td>
             </tr>
           </table>
         </td>
       </tr>
     `,
-      "Thank You - Satyam Holidays"
-    ),
-  }),
-};
+        `Thank You - ${brand.NAME}`,
+        brand
+      ),
+    }),
+  };
+}
 
-// Send email function
 const sendEmail = async ({ to, subject, template, data }) => {
   try {
+    const settings = await settingService.getAll();
+    const brand = buildBrand(settings);
+    const emailTemplates = createEmailTemplates(brand);
+
     if (NODE_ENV === "test") {
       const templateFn = emailTemplates[template];
       if (!templateFn) throw new Error(`Template '${template}' not found`);
@@ -341,7 +373,7 @@ const sendEmail = async ({ to, subject, template, data }) => {
     const emailContent = templateFn(data);
 
     const mailOptions = {
-      from: `"${BRAND.NAME}" <${process.env.SMTP_USER || process.env.EMAIL_USER || "no-reply@satyamholidays.com"}>`,
+      from: `"${brand.NAME}" <${process.env.SMTP_USER || process.env.EMAIL_USER || "no-reply@satyamholidays.com"}>`,
       to,
       subject: emailContent.subject || subject,
       html: emailContent.html,
@@ -363,7 +395,6 @@ const sendEmail = async ({ to, subject, template, data }) => {
   }
 };
 
-// Convenience helpers
 async function sendAdminNotification(enquiry) {
   const adminTo = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
   if (!adminTo) {

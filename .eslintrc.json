@@ -1,15 +1,18 @@
 {
   "root": true,
   "env": { "browser": true, "node": true, "es2022": true, "jest": true },
-  "extends": ["eslint:recommended", "plugin:react/recommended", "prettier"],
-  "settings": { "react": { "version": "detect" } },
   "parserOptions": { "ecmaVersion": 2022, "sourceType": "module" },
-  "rules": {
-    "react/prop-types": "off"
-  },
   "overrides": [
     {
+      "files": ["satyam-holidays-react/**/*.{js,jsx}"],
+      "extends": ["eslint:recommended", "plugin:react/recommended", "prettier"],
+      "parserOptions": { "ecmaFeatures": { "jsx": true } },
+      "settings": { "react": { "version": "detect" } },
+      "rules": { "react/prop-types": "off", "react/react-in-jsx-scope": "off" }
+    },
+    {
       "files": ["satyam-holidays-backend/**/*.js"],
+      "extends": ["eslint:recommended", "prettier"],
       "env": { "browser": false, "node": true }
     }
   ]

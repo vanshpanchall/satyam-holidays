@@ -9,9 +9,17 @@ import {
   FaTwitter,
   FaWhatsapp,
 } from "react-icons/fa";
-import siteConfig, { toWhatsAppLink } from "../config/siteConfig";
+import { toWhatsAppLink } from "../config/siteConfig";
+import { useSiteConfig } from "../contexts/SettingsContext";
+import useReveal from "../utils/useReveal";
 
 const Contact = () => {
+  const siteConfig = useSiteConfig();
+  const headerReveal = useReveal(0.2);
+  const infoReveal = useReveal(0.1);
+  const mapReveal = useReveal(0.1);
+  const cardsReveal = useReveal(0.1);
+  const emergencyReveal = useReveal(0.15);
   const socialLinks = [
     {
       name: "Facebook",
@@ -49,7 +57,10 @@ const Contact = () => {
       <div className="absolute inset-0 mesh-gradient"></div>
       <div className="container-custom relative z-10">
         {/* Section Header */}
-        <div className="text-center mb-16">
+        <div
+          ref={headerReveal.ref}
+          className={`text-center mb-16 reveal ${headerReveal.isVisible ? "reveal--visible" : ""}`}
+        >
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
             Get in <span className="gradient-text">Touch</span>
           </h2>
@@ -61,7 +72,10 @@ const Contact = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact Information */}
-          <div>
+          <div
+            ref={infoReveal.ref}
+            className={`reveal-left ${infoReveal.isVisible ? "reveal-left--visible" : ""}`}
+          >
             <div className="glass-dark rounded-2xl p-8">
               <h3 className="text-2xl font-bold mb-8">Contact Information</h3>
 
@@ -156,7 +170,10 @@ const Contact = () => {
           </div>
 
           {/* Map and Social Links */}
-          <div>
+          <div
+            ref={mapReveal.ref}
+            className={`reveal-right ${mapReveal.isVisible ? "reveal-right--visible" : ""}`}
+          >
             {/* Map Placeholder */}
             <div className="glass-dark rounded-2xl p-8 mb-8">
               <h3 className="text-2xl font-bold mb-6">Find Us</h3>
@@ -200,7 +217,10 @@ const Contact = () => {
         </div>
 
         {/* Quick Contact Cards */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div
+          ref={cardsReveal.ref}
+          className={`mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 reveal ${cardsReveal.isVisible ? "reveal--visible" : ""}`}
+        >
           <div className="glass-dark rounded-2xl p-6 text-center hover:shadow-glass-lg transition-all duration-300 group">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -256,7 +276,10 @@ const Contact = () => {
         </div>
 
         {/* Emergency Contact */}
-        <div className="mt-16 text-center">
+        <div
+          ref={emergencyReveal.ref}
+          className={`mt-16 text-center reveal-scale ${emergencyReveal.isVisible ? "reveal-scale--visible" : ""}`}
+        >
           <div
             className="glass-dark rounded-2xl p-8 max-w-2xl mx-auto"
             style={{

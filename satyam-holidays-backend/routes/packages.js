@@ -1,10 +1,58 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const multer = require("multer");
+const path = require("path");
 const router = express.Router();
 const packageService = require("../services/packageService");
 const cacheService = require("../utils/cache");
 const auth = require("../middleware/auth");
 const logger = require("../utils/logger");
+const { uploadImage } = require("../utils/cloudinary");
+
+// ─── Multer config (memory storage for Cloudinary) ───
+const fileFilter = (_req, file, cb) => {
+  const allowed = /jpeg|jpg|png|webp|gif/;
+  const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
+  const mimeOk = allowed.test(file.mimetype);
+  if (extOk && mimeOk) return cb(null, true);
+  cb(
+    new multer.MulterError(
+      "LIMIT_UNEXPECTED_FILE",
+      "Only image files (JPEG, PNG, WebP, GIF) are allowed"
+    )
+  );
+};
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter,
+});
+
+// ─── Upload package image to Cloudinary ───
+router.post("/upload-image", auth, upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No image file provided" });
+    }
+    const result = await uploadImage(req.file.buffer, "satyam-holidays/packages");
+    res.json({ success: true, imageUrl: result.url });
+  } catch (error) {
+    logger.error("Image upload error:", error);
+    res.status(500).json({ success: false, message: "Failed to upload image" });
+  }
+});
+
+// Multer error handler
+router.use((err, _req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({ success: false, message: "Image must be less than 5MB" });
+    }
+    return res.status(400).json({ success: false, message: err.message || "Invalid file" });
+  }
+  next(err);
+});
 
 // Get all packages
 router.get("/", async (req, res) => {

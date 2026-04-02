@@ -4,9 +4,12 @@ import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { useToast } from "./ToastProvider";
 import { useForm } from "react-hook-form";
 import { FaPaperPlane, FaCheck, FaExclamationTriangle } from "react-icons/fa";
-import siteConfig, { apiUrl } from "../config/siteConfig";
+import { apiUrl } from "../config/siteConfig";
+import { useSiteConfig } from "../contexts/SettingsContext";
+import useReveal from "../utils/useReveal";
 
 const Enquiry = () => {
+  const siteConfig = useSiteConfig();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [submitStatus, setSubmitStatus] = useState(null);
@@ -59,7 +62,7 @@ const Enquiry = () => {
           message: data.message || undefined,
           // Send generic key understood by backend
           captchaToken: currentToken || undefined,
-        }).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+        }).filter(([, v]) => v !== undefined && v !== null && v !== "")
       );
 
       const response = await fetch(apiUrl("/api/enquiries"), {
@@ -91,6 +94,10 @@ const Enquiry = () => {
     }
   };
 
+  const headerReveal = useReveal(0.2);
+  const infoReveal = useReveal(0.1);
+  const formReveal = useReveal(0.1);
+
   return (
     <section
       id="enquiry"
@@ -101,7 +108,10 @@ const Enquiry = () => {
       <div className="container-custom relative z-10">
         <div className="max-w-4xl mx-auto">
           {/* Section Header */}
-          <div className="text-center mb-16">
+          <div
+            ref={headerReveal.ref}
+            className={`text-center mb-16 reveal ${headerReveal.isVisible ? "reveal--visible" : ""}`}
+          >
             <h2 className="text-4xl md:text-5xl font-bold text-navy-900 dark:text-white mb-4">
               Send Us Your <span className="gradient-text">Enquiry</span>
             </h2>
@@ -113,7 +123,10 @@ const Enquiry = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
             {/* Contact Information */}
-            <div>
+            <div
+              ref={infoReveal.ref}
+              className={`reveal-left ${infoReveal.isVisible ? "reveal-left--visible" : ""}`}
+            >
               <div className="glass-card rounded-2xl p-8">
                 <h3 className="text-2xl font-bold text-navy-900 dark:text-white mb-6">
                   Get in Touch
@@ -199,7 +212,10 @@ const Enquiry = () => {
             </div>
 
             {/* Enquiry Form */}
-            <div>
+            <div
+              ref={formReveal.ref}
+              className={`reveal-right ${formReveal.isVisible ? "reveal-right--visible" : ""}`}
+            >
               <div className="glass-card rounded-2xl p-8">
                 <h3 className="text-2xl font-bold text-navy-900 dark:text-white mb-6">
                   Send Enquiry
@@ -210,7 +226,7 @@ const Enquiry = () => {
                   <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
                     <FaCheck className="text-green-500 mr-3" />
                     <span className="text-green-700">
-                      Thank you! Your enquiry has been sent successfully. We'll get back to you
+                      Thank you! Your enquiry has been sent successfully. We&apos;ll get back to you
                       soon.
                     </span>
                   </div>

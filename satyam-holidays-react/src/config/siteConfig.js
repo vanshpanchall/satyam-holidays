@@ -89,3 +89,10 @@ export const safeJson = async (response) => {
     return { success: false, message: "Unexpected server response" };
   }
 };
+
+// Resolve image URL — handles both relative /uploads/ paths and absolute URLs
+export const resolveImageUrl = (imageUrl) => {
+  if (!imageUrl) return "";
+  if (imageUrl.startsWith("/uploads")) return apiUrl(imageUrl);
+  return imageUrl;
+};

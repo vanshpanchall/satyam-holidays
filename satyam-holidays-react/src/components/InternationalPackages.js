@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { FaMapMarkerAlt, FaClock, FaStar, FaGlobe } from "react-icons/fa";
 import PackageDetailModal from "./PackageDetailModal";
-import { apiUrl } from "../config/siteConfig";
+import { apiUrl, resolveImageUrl } from "../config/siteConfig";
 import PackageSkeleton from "./PackageSkeleton";
+import useReveal from "../utils/useReveal";
 
 const InternationalPackages = () => {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -62,13 +63,19 @@ const InternationalPackages = () => {
     setSelectedPackage(null);
   };
 
+  const headerReveal = useReveal(0.2);
+  const ctaReveal = useReveal(0.15);
+
   return (
     <section className="section-padding relative overflow-hidden scroll-mt-24 md:scroll-mt-28">
       <div className="absolute inset-0 bg-white/60 dark:bg-navy-900/80"></div>
       <div className="absolute inset-0 mesh-gradient"></div>
       <div className="container-custom relative z-10">
         {/* Section Header */}
-        <div className="text-center mb-16">
+        <div
+          ref={headerReveal.ref}
+          className={`text-center mb-16 reveal ${headerReveal.isVisible ? "reveal--visible" : ""}`}
+        >
           <h2 className="text-4xl md:text-5xl font-bold text-navy-900 dark:text-white mb-4">
             International <span className="gradient-text">Packages</span>
           </h2>
@@ -128,7 +135,7 @@ const InternationalPackages = () => {
                 {/* Package Image */}
                 <div className="relative h-48 overflow-hidden rounded-t-xl">
                   <img
-                    src={pkg.image}
+                    src={resolveImageUrl(pkg.image)}
                     alt={pkg.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     loading="lazy"
@@ -208,7 +215,10 @@ const InternationalPackages = () => {
         )}
 
         {/* Call to Action */}
-        <div className="text-center mt-16">
+        <div
+          ref={ctaReveal.ref}
+          className={`text-center mt-16 reveal-scale ${ctaReveal.isVisible ? "reveal-scale--visible" : ""}`}
+        >
           <div className="glass-card rounded-2xl p-8 max-w-2xl mx-auto">
             <h3 className="text-2xl font-bold text-navy-900 dark:text-white mb-4">
               Ready for Your International Adventure?

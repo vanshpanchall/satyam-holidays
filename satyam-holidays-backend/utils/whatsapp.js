@@ -1,5 +1,6 @@
 const https = require("https");
 const logger = require("./logger");
+const settingService = require("../services/settingService");
 
 function buildPayload({ to, text, template }) {
   if (template) {
@@ -100,4 +101,44 @@ async function sendEnquiryThankYou({ name, phone }) {
   return sendWhatsApp({ to: phone, text });
 }
 
-module.exports = { sendWhatsApp, sendEnquiryThankYou };
+/**
+ * Send WhatsApp notification to admin about new enquiry
+ */
+async function sendAdminEnquiryAlert(enquiry) {
+  let adminPhone = process.env.ADMIN_WHATSAPP;
+  try {
+    const settings = await settingService.getAll();
+    const fromSettings = settings["notifications.adminWhatsapp"];
+    if (fromSettings && String(fromSettings).trim()) {
+      adminPhone = fromSettings;
+    }
+  } catch (e) {
+    logger.warn("[whatsapp] Could not load settings for admin phone", { message: e.message });
+  }
+  if (!adminPhone || !String(adminPhone).trim()) {
+    logger.info("[whatsapp] Admin WhatsApp not configured; skipping admin alert");
+    return { skipped: true };
+  }
+
+  const lines = [
+    `📋 *New Enquiry Received*`,
+    ``,
+    `👤 *Name:* ${enquiry.name || "N/A"}`,
+    `📧 *Email:* ${enquiry.email || "N/A"}`,
+    `📱 *Phone:* ${enquiry.phone || "N/A"}`,
+    enquiry.destination ? `🌍 *Destination:* ${enquiry.destination}` : null,
+    enquiry.travelers ? `👥 *Travelers:* ${enquiry.travelers}` : null,
+    enquiry.budget ? `💰 *Budget:* ${enquiry.budget}` : null,
+    enquiry.travelDate
+      ? `📅 *Travel Date:* ${new Date(enquiry.travelDate).toLocaleDateString("en-IN")}`
+      : null,
+    enquiry.message ? `\n💬 *Message:*\n${enquiry.message}` : null,
+    ``,
+    `⏰ ${new Date().toLocaleString("en-IN")}`,
+  ];
+
+  const text = lines.filter(Boolean).join("\n");
+  return sendWhatsApp({ to: adminPhone, text });
+}
+
+module.exports = { sendWhatsApp, sendEnquiryThankYou, sendAdminEnquiryAlert };

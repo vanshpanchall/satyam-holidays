@@ -7,6 +7,16 @@ jest.setTimeout(20000);
 const app = require("../server");
 
 describe("Packages API", () => {
+  let token;
+
+  beforeAll(async () => {
+    const loginRes = await request(app).post("/api/auth/login").send({
+      email: process.env.ADMIN_EMAIL,
+      password: process.env.ADMIN_PASSWORD,
+    });
+    token = loginRes.body.token;
+  });
+
   test("GET /api/packages returns a list of packages", async () => {
     const res = await request(app).get("/api/packages").send();
     expect(res.statusCode).toBe(200);
@@ -57,5 +67,44 @@ describe("Packages API", () => {
   test("DELETE /api/packages/:id without auth returns 401", async () => {
     const res = await request(app).delete("/api/packages/some-id").send();
     expect(res.statusCode).toBe(401);
+  });
+
+  test("POST /api/packages with auth creates, PUT updates, DELETE removes", async () => {
+    if (!token) return;
+
+    const payload = {
+      name: `E2E Package ${Date.now()}`,
+      category: "domestic",
+      subcategory: "north",
+      duration: "5D/4N",
+      price: "₹15,000",
+      location: "Test City",
+      description: "Automated test package",
+      image: "https://example.com/placeholder.jpg",
+      rating: 4.5,
+      reviews: 0,
+    };
+
+    const createRes = await request(app)
+      .post("/api/packages")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+    expect(createRes.statusCode).toBe(201);
+    expect(createRes.body.success).toBe(true);
+    const id = createRes.body.data?._id || createRes.body.data?.id;
+    expect(id).toBeTruthy();
+
+    const updateRes = await request(app)
+      .put(`/api/packages/${id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ ...payload, name: `${payload.name} Updated` });
+    expect(updateRes.statusCode).toBe(200);
+    expect(updateRes.body.data.name).toContain("Updated");
+
+    const deleteRes = await request(app)
+      .delete(`/api/packages/${id}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(deleteRes.statusCode).toBe(200);
+    expect(deleteRes.body.success).toBe(true);
   });
 });

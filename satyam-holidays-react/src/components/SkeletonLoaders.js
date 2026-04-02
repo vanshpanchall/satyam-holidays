@@ -209,18 +209,3 @@ export const FooterSkeleton = () => (
     </div>
   </footer>
 );
-
-/* ─── Inline section fallback (used in Home.js per Suspense group) ─── */
-export const SectionSkeleton = ({ variant = "packages" }) => {
-  const variants = {
-    services: <ServicesSkeleton />,
-    about: <AboutSkeleton />,
-    packages: <PackagesSkeleton />,
-    enquiry: <EnquirySkeleton />,
-    contact: <ContactSkeleton />,
-    footer: <FooterSkeleton />,
-  };
-  return variants[variant] || <PackagesSkeleton />;
-};
-
-export default SectionSkeleton;

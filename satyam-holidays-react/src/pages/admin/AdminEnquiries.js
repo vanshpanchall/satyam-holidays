@@ -27,7 +27,7 @@ const AdminEnquiries = () => {
 
   useEffect(() => {
     fetchEnquiries();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchEnquiries = async () => {
     try {

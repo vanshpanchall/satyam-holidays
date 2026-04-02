@@ -1,29 +1,55 @@
 import React from "react";
 import { FaAward, FaUsers, FaGlobe, FaHeart } from "react-icons/fa";
+import useReveal from "../utils/useReveal";
+
+const values = [
+  {
+    icon: <FaAward className="text-3xl" />,
+    title: "Excellence",
+    description: "We strive for excellence in every aspect of our service delivery.",
+  },
+  {
+    icon: <FaUsers className="text-3xl" />,
+    title: "Customer First",
+    description: "Our customers' satisfaction and happiness are our top priorities.",
+  },
+  {
+    icon: <FaGlobe className="text-3xl" />,
+    title: "Global Reach",
+    description: "Connecting travelers to destinations across the globe with local expertise.",
+  },
+  {
+    icon: <FaHeart className="text-3xl" />,
+    title: "Passion",
+    description: "We are passionate about creating unforgettable travel experiences.",
+  },
+];
+
+const ValueCard = ({ value, index }) => {
+  const { ref, isVisible } = useReveal(0.1);
+  return (
+    <div
+      ref={ref}
+      className={`text-center p-6 rounded-2xl glass-card group reveal-scale ${isVisible ? "reveal-scale--visible" : ""}`}
+      style={{ transitionDelay: `${index * 0.1}s` }}
+    >
+      <div
+        className="w-16 h-16 rounded-2xl flex items-center justify-center text-primary-500 mx-auto mb-4 group-hover:text-white transition-all duration-300"
+        style={{ background: "rgba(245,158,11,0.1)" }}
+      >
+        <div className="group-hover:scale-110 transition-transform duration-300">{value.icon}</div>
+      </div>
+      <h4 className="text-xl font-bold text-navy-900 dark:text-white mb-3">{value.title}</h4>
+      <p className="text-navy-700 dark:text-navy-200">{value.description}</p>
+    </div>
+  );
+};
 
 const About = () => {
-  const values = [
-    {
-      icon: <FaAward className="text-3xl" />,
-      title: "Excellence",
-      description: "We strive for excellence in every aspect of our service delivery.",
-    },
-    {
-      icon: <FaUsers className="text-3xl" />,
-      title: "Customer First",
-      description: "Our customers' satisfaction and happiness are our top priorities.",
-    },
-    {
-      icon: <FaGlobe className="text-3xl" />,
-      title: "Global Reach",
-      description: "Connecting travelers to destinations across the globe with local expertise.",
-    },
-    {
-      icon: <FaHeart className="text-3xl" />,
-      title: "Passion",
-      description: "We are passionate about creating unforgettable travel experiences.",
-    },
-  ];
+  const content = useReveal(0.1);
+  const visual = useReveal(0.1);
+  const valuesHeader = useReveal(0.2);
+  const mission = useReveal(0.15);
 
   return (
     <section
@@ -35,7 +61,10 @@ const About = () => {
       <div className="container-custom relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left Column - Content */}
-          <div>
+          <div
+            ref={content.ref}
+            className={`reveal-left ${content.isVisible ? "reveal-left--visible" : ""}`}
+          >
             <h2 className="text-4xl md:text-5xl font-bold text-navy-900 dark:text-white mb-6">
               About <span className="gradient-text">Satyam Holidays</span>
             </h2>
@@ -55,13 +84,13 @@ const About = () => {
             {/* Stats */}
             <div className="grid grid-cols-2 gap-6 mb-8">
               <div className="text-center p-4 glass-card rounded-xl">
-                <div className="text-3xl font-bold gradient-text mb-1">10+</div>
+                <div className="text-3xl font-bold gradient-text mb-1">35+</div>
                 <div className="text-sm text-navy-700 dark:text-navy-200 font-medium">
                   Years Experience
                 </div>
               </div>
               <div className="text-center p-4 glass-card rounded-xl">
-                <div className="text-3xl font-bold gradient-text mb-1">500+</div>
+                <div className="text-3xl font-bold gradient-text mb-1">15000+</div>
                 <div className="text-sm text-navy-700 dark:text-navy-200 font-medium">
                   Happy Customers
                 </div>
@@ -79,8 +108,11 @@ const About = () => {
             </button>
           </div>
 
-          {/* Right Column - Image/Visual */}
-          <div className="relative">
+          {/* Right Column - Visual */}
+          <div
+            ref={visual.ref}
+            className={`relative reveal-right ${visual.isVisible ? "reveal-right--visible" : ""}`}
+          >
             <div className="relative z-10">
               <div
                 className="glass-card rounded-3xl p-8 text-white"
@@ -134,7 +166,10 @@ const About = () => {
 
         {/* Values Section */}
         <div className="mt-20">
-          <div className="text-center mb-12">
+          <div
+            ref={valuesHeader.ref}
+            className={`text-center mb-12 reveal ${valuesHeader.isVisible ? "reveal--visible" : ""}`}
+          >
             <h3 className="text-3xl font-bold text-navy-900 dark:text-white mb-4">Our Values</h3>
             <p className="text-lg text-navy-700 dark:text-navy-200 max-w-2xl mx-auto">
               These core values guide everything we do and help us deliver exceptional travel
@@ -144,35 +179,22 @@ const About = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {values.map((value, index) => (
-              <div
-                key={index}
-                className="text-center p-6 rounded-2xl glass-card group"
-              >
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-primary-500 mx-auto mb-4 group-hover:text-white transition-all duration-300"
-                  style={{ background: "rgba(245,158,11,0.1)" }}
-                >
-                  <div className="group-hover:scale-110 transition-transform duration-300">
-                    {value.icon}
-                  </div>
-                </div>
-                <h4 className="text-xl font-bold text-navy-900 dark:text-white mb-3">
-                  {value.title}
-                </h4>
-                <p className="text-navy-700 dark:text-navy-200">{value.description}</p>
-              </div>
+              <ValueCard key={index} value={value} index={index} />
             ))}
           </div>
         </div>
 
         {/* Mission Statement */}
-        <div className="mt-20 glass-card rounded-3xl p-8 md:p-12">
+        <div
+          ref={mission.ref}
+          className={`mt-20 glass-card rounded-3xl p-8 md:p-12 reveal-scale ${mission.isVisible ? "reveal-scale--visible" : ""}`}
+        >
           <div className="text-center max-w-4xl mx-auto">
             <h3 className="text-3xl font-bold text-navy-900 dark:text-white mb-6">Our Mission</h3>
             <p className="text-xl text-navy-700 dark:text-navy-200 leading-relaxed">
-              &ldquo;To inspire and enable people to explore the world by providing exceptional travel
-              experiences that create lasting memories and foster a deeper understanding of diverse
-              cultures and destinations.&rdquo;
+              &ldquo;To inspire and enable people to explore the world by providing exceptional
+              travel experiences that create lasting memories and foster a deeper understanding of
+              diverse cultures and destinations.&rdquo;
             </p>
           </div>
         </div>

@@ -15,9 +15,11 @@ import {
   FaGlobe,
   FaEnvelope,
 } from "react-icons/fa";
-import siteConfig from "../config/siteConfig";
+import { resolveImageUrl } from "../config/siteConfig";
+import { useSiteConfig } from "../contexts/SettingsContext";
 
 const PackageFlyer = ({ pkg, onClose }) => {
+  const siteConfig = useSiteConfig();
   const flyerRef = useRef(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -129,7 +131,8 @@ const PackageFlyer = ({ pkg, onClose }) => {
             <div style={{ position: "relative", height: "280px" }}>
               <img
                 src={
-                  pkg.image || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800"
+                  resolveImageUrl(pkg.image) ||
+                  "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800"
                 }
                 alt={pkg.name}
                 crossOrigin="anonymous"
@@ -175,8 +178,8 @@ const PackageFlyer = ({ pkg, onClose }) => {
                   }}
                 >
                   <img
-                    src="/satyam-logo.svg"
-                    alt="Satyam Holidays"
+                    src={resolveImageUrl(siteConfig.company.logo) || "/satyam-logo.svg"}
+                    alt={siteConfig.company.name}
                     crossOrigin="anonymous"
                     style={{ height: "32px", width: "auto" }}
                   />
@@ -190,10 +193,10 @@ const PackageFlyer = ({ pkg, onClose }) => {
                         lineHeight: 1.2,
                       }}
                     >
-                      Satyam Holidays
+                      {siteConfig.company.name}
                     </p>
                     <p style={{ fontSize: "9px", color: "#f59e0b", margin: 0, fontWeight: "500" }}>
-                      Journey With Joy!
+                      {siteConfig.company.tagline}
                     </p>
                   </div>
                 </div>
@@ -590,8 +593,8 @@ const PackageFlyer = ({ pkg, onClose }) => {
                   }}
                 >
                   <img
-                    src="/satyam-logo.svg"
-                    alt="Satyam Holidays"
+                    src={resolveImageUrl(siteConfig.company.logo) || "/satyam-logo.svg"}
+                    alt={siteConfig.company.name}
                     crossOrigin="anonymous"
                     style={{ width: "100%", height: "100%", objectFit: "contain" }}
                   />
@@ -605,7 +608,15 @@ const PackageFlyer = ({ pkg, onClose }) => {
                   }}
                 >
                   <FaGlobe style={{ color: "#f59e0b", fontSize: "12px" }} />
-                  <span style={{ color: "#94a3b8", fontSize: "10px" }}>satyamholidays.com</span>
+                  <span style={{ color: "#94a3b8", fontSize: "10px" }}>
+                    {(() => {
+                      try {
+                        return new URL(siteConfig.website || "https://satyamholidays.com").hostname;
+                      } catch {
+                        return "satyamholidays.com";
+                      }
+                    })()}
+                  </span>
                 </div>
               </div>
             </div>

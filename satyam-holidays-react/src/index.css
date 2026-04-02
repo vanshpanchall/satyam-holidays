@@ -29,13 +29,17 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #1e293b;
+    background: rgba(241, 245, 249, 0.5);
     border-radius: 4px;
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5);
   }
 
   ::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #f59e0b 0%, #ea580c 100%);
-    border-radius: 4px;
+    border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -270,44 +274,6 @@
   .text-shadow-lg {
     text-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   }
-
-  .backdrop-blur-sm {
-    backdrop-filter: blur(4px);
-  }
-
-  .backdrop-blur-md {
-    backdrop-filter: blur(12px);
-  }
-
-  .backdrop-blur-lg {
-    backdrop-filter: blur(16px);
-  }
-
-  .backdrop-blur-xl {
-    backdrop-filter: blur(24px);
-  }
-}
-
-/* Custom scrollbar — glass-themed */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(241, 245, 249, 0.5);
-}
-
-.dark ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #f59e0b, #ea580c);
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #ea580c, #c2410c);
 }
 
 /* ─── Skeleton Shimmer ─── */
@@ -361,51 +327,95 @@
   }
 }
 
-/* Custom animations */
-@keyframes slideInFromLeft {
-  0% {
-    transform: translateX(-100%);
+/* ─── Hero entrance animation ─── */
+.hero-content {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-content--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Stat card entrance ─── */
+.stat-card {
+  animation: statReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes statReveal {
+  from {
     opacity: 0;
+    transform: translateY(20px) scale(0.95);
   }
-  100% {
-    transform: translateX(0);
+  to {
     opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
-@keyframes slideInFromRight {
-  0% {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
+/* ─── Professional scroll reveal system ─── */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
 }
 
-@keyframes slideInFromBottom {
-  0% {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
+.reveal--visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.slide-in-left {
-  animation: slideInFromLeft 0.6s ease-out;
+.reveal-left {
+  opacity: 0;
+  transform: translateX(-28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
 }
 
-.slide-in-right {
-  animation: slideInFromRight 0.6s ease-out;
+.reveal-left--visible {
+  opacity: 1;
+  transform: translateX(0);
 }
 
-.slide-in-bottom {
-  animation: slideInFromBottom 0.6s ease-out;
+.reveal-right {
+  opacity: 0;
+  transform: translateX(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
 }
+
+.reveal-right--visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-scale--visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Stagger delays for child items */
+.stagger-1 { transition-delay: 0.05s; }
+.stagger-2 { transition-delay: 0.1s; }
+.stagger-3 { transition-delay: 0.15s; }
+.stagger-4 { transition-delay: 0.2s; }
+.stagger-5 { transition-delay: 0.25s; }
+.stagger-6 { transition-delay: 0.3s; }
 
 /* ─── Premium Mesh Background ─── */
 .mesh-gradient {
@@ -424,4 +434,28 @@
     radial-gradient(at 0% 50%, rgba(100, 116, 139, 0.04) 0px, transparent 50%),
     radial-gradient(at 80% 50%, rgba(245, 158, 11, 0.05) 0px, transparent 50%),
     radial-gradient(at 0% 100%, rgba(234, 88, 12, 0.04) 0px, transparent 50%);
+}
+
+/* ─── Prefers reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .hero-content,
+  .reveal,
+  .reveal-left,
+  .reveal-right,
+  .reveal-scale {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .stat-card {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .animate-float,
+  .animate-pulse-slow {
+    animation: none;
+  }
 }

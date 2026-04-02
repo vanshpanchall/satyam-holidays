@@ -1,9 +1,10 @@
 const Enquiry = require("../models/Enquiry");
 const sendEmail = require("../utils/email");
-const { sendEnquiryThankYou } = require("../utils/whatsapp");
+const { sendEnquiryThankYou, sendAdminEnquiryAlert } = require("../utils/whatsapp");
 const cacheService = require("../utils/cache");
 const socketManager = require("../utils/socketManager");
 const logger = require("../utils/logger");
+const settingService = require("./settingService");
 
 class EnquiryService {
   async createEnquiry(enquiryData, ipAddress, userAgent) {
@@ -22,28 +23,37 @@ class EnquiryService {
     // Emit real-time event to admin dashboard
     socketManager.emitNewEnquiry(enquiry);
 
-    // Send email notification
-    try {
-      await sendEmail.sendAdminNotification(enquiry);
-      await sendEmail.sendCustomerConfirmation(enquiry);
-    } catch (emailError) {
-      logger.error("Email sending failed", { error: emailError.message, enquiryId: enquiry._id });
-      // Don't fail the request if email fails
+    const settings = await settingService.getAll();
+    const emailEnabled = settings["notifications.emailEnabled"] !== false;
+    const whatsappEnabled =
+      process.env.WHATSAPP_ENABLE === "true" && settings["notifications.whatsappEnabled"] !== false;
+
+    if (emailEnabled) {
+      try {
+        await sendEmail.sendAdminNotification(enquiry);
+        await sendEmail.sendCustomerConfirmation(enquiry);
+      } catch (emailError) {
+        logger.error("Email sending failed", { error: emailError.message, enquiryId: enquiry._id });
+      }
     }
 
-    // Send WhatsApp thank you (if enabled via env)
-    try {
-      if (process.env.WHATSAPP_ENABLE === "true") {
+    if (whatsappEnabled) {
+      try {
         await sendEnquiryThankYou(enquiry);
-      } else {
-        logger.info("[whatsapp] Disabled; not sending thank-you message");
+      } catch (whatsappError) {
+        logger.error("WhatsApp customer msg failed", {
+          error: whatsappError.message,
+          enquiryId: enquiry._id,
+        });
       }
-    } catch (whatsappError) {
-      logger.error("WhatsApp sending failed", {
-        error: whatsappError.message,
-        enquiryId: enquiry._id,
-      });
-      // Don't fail the request if WhatsApp fails
+      try {
+        await sendAdminEnquiryAlert(enquiry);
+      } catch (whatsappError) {
+        logger.error("WhatsApp admin alert failed", {
+          error: whatsappError.message,
+          enquiryId: enquiry._id,
+        });
+      }
     }
 
     return enquiry;

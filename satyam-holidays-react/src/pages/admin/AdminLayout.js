@@ -9,6 +9,7 @@ import {
   FaTimes,
   FaMoon,
   FaSun,
+  FaCog,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -52,6 +53,7 @@ const AdminLayout = () => {
     { name: "Dashboard", path: "/admin", icon: <FaTachometerAlt /> },
     { name: "Enquiries", path: "/admin/enquiries", icon: <FaInbox /> },
     { name: "Packages", path: "/admin/packages", icon: <FaSuitcase /> },
+    { name: "Settings", path: "/admin/settings", icon: <FaCog /> },
   ];
 
   const handleLogout = () => {

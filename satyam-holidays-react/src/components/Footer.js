@@ -1,8 +1,10 @@
 import React from "react";
 import { FaFacebook, FaInstagram, FaTwitter, FaWhatsapp, FaArrowUp } from "react-icons/fa";
-import siteConfig, { toWhatsAppLink } from "../config/siteConfig";
+import { toWhatsAppLink } from "../config/siteConfig";
+import { useSiteConfig } from "../contexts/SettingsContext";
 
 const Footer = () => {
+  const siteConfig = useSiteConfig();
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };

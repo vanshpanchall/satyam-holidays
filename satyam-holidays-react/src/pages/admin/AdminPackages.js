@@ -139,7 +139,13 @@ const AdminPackages = () => {
               {/* Image */}
               <div className="relative h-40 overflow-hidden">
                 <img
-                  src={pkg.image || "https://via.placeholder.com/400x200?text=No+Image"}
+                  src={
+                    pkg.image
+                      ? pkg.image.startsWith("/uploads")
+                        ? apiUrl(pkg.image)
+                        : pkg.image
+                      : "https://via.placeholder.com/400x200?text=No+Image"
+                  }
                   alt={pkg.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
@@ -257,6 +263,82 @@ const PackageModal = ({ pkg, onClose, onSaved }) => {
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [highlightInput, setHighlightInput] = useState("");
+  const [imagePreview, setImagePreview] = useState(pkg?.image || "");
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = React.useRef(null);
+
+  const handleImageUpload = async (file) => {
+    if (!file) return;
+    if (!file.type.match(/^image\/(jpeg|jpg|png|webp|gif)$/)) {
+      toast.error("Only JPEG, PNG, WebP, or GIF images are allowed");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setIsUploading(true);
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target.result);
+    reader.readAsDataURL(file);
+
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("image", file);
+
+      const res = await fetchWithAuth(apiUrl("/api/packages/upload-image"), {
+        method: "POST",
+        body: formDataUpload,
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setFormData((prev) => ({ ...prev, image: json.imageUrl }));
+        toast.success("Image uploaded successfully");
+      } else {
+        toast.error(json.message || "Image upload failed");
+        setImagePreview(pkg?.image || "");
+      }
+    } catch (err) {
+      toast.error("Failed to upload image");
+      setImagePreview(pkg?.image || "");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleImageUpload(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file);
+  };
+
+  const getImageSrc = () => {
+    if (imagePreview && imagePreview.startsWith("data:")) return imagePreview;
+    if (imagePreview && imagePreview.startsWith("/uploads")) return apiUrl(imagePreview);
+    if (imagePreview && imagePreview.startsWith("http")) return imagePreview;
+    if (formData.image && formData.image.startsWith("/uploads")) return apiUrl(formData.image);
+    if (formData.image && formData.image.startsWith("http")) return formData.image;
+    return "";
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -302,6 +384,8 @@ const PackageModal = ({ pkg, onClose, onSaved }) => {
   const inputClass =
     "w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500";
 
+  const currentImgSrc = getImageSrc();
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -332,6 +416,74 @@ const PackageModal = ({ pkg, onClose, onSaved }) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Image Upload */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Package Image *
+            </label>
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => fileInputRef.current?.click()}
+              className={`relative border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 ${
+                isDragOver
+                  ? "border-amber-500 bg-amber-50 dark:bg-amber-500/10"
+                  : currentImgSrc
+                    ? "border-slate-200 dark:border-slate-700"
+                    : "border-slate-300 dark:border-slate-600 hover:border-amber-400 dark:hover:border-amber-500"
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+
+              {currentImgSrc ? (
+                <div className="relative group">
+                  <img
+                    src={currentImgSrc}
+                    alt="Package preview"
+                    className="w-full h-48 object-cover rounded-xl"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                    <div className="text-white text-center">
+                      <FaFileImage className="text-3xl mx-auto mb-2" />
+                      <p className="text-sm font-medium">Click or drag to replace</p>
+                    </div>
+                  </div>
+                  {isUploading && (
+                    <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center">
+                      <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  {isUploading ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Uploading...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <FaFileImage className="text-4xl text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                      <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                        Click to upload or drag & drop
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                        JPEG, PNG, WebP, GIF — max 5MB
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -345,20 +497,6 @@ const PackageModal = ({ pkg, onClose, onSaved }) => {
                 onChange={handleChange}
                 className={inputClass}
                 placeholder="Package name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Image URL *
-              </label>
-              <input
-                required
-                type="url"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                className={inputClass}
-                placeholder="https://..."
               />
             </div>
             <div>
@@ -518,7 +656,7 @@ const PackageModal = ({ pkg, onClose, onSaved }) => {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploading}
             className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium disabled:opacity-50"
           >
             {isSubmitting ? "Saving..." : pkg ? "Update" : "Create"}

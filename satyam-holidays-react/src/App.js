@@ -7,6 +7,7 @@ import * as Sentry from "@sentry/react";
 
 import { ToastProvider } from "./components/ToastProvider";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { SettingsProvider } from "./contexts/SettingsContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { PageSkeleton } from "./components/SkeletonLoaders";
 import PageTransition from "./components/PageTransition";
@@ -26,6 +27,7 @@ const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminEnquiries = lazy(() => import("./pages/admin/AdminEnquiries"));
 const AdminPackages = lazy(() => import("./pages/admin/AdminPackages"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 
 const AnimatedRoutes = () => {
@@ -62,6 +64,7 @@ const AnimatedRoutes = () => {
             <Route index element={<AdminDashboard />} />
             <Route path="enquiries" element={<AdminEnquiries />} />
             <Route path="packages" element={<AdminPackages />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
         </Routes>
       </Suspense>
@@ -72,26 +75,28 @@ const AnimatedRoutes = () => {
 function App() {
   return (
     <ThemeProvider>
-      <ToastProvider>
-        <ErrorBoundary>
-          <div className="App min-h-screen bg-white dark:bg-navy-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-            <BrowserRouter>
-              <AnimatedRoutes />
-            </BrowserRouter>
-            <ToastContainer
-              position="bottom-right"
-              autoClose={4000}
-              hideProgressBar={false}
-              newestOnTop
-              closeOnClick
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="colored"
-            />
-          </div>
-        </ErrorBoundary>
-      </ToastProvider>
+      <SettingsProvider>
+        <ToastProvider>
+          <ErrorBoundary>
+            <div className="App min-h-screen bg-white dark:bg-navy-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+              <BrowserRouter>
+                <AnimatedRoutes />
+              </BrowserRouter>
+              <ToastContainer
+                position="bottom-right"
+                autoClose={4000}
+                hideProgressBar={false}
+                newestOnTop
+                closeOnClick
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="colored"
+              />
+            </div>
+          </ErrorBoundary>
+        </ToastProvider>
+      </SettingsProvider>
     </ThemeProvider>
   );
 }

@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { FaMapMarkerAlt, FaClock, FaStar } from "react-icons/fa";
 import PackageDetailModal from "./PackageDetailModal";
-import { apiUrl } from "../config/siteConfig";
+import { apiUrl, resolveImageUrl } from "../config/siteConfig";
 import PackageSkeleton from "./PackageSkeleton";
+import useReveal from "../utils/useReveal";
 
 const DomesticPackages = () => {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -58,6 +59,9 @@ const DomesticPackages = () => {
     setSelectedPackage(null);
   };
 
+  const headerReveal = useReveal(0.2);
+  const ctaReveal = useReveal(0.15);
+
   return (
     <section
       id="packages"
@@ -67,7 +71,10 @@ const DomesticPackages = () => {
       <div className="absolute inset-0 mesh-gradient"></div>
       <div className="container-custom relative z-10">
         {/* Section Header */}
-        <div className="text-center mb-16">
+        <div
+          ref={headerReveal.ref}
+          className={`text-center mb-16 reveal ${headerReveal.isVisible ? "reveal--visible" : ""}`}
+        >
           <h2 className="text-4xl md:text-5xl font-bold text-navy-900 dark:text-white mb-4">
             Domestic <span className="gradient-text">Packages</span>
           </h2>
@@ -128,7 +135,7 @@ const DomesticPackages = () => {
                 {/* Package Image */}
                 <div className="relative h-48 overflow-hidden rounded-t-xl">
                   <img
-                    src={pkg.image}
+                    src={resolveImageUrl(pkg.image)}
                     alt={pkg.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     loading="lazy"
@@ -204,10 +211,13 @@ const DomesticPackages = () => {
         )}
 
         {/* Call to Action */}
-        <div className="text-center mt-16">
+        <div
+          ref={ctaReveal.ref}
+          className={`text-center mt-16 reveal-scale ${ctaReveal.isVisible ? "reveal-scale--visible" : ""}`}
+        >
           <div className="glass-card rounded-2xl p-8 max-w-2xl mx-auto">
             <h3 className="text-2xl font-bold text-navy-900 dark:text-white mb-4">
-              Can't Find What You're Looking For?
+              Can&apos;t Find What You&apos;re Looking For?
             </h3>
             <p className="text-navy-700 dark:text-navy-200 mb-6">
               We can customize any package according to your preferences and requirements.

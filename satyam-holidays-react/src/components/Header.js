@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
-import siteConfig from "../config/siteConfig";
+import { useSiteConfig } from "../contexts/SettingsContext";
 import ThemeToggle from "./ThemeToggle";
 
 const Header = () => {
+  const siteConfig = useSiteConfig();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const menuRef = useRef(null);
