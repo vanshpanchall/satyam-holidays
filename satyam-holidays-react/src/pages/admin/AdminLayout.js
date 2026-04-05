@@ -12,7 +12,7 @@ import {
   FaCog,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import { apiUrl } from "../../config/siteConfig";
+import { apiUrl, fetchWithAuth } from "../../config/siteConfig";
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -31,9 +31,7 @@ const AdminLayout = () => {
     // Verify authentication via API (supports HTTPOnly cookies)
     const verifyAuth = async () => {
       try {
-        const res = await fetch(apiUrl("/api/auth/verify"), {
-          credentials: "include",
-        });
+        const res = await fetchWithAuth(apiUrl("/api/auth/verify"));
         if (res.ok) {
           setIsAuthenticated(true);
         } else {

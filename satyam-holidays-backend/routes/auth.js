@@ -10,13 +10,23 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const NODE_ENV = process.env.NODE_ENV || "development";
+const IS_PRODUCTION = NODE_ENV === "production";
 
 // Cookie settings for HTTPOnly JWT
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: NODE_ENV === "production",
-  sameSite: NODE_ENV === "production" ? "strict" : "lax",
+  secure: IS_PRODUCTION,
+  // Frontend and backend are on different Vercel subdomains in production.
+  // SameSite=None is required for cross-site credentialed requests.
+  sameSite: IS_PRODUCTION ? "none" : "lax",
   maxAge: 60 * 60 * 1000, // 1 hour (reduced from 8h for security)
+  path: "/",
+};
+
+const CLEAR_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: IS_PRODUCTION,
+  sameSite: IS_PRODUCTION ? "none" : "lax",
   path: "/",
 };
 
@@ -118,7 +128,7 @@ router.post("/login", loginLimiter, async (req, res) => {
 
 // POST /api/auth/logout
 router.post("/logout", (_req, res) => {
-  res.clearCookie("adminToken", { path: "/" });
+  res.clearCookie("adminToken", CLEAR_COOKIE_OPTIONS);
   res.json({ success: true, message: "Logged out successfully" });
 });
 
@@ -137,7 +147,7 @@ router.get("/verify", (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     res.json({ success: true, user: decoded.user });
   } catch {
-    res.clearCookie("adminToken", { path: "/" });
+    res.clearCookie("adminToken", CLEAR_COOKIE_OPTIONS);
     res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
 });

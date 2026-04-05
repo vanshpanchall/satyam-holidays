@@ -73,6 +73,16 @@ export const apiUrl = (path = "") => {
 // Get CSRF token from cookie
 const getCsrfToken = () => Cookies.get("csrf_token");
 
+// Get admin token from localStorage (fallback for browsers that block cross-site cookies)
+const getAdminToken = () => {
+  if (typeof window === "undefined") return "";
+  try {
+    return localStorage.getItem("adminToken") || "";
+  } catch {
+    return "";
+  }
+};
+
 // Add CSRF token to headers for state-changing requests
 const withCsrfHeaders = (headers = {}, method = "GET") => {
   const stateChangingMethods = ["POST", "PUT", "PATCH", "DELETE"];
@@ -85,9 +95,20 @@ const withCsrfHeaders = (headers = {}, method = "GET") => {
   return headers;
 };
 
+const withAuthHeaders = (headers = {}) => {
+  const token = getAdminToken();
+  if (!token) return headers;
+  if (headers.Authorization || headers.authorization) return headers;
+  return {
+    ...headers,
+    Authorization: `Bearer ${token}`,
+  };
+};
+
 export const fetchWithAuth = async (url, options = {}) => {
   const method = options.method || "GET";
-  const headers = withCsrfHeaders(options.headers || {}, method);
+  const csrfHeaders = withCsrfHeaders(options.headers || {}, method);
+  const headers = withAuthHeaders(csrfHeaders);
 
   // Include credentials for HTTPOnly cookie authentication
   const response = await fetch(url, {
