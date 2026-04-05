@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
@@ -28,28 +28,28 @@ jobs:
 
       - name: Validate Vercel configs
         run: |
-          node -e "JSON.parse(require('node:fs').readFileSync('satyam-holidays-backend/vercel.json','utf8'))"
-          node -e "JSON.parse(require('node:fs').readFileSync('satyam-holidays-react/vercel.json','utf8'))"
+          node -e "JSON.parse(require('node:fs').readFileSync('satyam-holidays-backend/vercel.json', 'utf8'))"
+          node -e "JSON.parse(require('node:fs').readFileSync('satyam-holidays-react/vercel.json', 'utf8'))"
 
       - name: Lint
         run: npm run lint
 
       - name: Install backend deps
-        run: npm ci
         working-directory: satyam-holidays-backend
+        run: npm ci
 
       - name: Install frontend deps
-        run: npm ci
         working-directory: satyam-holidays-react
+        run: npm ci
 
       - name: Backend tests
+        working-directory: satyam-holidays-backend
         env:
           NODE_ENV: test
         run: npm test --silent -- --runInBand
-        working-directory: satyam-holidays-backend
 
       - name: Frontend build
+        working-directory: satyam-holidays-react
         env:
           DISABLE_ESLINT_PLUGIN: true
         run: npm run build --silent
-        working-directory: satyam-holidays-react

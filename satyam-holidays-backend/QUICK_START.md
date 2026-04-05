@@ -1,106 +1,111 @@
-# Quick Start Guide - Satyam Holidays
+# Backend Quick Start
+
+Use this guide when you only need to run and validate the backend API.
+For full-stack setup, use README.md or setup.md at repository root.
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
-- npm or yarn
-- MongoDB (Atlas recommended for beginners)
+- Node.js 18 or later
+- npm 9 or later
+- MongoDB instance (local or Atlas)
 
-## Setup Steps
+## 1. Install Dependencies
 
-### 1. Backend Setup
-
-```bash
-cd satyam-holidays-backend
-npm install
-```
-
-### 2. Configure Environment Variables
-
-Edit the `.env` file with your settings:
-
-```env
-# Server Configuration
-PORT=5000
-NODE_ENV=development
-
-# Database Configuration (Replace with your MongoDB connection string)
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/satyam-holidays
-
-# Email Configuration (Replace with your Gmail app password)
-EMAIL_USER=satyamholidays19@gmail.com
-EMAIL_PASS=your-app-password
-
-# JWT Secret
-JWT_SECRET=satyam-holidays-super-secret-key-2024
-
-# CORS Origins
-CORS_ORIGIN=http://localhost:3000,http://localhost:5173
-```
-
-### 3. Frontend Setup
+From repository root:
 
 ```bash
-cd satyam-holidays-react
-npm install
+npm --prefix satyam-holidays-backend ci
 ```
 
-### 4. Start the Application
+## 2. Configure Environment
 
-**Terminal 1 - Backend:**
+Create a local .env file:
 
 ```bash
-cd satyam-holidays-backend
-npm start
+# Linux/macOS
+cp satyam-holidays-backend/env.example satyam-holidays-backend/.env
+
+# Windows PowerShell
+Copy-Item satyam-holidays-backend/env.example satyam-holidays-backend/.env
 ```
 
-**Terminal 2 - Frontend:**
+Minimum required values:
+
+- MONGODB_URI
+- JWT_SECRET
+- CORS_ORIGIN
+
+Email values for enquiry notifications:
+
+- EMAIL_USER and EMAIL_PASS
+  or
+- SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+
+For Atlas onboarding details, see MONGODB_SETUP.md.
+
+## 3. Start Backend Server
+
+Development mode:
 
 ```bash
-cd satyam-holidays-react
-npm start
+npm --prefix satyam-holidays-backend run dev
 ```
 
-### 5. Access the Application
+Production-like mode:
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
-- API Health Check: http://localhost:5000/api/health
+```bash
+npm --prefix satyam-holidays-backend start
+```
 
-## Features Available
+Default backend URL:
 
-- ✅ Modern responsive UI with animations
-- ✅ Domestic and International packages
-- ✅ Enquiry form with email notifications
-- ✅ Contact form
-- ✅ Excel export for enquiries
-- ✅ MongoDB database integration
-- ✅ Email notifications
-- ✅ RESTful API endpoints
+- http://localhost:5000
 
-## API Endpoints
+Health endpoints:
 
-- `GET /api/health` - Health check
-- `POST /api/enquiries` - Submit enquiry
-- `GET /api/enquiries` - Get all enquiries (admin)
-- `GET /api/enquiries/export/excel` - Export enquiries to Excel
-- `GET /api/enquiries/stats/overview` - Get enquiry statistics
+- http://localhost:5000/api/health
+- http://localhost:5000/api/v1/health
+
+## 4. Validate Backend
+
+Run tests:
+
+```bash
+npm --prefix satyam-holidays-backend test -- --runInBand
+```
+
+Run production verification script (after deployment):
+
+```bash
+npm --prefix satyam-holidays-backend run ops:verify-production
+```
+
+## 5. Useful Backend Scripts
+
+- npm --prefix satyam-holidays-backend run security:generate-secrets
+- npm --prefix satyam-holidays-backend run backup
+- npm --prefix satyam-holidays-backend run restore -- ./backups/<file>.tar.gz
+- npm --prefix satyam-holidays-backend run rollback
 
 ## Troubleshooting
 
-### MongoDB Connection Issues
+MongoDB connection fails:
 
-- Ensure your MongoDB connection string is correct
-- Check if your IP is whitelisted (for Atlas)
-- Verify username and password
+- Verify MONGODB_URI format and credentials
+- If using Atlas, confirm network access allowlist
 
-### Email Issues
+Enquiry emails are not sent:
 
-- Ensure 2FA is enabled on Gmail
-- Use App Password, not regular password
-- Check if less secure apps are blocked
+- Confirm SMTP or Gmail app password values
+- Check backend logs for transport verification errors
 
-### Port Issues
+Port 5000 is already in use:
 
-- Change PORT in .env if 5000 is occupied
-- Update CORS_ORIGIN if using different frontend port
+- Change PORT in .env and restart backend
+
+## Related Docs
+
+- ../README.md
+- ../setup.md
+- ../OPERATIONS_RUNBOOK.md
+- MONGODB_SETUP.md

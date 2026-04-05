@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   mongo:
     image: mongo:6
@@ -23,7 +22,7 @@ services:
       - mongo
       - redis
     env_file:
-      - ./satyam-holidays-backend/.env
+      - ${BACKEND_ENV_FILE:-./satyam-holidays-backend/env.example}
     environment:
       NODE_ENV: production
       PORT: "5000"

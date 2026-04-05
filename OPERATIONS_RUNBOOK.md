@@ -1,132 +1,141 @@
 # Operations Runbook
 
-This runbook turns production checklist items into concrete, repeatable steps.
+This runbook provides repeatable operations steps for Preview and Production releases.
+Use it alongside PRODUCTION_CHECKLIST.md for release sign-off.
 
-## 0. Deployment model (Vercel + GitHub)
+## 1. Deployment Model
 
-- This repo is deployed as two Vercel projects:
-  - frontend project root: `satyam-holidays-react`
-  - backend project root: `satyam-holidays-backend`
-- GitHub PRs create Preview deployments and pushes to `main` create Production deployments.
-- Keep branch protection enabled so CI checks from `.github/workflows/ci.yml` must pass before merge.
-- Manage runtime env vars in Vercel project settings (Production/Preview/Development scopes).
-- Use local env sync when needed:
+- The repository is deployed as two Vercel projects:
+  - frontend root: satyam-holidays-react
+  - backend root: satyam-holidays-backend
+- Pull requests create Preview deployments.
+- Pushes to main create Production deployments.
+- Branch protection should require CI pass from .github/workflows/ci.yml.
 
-```bash
-# from each project directory
-vercel env pull .env.local
-```
+## 2. Release Preparation
 
-## 1. Rotate credentials
+### 2.1 Rotate and validate secrets
 
-Generate strong application secrets:
+Generate strong app secrets:
 
 ```bash
-cd satyam-holidays-backend
-npm run security:generate-secrets
-# Optional: write directly into a target env file
-npm run security:generate-secrets -- --env-file=.env.production
+npm --prefix satyam-holidays-backend run security:generate-secrets
 ```
 
-Rotate external keys in provider dashboards:
+Optional: write generated values to a target file:
 
-- Cloudinary API key/secret
+```bash
+npm --prefix satyam-holidays-backend run security:generate-secrets -- --env-file=.env.production
+```
+
+Rotate provider keys if required by policy:
+
+- Cloudinary API key and secret
 - reCAPTCHA or hCaptcha keys
 - SMTP credentials
-- Sentry DSN project key (if rotated policy requires it)
+- Sentry DSN credentials
 
-## 2. Infrastructure setup
+### 2.2 Validate environment configuration
 
-### Database (MongoDB Atlas + IP whitelist)
+Backend production variables should include:
 
-- Use Atlas connection string format: mongodb+srv://...
-- Add outbound IPs of your app hosts in Atlas Network Access list.
-- Keep ALLOW_NON_ATLAS_DB=false in production.
+- NODE_ENV=production
+- MONGODB_URI
+- JWT_SECRET
+- CORS_ORIGIN and or FRONTEND_ORIGIN
+- CAPTCHA_ENFORCE=true
 
-### Redis cache
+Frontend production variables should include:
 
-- For Vercel deployments, use a managed Redis provider (for example Upstash/Redis Cloud) and set `REDIS_URL`.
-- Set `REDIS_REQUIRED=true` in production if your alert policy treats Redis as mandatory.
+- REACT_APP_API_BASE
+- REACT_APP_CAPTCHA_PROVIDER
+- CAPTCHA site key for selected provider
 
-### CDN + TLS
+## 3. Infrastructure Baseline
 
-- Vercel provides global edge caching and TLS termination by default.
-- Keep immutable caching for static assets via frontend `vercel.json` headers.
-- If you use Cloudflare in front of Vercel, bypass API routes from full-page caching.
+### 3.1 Database
 
-### Load balancer
+- Use Atlas-style MongoDB URI: mongodb+srv://...
+- Maintain Atlas network allowlist for runtime egress IPs
+- Keep ALLOW_NON_ATLAS_DB=false in production unless intentionally overridden
 
-- Vercel serverless/edge infrastructure handles request distribution automatically.
-- `infra/nginx/load-balancer.conf` is only for non-Vercel self-hosted deployments.
+### 3.2 Redis
 
-### Monitoring and alerts
+- Use managed Redis for hosted production deployments
+- Set REDIS_URL
+- Set REDIS_REQUIRED=true if Redis outage must alert as critical
 
-- Primary production monitoring on Vercel should include:
-  - Vercel project analytics/logs
-  - Sentry error tracking
-  - external uptime checks (for frontend and `/api/v1/health`)
+### 3.3 CDN and TLS
 
-### Optional self-hosted monitoring stack
+- Vercel provides TLS termination and edge delivery
+- Keep immutable caching headers in frontend vercel.json
+- If using Cloudflare in front of Vercel, avoid caching API responses unintentionally
+
+### 3.4 Monitoring
+
+Primary monitoring stack:
+
+- Vercel logs and analytics
+- Sentry error tracking
+- external uptime checks for frontend and backend health endpoint
+
+Optional local self-hosted monitoring stack:
 
 ```bash
-# Start app + monitoring stack together
-cd ..
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 ```
 
-Services:
+Endpoints:
 
 - Prometheus: http://localhost:9090
 - Alertmanager: http://localhost:9093
 - Uptime Kuma: http://localhost:3002
 
-## 3. Post-deploy verification
+## 4. Post-Deploy Verification
 
-Set these environment variables before running verification:
+Set these variables before verification:
 
-- API_BASE_URL (use your Vercel backend production or preview URL)
+- API_BASE_URL
 - ADMIN_EMAIL
 - ADMIN_PASSWORD
 - VERIFY_EMAIL_TO
 - SENTRY_DSN
 - Cloudinary credentials
 
-Run:
+Run verification:
 
 ```bash
-cd satyam-holidays-backend
-npm run ops:verify-production
+npm --prefix satyam-holidays-backend run ops:verify-production
 ```
 
-The verification script checks:
+Verification includes:
 
-- health endpoint
-- admin login and token verification
-- HTTP to HTTPS redirect
-- Sentry test event emission
-- Cloudinary API ping
-- email transport verification + test mail
+- health endpoint check
+- admin login and token flow
+- HTTP to HTTPS redirect check
+- Sentry test event
+- Cloudinary connectivity
+- SMTP verification and test email
 
-Tip for Preview validation:
+Preview best practice:
 
-- On pull requests, run the verifier against the Preview backend URL before promoting changes to `main`.
+- Run verification against Preview backend URL before merging high-risk changes
 
-## 4. Performance gate
+## 5. Performance Gate
+
+Run deterministic Lighthouse gate:
 
 ```bash
-cd ../satyam-holidays-react
-npm run perf:lighthouse
+npm --prefix satyam-holidays-react run perf:lighthouse
 ```
 
-This command now runs a deterministic local Lighthouse gate via `scripts/lighthouse-gate.js` and fails with explicit metric deltas when thresholds are not met.
-
-If you need the previous LHCI workflow for comparison:
+Legacy LHCI comparison run:
 
 ```bash
-npm run perf:lighthouse:lhci
+npm --prefix satyam-holidays-react run perf:lighthouse:lhci
 ```
 
-Thresholds are enforced in `scripts/lighthouse-gate.js`:
+Current gate thresholds:
 
 - FCP < 2s
 - TTI < 4s
@@ -134,50 +143,52 @@ Thresholds are enforced in `scripts/lighthouse-gate.js`:
 - CLS < 0.1
 - LCP < 2.5s
 
-## 5. Backup, restore, rollback
+## 6. Backup and Recovery
 
 Create backup:
 
 ```bash
-cd ../satyam-holidays-backend
-npm run backup
+npm --prefix satyam-holidays-backend run backup
 ```
 
-Restore a backup:
+Restore backup:
 
 ```bash
-npm run restore -- ./backups/<backup-file>.tar.gz
+npm --prefix satyam-holidays-backend run restore -- ./backups/<backup-file>.tar.gz
 ```
 
-Rollback to latest backup:
+Rollback using latest backup:
 
 ```bash
-npm run rollback
+npm --prefix satyam-holidays-backend run rollback
 ```
 
-Recommended backup schedule (server cron):
+Example daily cron schedule:
 
 ```cron
 0 2 * * * /path/to/satyam-holidays-backend/scripts/backup.sh >> /var/log/satyam-backup.log 2>&1
 ```
 
-## 6. Alert coverage
+## 7. Alert Coverage
 
-Configured alert rules in monitoring/alerts.yml include:
+Alert rules in monitoring/alerts.yml should cover:
 
-- uptime monitoring
-- elevated backend error rate
-- CPU, memory, and disk usage
-- MongoDB connectivity and pool saturation
-- Redis disconnect when REDIS_REQUIRED=true
+- uptime checks
+- backend error-rate spikes
+- CPU, memory, and disk pressure
+- MongoDB connectivity and pool health
+- Redis disconnect events when REDIS_REQUIRED=true
 
-Adjust thresholds based on production baseline after one week of traffic.
+Recalibrate thresholds after one week of production traffic.
 
-## 7. CI/CD alignment for Vercel
+## 8. CI and Release Flow
 
-- CI in `.github/workflows/ci.yml` runs lint, backend tests, frontend build, and validates both `vercel.json` files.
-- Vercel remains the deploy orchestrator; GitHub Actions acts as the merge quality gate.
-- Recommended release flow:
-  1.  Open PR -> review CI + Vercel Preview.
-  2.  Run `ops:verify-production` against Preview URL for high-risk changes.
-  3.  Merge to `main` -> Vercel Production deploy.
+- CI validates lint, backend tests, frontend build, and both vercel.json files
+- Vercel remains the deploy orchestrator
+- GitHub Actions remains the merge quality gate
+
+Recommended flow:
+
+1. Open PR and review CI plus Vercel Preview.
+2. Run ops:verify-production against Preview for high-risk changes.
+3. Merge to main for Production deployment.

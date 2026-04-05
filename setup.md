@@ -1,131 +1,106 @@
-# Quick Setup Guide - Satyam Holidays
+# Satyam Holidays Setup Guide
 
-## 🚀 Quick Start
+This document is the practical local setup companion to README.md.
+Use this when you want to run the project quickly on a development machine.
 
-### 1. Frontend Setup (React.js)
+## Prerequisites
+
+- Node.js 18 or later
+- npm 9 or later
+- MongoDB (local or Atlas)
+- Optional: Docker Desktop for compose-based local stack
+
+## Recommended Local Setup
+
+### 1. Install Dependencies
+
+From repository root:
 
 ```bash
-# Navigate to frontend directory
-cd satyam-holidays-react
-
-# Install dependencies
-npm install
-
-# Start development server
-npm start
+npm ci
+npm --prefix satyam-holidays-backend ci
+npm --prefix satyam-holidays-react ci
 ```
 
-The frontend will run on: http://localhost:3000
+### 2. Create Backend Environment File
 
-### 2. Backend Setup (Node.js)
+Use the backend example file as a baseline.
 
 ```bash
-# Navigate to backend directory
-cd satyam-holidays-backend
+# Linux/macOS
+cp satyam-holidays-backend/env.example satyam-holidays-backend/.env
 
-# Install dependencies
-npm install
+# Windows PowerShell
+Copy-Item satyam-holidays-backend/env.example satyam-holidays-backend/.env
+```
 
-# Copy environment file
-cp env.example .env
+Minimum values to verify in .env:
 
-# Edit .env file with your settings
-# (Update email and database settings)
+- MONGODB_URI
+- JWT_SECRET
+- CORS_ORIGIN
+- EMAIL_USER and EMAIL_PASS (or SMTP_HOST, SMTP_USER, SMTP_PASS)
 
-# Start development server
+For Atlas-specific setup, see satyam-holidays-backend/MONGODB_SETUP.md.
+
+### 3. Start the Application
+
+From repository root:
+
+```bash
 npm run dev
 ```
 
-The backend will run on: http://localhost:5000
+Default URLs with root dev command:
 
-### 3. Database Setup
+- Frontend: http://localhost:3001
+- Backend API: http://localhost:5000
+- Health endpoint: http://localhost:5000/api/v1/health
 
-#### Option A: MongoDB Local
-1. Install MongoDB Community Edition
-2. Start MongoDB service
-3. Database will be created automatically
+## Alternative: Start Apps Separately
 
-#### Option B: MongoDB Atlas (Cloud)
-1. Create free account at MongoDB Atlas
-2. Create cluster
-3. Get connection string
-4. Update `MONGODB_URI` in `.env`
+Backend:
 
-### 4. Email Setup
-
-1. Enable 2-factor authentication on Gmail
-2. Generate App Password
-3. Update `.env` file:
-   ```env
-   EMAIL_USER=satyamholidays19@gmail.com
-   EMAIL_PASS=your-app-password
-   ```
-
-## 📁 Project Structure
-
-```
-satyam-holidays/
-├── satyam-holidays-react/     # Frontend (React)
-├── satyam-holidays-backend/   # Backend (Node.js)
-└── README.md                  # Full documentation
-```
-
-## 🎯 Features Ready to Use
-
-✅ **Frontend**
-- Modern animated UI
-- Responsive design
-- Package showcase
-- Enquiry form
-- Contact information
-
-✅ **Backend**
-- RESTful API
-- Email notifications
-- Excel export
-- Database management
-- Security features
-
-## 🔧 Configuration
-
-### Frontend Customization
-- Update colors in `tailwind.config.js`
-- Modify content in components
-- Update contact details
-
-### Backend Configuration
-- Database connection in `.env`
-- Email settings in `.env`
-- API endpoints in `server.js`
-
-## 📧 Testing Email
-
-1. Fill out the enquiry form on the website
-2. Check your email (satyamholidays19@gmail.com)
-3. Customer will receive confirmation email
-4. Excel export available at `/api/enquiries/export/excel`
-
-## 🚀 Deployment
-
-### Frontend (Vercel/Netlify)
 ```bash
-cd satyam-holidays-react
-npm run build
-# Deploy build folder
+npm --prefix satyam-holidays-backend run dev
 ```
 
-### Backend (Heroku/Railway)
+Frontend:
+
 ```bash
-cd satyam-holidays-backend
-# Set environment variables
-# Deploy to platform
+npm --prefix satyam-holidays-react run start
 ```
 
-## 📞 Support
+If the frontend is started directly with npm start, it runs on port 3000.
 
-- **Email**: satyamholidays19@gmail.com
-- **Phone**: +91 98765 43210
+## Optional Docker Setup
 
----
+App stack:
 
-**Your Satyam Holidays website is ready! 🎉**
+```bash
+docker compose -f docker-compose.yml up -d
+```
+
+App plus monitoring stack:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+```
+
+## Verification Checklist
+
+- Frontend loads without console errors
+- GET /api/v1/health returns healthy response
+- Enquiry form creates a backend record
+- Backend test suite passes:
+
+```bash
+npm --prefix satyam-holidays-backend test -- --runInBand
+```
+
+## Related Docs
+
+- README.md
+- OPERATIONS_RUNBOOK.md
+- PRODUCTION_CHECKLIST.md
+- satyam-holidays-backend/QUICK_START.md

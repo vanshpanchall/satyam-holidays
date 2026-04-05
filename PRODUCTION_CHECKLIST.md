@@ -1,17 +1,30 @@
 # Production Deployment Checklist
 
-## Pre-Deployment Security
+Use this checklist to confirm production readiness and release sign-off.
+For step-by-step execution details, use OPERATIONS_RUNBOOK.md.
 
-- [x] **Rotate all credentials** - Use `npm --prefix satyam-holidays-backend run security:generate-secrets` for app secrets, then rotate provider keys
-- [x] **Remove .env from git** - Ensure `.env*` (except examples) are in `.gitignore`
-- [x] **Enable HTTPS** - App-level HTTP→HTTPS redirect middleware added (still configure SSL cert at host)
-- [x] **Set secure cookies** - `secure: true` in production cookie options
-- [x] **Configure CORS** - Production CORS allowlist reads only configured production origins
-- [x] **Enable CAPTCHA** - Production blocks enquiries unless CAPTCHA is enforced/configured
+## 1. Release Controls
 
-## Environment Configuration
+- [ ] Pull request is approved and CI is green in .github/workflows/ci.yml
+- [ ] Vercel Preview deployment is validated for release scope
+- [ ] Release owner and rollback owner are assigned
 
-### Backend (Vercel project environment variables)
+## 2. Security and Secret Hygiene
+
+- [ ] Generate and rotate app secrets:
+
+```bash
+npm --prefix satyam-holidays-backend run security:generate-secrets
+```
+
+- [ ] Rotate provider credentials if required by policy (Cloudinary, CAPTCHA provider, SMTP provider, Sentry)
+- [ ] Confirm secret files are excluded from git (`.env*` except examples)
+- [ ] Confirm CAPTCHA is enforced for production (`CAPTCHA_ENFORCE=true`)
+- [ ] Confirm CORS allowlist includes only intended production origins
+
+## 3. Environment Configuration
+
+### 3.1 Backend Variables
 
 ```bash
 NODE_ENV=production
@@ -22,7 +35,7 @@ FRONTEND_ORIGIN=https://yourdomain.com
 CAPTCHA_ENFORCE=true
 ```
 
-### Frontend (Vercel project environment variables)
+### 3.2 Frontend Variables
 
 ```bash
 REACT_APP_API_BASE=https://api.yourdomain.com
@@ -30,67 +43,79 @@ REACT_APP_CAPTCHA_PROVIDER=recaptcha_v2
 REACT_APP_RECAPTCHA_SITE_KEY=<your-key>
 ```
 
-## Infrastructure
+### 3.3 Configuration Validation
 
-- [x] **Database** - Atlas-style URI enforced in production config validation (`mongodb+srv://`)
-- [x] **Redis** - Managed Redis URL support is wired via `REDIS_URL` (self-hosted compose remains optional)
-- [x] **CDN** - Vercel edge CDN + cache headers configured in frontend `vercel.json`
-- [x] **Load Balancer** - Vercel managed request distribution in production (`infra/nginx/load-balancer.conf` is self-hosted fallback)
-- [x] **Monitoring** - Sentry DSN enforced by production config validation
+- [ ] Backend starts with no critical production configuration errors
+- [ ] Frontend build reads the correct API base URL
 
-## Build & Deploy
+## 4. Infrastructure Readiness
 
-### Backend
+- [ ] MongoDB Atlas URI uses `mongodb+srv://` and allowlist is correct
+- [ ] REDIS_URL is configured and REDIS_REQUIRED policy is set correctly
+- [ ] Frontend cache headers are active in vercel.json
+- [ ] Monitoring path is confirmed for hosted runtime (Vercel + Sentry + uptime checks)
+- [ ] monitoring/alerts.yml coverage is confirmed for self-hosted stack
+
+## 5. Deployment
+
+- [ ] Merge to main only after CI and Preview checks pass
+- [ ] Backend deployment status is successful in Vercel
+- [ ] Frontend deployment status is successful in Vercel
+- [ ] Release notes include deployment IDs and timestamp
+
+## 6. Post-Deploy Verification
+
+- [ ] Run post-deploy verification:
 
 ```bash
-# Vercel auto-builds/deploys backend on push to main
-# Project root: satyam-holidays-backend
+npm --prefix satyam-holidays-backend run ops:verify-production
 ```
 
-### Frontend
+- [ ] Health endpoint check passes at GET /api/v1/health
+- [ ] Admin login and token verification pass
+- [ ] HTTP to HTTPS redirect check passes
+- [ ] CAPTCHA is enforced in enquiry flow
+- [ ] SMTP verification and test email pass
+- [ ] Cloudinary connectivity check passes
+- [ ] Rate limiting behavior is confirmed under burst traffic
+
+## 7. Security Header Validation
+
+- [ ] X-Content-Type-Options: nosniff
+- [ ] X-Frame-Options: DENY
+- [ ] X-XSS-Protection: 1; mode=block
+- [ ] Strict-Transport-Security: max-age=31536000
+- [ ] Content-Security-Policy is present and appropriate
+
+## 8. Performance Validation
+
+- [ ] Run Lighthouse gate:
 
 ```bash
-# Vercel auto-builds/deploys frontend on push to main
-# Project root: satyam-holidays-react
+npm --prefix satyam-holidays-react run perf:lighthouse
 ```
 
-## Post-Deployment Verification
+- [ ] FCP < 2s
+- [ ] TTI < 4s
+- [ ] TBT < 300ms
+- [ ] CLS < 0.1
+- [ ] LCP < 2.5s
 
-- [x] Health check endpoint exists: `GET /api/v1/health`
-- [x] Admin login works with new credentials (validated by `npm --prefix satyam-holidays-backend run ops:verify-production`)
-- [x] CAPTCHA is enforced on enquiry form (when `CAPTCHA_ENFORCE=true`)
-- [x] HTTPS redirect is working (validated by `ops:verify-production`)
-- [x] Rate limiting is active (test with rapid requests)
-- [x] Error tracking is receiving events (Sentry test event sent by `ops:verify-production`)
-- [x] Images load correctly from Cloudinary (Cloudinary API ping in `ops:verify-production`)
-- [x] Email notifications are being sent (SMTP verify + test email in `ops:verify-production`)
+## 9. Backup and Rollback Readiness
 
-## Security Headers (verify with securityheaders.com)
+- [ ] Backup run completed successfully
+- [ ] Restore procedure verified in a non-production environment
+- [ ] Rollback script is available with a recent backup artifact
 
-- [x] X-Content-Type-Options: nosniff
-- [x] X-Frame-Options: DENY
-- [x] X-XSS-Protection: 1; mode=block
-- [x] Strict-Transport-Security: max-age=31536000
-- [x] Content-Security-Policy: configured appropriately
+## 10. Monitoring and Alerting
 
-## Performance (verify with Lighthouse)
+- [ ] Sentry receives post-deploy events
+- [ ] Uptime checks are active for frontend and backend health endpoints
+- [ ] Error-rate and resource-usage alerts are active
+- [ ] On-call notification channel is tested
 
-- [x] Lighthouse performance gate is automated (`npm --prefix satyam-holidays-react run perf:lighthouse`)
-- [x] First Contentful Paint < 2s (latest local run: 776ms)
-- [x] Time to Interactive < 4s (latest local run: 1979ms)
-- [x] Total Blocking Time < 300ms (latest local run: 204ms)
-- [x] Cumulative Layout Shift < 0.1 (latest local run: 0.000)
-- [x] Largest Contentful Paint < 2.5s (latest local run: 1972ms)
+## 11. Final Sign-Off
 
-## Backup & Recovery
-
-- [x] MongoDB automated backups enabled (`satyam-holidays-backend/scripts/backup.sh`)
-- [x] Backup restoration tested workflow available (`satyam-holidays-backend/scripts/restore.sh`)
-- [x] Rollback procedure documented (`OPERATIONS_RUNBOOK.md` + `scripts/rollback.sh`)
-
-## Monitoring & Alerts
-
-- [x] Uptime monitoring configured (external monitor + Vercel endpoint checks)
-- [x] Error rate alerts set up (`monitoring/alerts.yml`)
-- [x] Resource usage alerts configured (`monitoring/alerts.yml` for self-hosted, Vercel observability for hosted runtime)
-- [x] Database connection pool alerts configured (`monitoring/alerts.yml` + backend metrics)
+- [ ] Engineering release owner approval
+- [ ] Operations and on-call acknowledgement
+- [ ] Product or stakeholder release approval
