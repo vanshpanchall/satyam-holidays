@@ -27,8 +27,16 @@ const TINY_JPEG = Buffer.from(
 
 describe("POST /api/packages/upload-image", () => {
   let token;
+  let csrfToken;
+  let csrfCookie;
+
+  const withCsrf = (req) => req.set("Cookie", csrfCookie).set("x-csrf-token", csrfToken);
 
   beforeAll(async () => {
+    const csrfRes = await request(app).get("/api/csrf-token").send();
+    csrfToken = csrfRes.body?.csrfToken;
+    csrfCookie = `csrf_token=${csrfToken}`;
+
     const loginRes = await request(app).post("/api/auth/login").send({
       email: process.env.ADMIN_EMAIL,
       password: process.env.ADMIN_PASSWORD,
@@ -36,26 +44,35 @@ describe("POST /api/packages/upload-image", () => {
     token = loginRes.body.token;
   });
 
-  test("returns 401 without auth", async () => {
+  test("returns 403 without CSRF", async () => {
     const res = await request(app)
       .post("/api/packages/upload-image")
       .attach("image", TINY_JPEG, "photo.jpg");
+    expect(res.statusCode).toBe(403);
+  });
+
+  test("returns 401 with CSRF but without auth", async () => {
+    const res = await withCsrf(request(app).post("/api/packages/upload-image")).attach(
+      "image",
+      TINY_JPEG,
+      "photo.jpg"
+    );
     expect(res.statusCode).toBe(401);
   });
 
   test("returns 400 without file when authenticated", async () => {
     if (!token) return;
-    const res = await request(app)
-      .post("/api/packages/upload-image")
-      .set("Authorization", `Bearer ${token}`);
+    const res = await withCsrf(request(app).post("/api/packages/upload-image")).set(
+      "Authorization",
+      `Bearer ${token}`
+    );
     expect(res.statusCode).toBe(400);
     expect(res.body.success).toBe(false);
   });
 
   test("returns 400 for non-image file when authenticated", async () => {
     if (!token) return;
-    const res = await request(app)
-      .post("/api/packages/upload-image")
+    const res = await withCsrf(request(app).post("/api/packages/upload-image"))
       .set("Authorization", `Bearer ${token}`)
       .attach("image", Buffer.from("hello"), "notes.txt");
     expect(res.statusCode).toBe(400);
@@ -64,8 +81,7 @@ describe("POST /api/packages/upload-image", () => {
 
   test("returns 200 and imageUrl for valid image when authenticated", async () => {
     if (!token) return;
-    const res = await request(app)
-      .post("/api/packages/upload-image")
+    const res = await withCsrf(request(app).post("/api/packages/upload-image"))
       .set("Authorization", `Bearer ${token}`)
       .attach("image", TINY_JPEG, "photo.jpg");
     expect(res.statusCode).toBe(200);

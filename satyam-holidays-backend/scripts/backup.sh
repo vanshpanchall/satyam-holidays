@@ -10,6 +10,16 @@ if [ -f ".env" ]; then
   export $(grep -v '^#' .env | xargs)
 fi
 
+if ! command -v mongodump >/dev/null 2>&1; then
+  echo "mongodump not found. Install MongoDB Database Tools first."
+  exit 1
+fi
+
+if [ -z "$MONGODB_URI" ]; then
+  echo "MONGODB_URI is not set. Aborting backup."
+  exit 1
+fi
+
 BACKUP_DIR="./backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_PATH="${BACKUP_DIR}/satyam_holidays_${TIMESTAMP}"

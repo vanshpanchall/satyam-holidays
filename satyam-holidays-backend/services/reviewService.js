@@ -37,13 +37,30 @@ class ReviewService {
         .sort(sort)
         .skip(skip)
         .limit(limit)
-        .select("-ipAddress -userAgent");
+        .select("-ipAddress -userAgent")
+        .lean(); // Use lean() for read-only operations
 
       const total = await Review.countDocuments({ packageId });
       const totalPages = Math.ceil(total / limit);
 
+      // Transform reviews for response
+      const transformedReviews = reviews.map((review) => ({
+        id: review._id,
+        name: review.name,
+        rating: review.rating,
+        comment: review.comment,
+        verified: review.verified,
+        helpful: review.helpful,
+        createdAt: review.createdAt,
+        formattedDate: new Date(review.createdAt).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }),
+      }));
+
       const result = {
-        reviews: reviews.map((review) => review.getSummary()),
+        reviews: transformedReviews,
         pagination: {
           currentPage: page,
           totalPages,
@@ -67,34 +84,44 @@ class ReviewService {
       const cached = await cache.get(cacheKey);
       if (cached) return cached;
 
-      const reviews = await Review.find({ packageId });
+      // Use aggregation for better performance instead of fetching all reviews
+      const result = await Review.aggregate([
+        { $match: { packageId: new (require("mongoose").Types.ObjectId)(packageId) } },
+        {
+          $group: {
+            _id: null,
+            totalReviews: { $sum: 1 },
+            avgRating: { $avg: "$rating" },
+            verifiedCount: { $sum: { $cond: ["$verified", 1, 0] } },
+            rating1: { $sum: { $cond: [{ $eq: ["$rating", 1] }, 1, 0] } },
+            rating2: { $sum: { $cond: [{ $eq: ["$rating", 2] }, 1, 0] } },
+            rating3: { $sum: { $cond: [{ $eq: ["$rating", 3] }, 1, 0] } },
+            rating4: { $sum: { $cond: [{ $eq: ["$rating", 4] }, 1, 0] } },
+            rating5: { $sum: { $cond: [{ $eq: ["$rating", 5] }, 1, 0] } },
+          },
+        },
+      ]);
 
-      if (reviews.length === 0) {
-        const summary = {
-          totalReviews: 0,
-          averageRating: 0,
-          ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-          verifiedReviews: 0,
-        };
-        await cache.set(cacheKey, summary, 600); // Cache for 10 minutes
-        return summary;
-      }
-
-      const totalReviews = reviews.length;
-      const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews;
-      const verifiedReviews = reviews.filter((review) => review.verified).length;
-
-      const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-      reviews.forEach((review) => {
-        ratingDistribution[review.rating]++;
-      });
-
-      const summary = {
-        totalReviews,
-        averageRating: Math.round(averageRating * 10) / 10,
-        ratingDistribution,
-        verifiedReviews,
-      };
+      const data = result[0];
+      const summary = data
+        ? {
+            totalReviews: data.totalReviews,
+            averageRating: Math.round(data.avgRating * 10) / 10,
+            ratingDistribution: {
+              1: data.rating1,
+              2: data.rating2,
+              3: data.rating3,
+              4: data.rating4,
+              5: data.rating5,
+            },
+            verifiedReviews: data.verifiedCount,
+          }
+        : {
+            totalReviews: 0,
+            averageRating: 0,
+            ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+            verifiedReviews: 0,
+          };
 
       await cache.set(cacheKey, summary, 600); // Cache for 10 minutes
       return summary;

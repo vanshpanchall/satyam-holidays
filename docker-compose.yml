@@ -8,10 +8,20 @@ services:
     ports:
       - "27017:27017"
 
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+
   backend:
     build: ./satyam-holidays-backend
     depends_on:
       - mongo
+      - redis
     env_file:
       - ./satyam-holidays-backend/.env
     environment:
@@ -37,6 +47,11 @@ services:
       EMAIL_LOCALE: "${EMAIL_LOCALE:-en}"
       # CORS
       CORS_ORIGIN: "${CORS_ORIGIN:-http://localhost:3000,http://localhost:5173,http://localhost:8080}"
+      # Redis
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379}"
+      REDIS_REQUIRED: "${REDIS_REQUIRED:-false}"
+      # Production verification helpers
+      API_BASE_URL: "${API_BASE_URL:-http://localhost:5000}"
     ports:
       - "5000:5000"
     restart: unless-stopped
@@ -60,3 +75,4 @@ services:
 
 volumes:
   mongo-data:
+  redis-data:

@@ -13,7 +13,7 @@ import { toWhatsAppLink } from "../config/siteConfig";
 import { useSiteConfig } from "../contexts/SettingsContext";
 import useReveal from "../utils/useReveal";
 
-const Contact = () => {
+const Contact = ({ sectionId = "contact" }) => {
   const siteConfig = useSiteConfig();
   const headerReveal = useReveal(0.2);
   const infoReveal = useReveal(0.1);
@@ -49,7 +49,7 @@ const Contact = () => {
 
   return (
     <section
-      id="contact"
+      id={sectionId || undefined}
       className="section-padding relative overflow-hidden text-white scroll-mt-24 md:scroll-mt-28"
     >
       {/* Dark glass background */}

@@ -1,3 +1,5 @@
+import Cookies from "js-cookie";
+
 // Central site configuration for easy customization
 // Update values here and the UI will reflect across the site.
 
@@ -52,25 +54,59 @@ export const toWhatsAppLink = (phone) => {
 
 export default siteConfig;
 
+// API version prefix
+const API_VERSION = "/api/v1";
+
 // Small helper to build API URLs consistently
 export const apiUrl = (path = "") => {
   const base = siteConfig.api.baseUrl.replace(/\/$/, "");
-  const p = String(path || "").startsWith("/") ? path : `/${path || ""}`;
+  let p = String(path || "").startsWith("/") ? path : `/${path || ""}`;
+
+  // Add version prefix if not already present and path starts with /api
+  if (p.startsWith("/api/") && !p.startsWith("/api/v1/")) {
+    p = p.replace("/api/", `${API_VERSION}/`);
+  }
+
   return `${base}${p}`;
 };
 
-export const fetchWithAuth = async (url, options = {}) => {
-  const token = localStorage.getItem("adminToken");
-  const headers = {
-    ...options.headers,
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+// Get CSRF token from cookie
+const getCsrfToken = () => Cookies.get("csrf_token");
 
-  const response = await fetch(url, { ...options, headers });
+// Add CSRF token to headers for state-changing requests
+const withCsrfHeaders = (headers = {}, method = "GET") => {
+  const stateChangingMethods = ["POST", "PUT", "PATCH", "DELETE"];
+  if (stateChangingMethods.includes(method.toUpperCase())) {
+    const token = getCsrfToken();
+    if (token) {
+      return { ...headers, "x-csrf-token": token };
+    }
+  }
+  return headers;
+};
+
+export const fetchWithAuth = async (url, options = {}) => {
+  const method = options.method || "GET";
+  const headers = withCsrfHeaders(options.headers || {}, method);
+
+  // Include credentials for HTTPOnly cookie authentication
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: "include", // Important: sends cookies with requests
+  });
 
   if (response.status === 401) {
+    // Clear any legacy localStorage token
     localStorage.removeItem("adminToken");
-    // Return a fake response so components handle it gracefully instead of crashing
+    // Redirect to login if on admin page
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/admin") &&
+      !window.location.pathname.includes("/login")
+    ) {
+      window.location.href = "/admin/login";
+    }
     return new Response(JSON.stringify({ success: false, message: "Session expired" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 const pageVariants = {
@@ -37,10 +37,15 @@ const reducedTransition = {
 
 const PageTransition = ({ children }) => {
   const prefersReduced = useReducedMotion();
+  const hasMounted = useRef(false);
+
+  useEffect(() => {
+    hasMounted.current = true;
+  }, []);
 
   return (
     <motion.div
-      initial="initial"
+      initial={hasMounted.current ? "initial" : false}
       animate="in"
       exit="out"
       variants={prefersReduced ? reducedVariants : pageVariants}

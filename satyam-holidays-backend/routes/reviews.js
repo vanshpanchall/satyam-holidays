@@ -4,6 +4,7 @@ const reviewService = require("../services/reviewService");
 const auth = require("../middleware/auth");
 const { body, param, query, validationResult } = require("express-validator");
 const logger = require("../utils/logger");
+const { parsePaginationParams, buildPaginationMeta } = require("../utils/pagination");
 
 // Validation middleware
 const validateReview = [
@@ -70,19 +71,15 @@ router.post("/", validateReview, handleValidationErrors, async (req, res) => {
 router.get("/package/:packageId", validatePagination, handleValidationErrors, async (req, res) => {
   try {
     const { packageId } = req.params;
-    const { page = 1, limit = 10, sortBy = "createdAt", sortOrder = "desc" } = req.query;
+    const { page, limit } = parsePaginationParams(req.query);
+    const { sortBy = "createdAt", sortOrder = "desc" } = req.query;
 
-    const result = await reviewService.getReviews(
-      packageId,
-      parseInt(page),
-      parseInt(limit),
-      sortBy,
-      sortOrder
-    );
+    const result = await reviewService.getReviews(packageId, page, limit, sortBy, sortOrder);
 
     res.json({
       success: true,
-      data: result,
+      data: result.reviews,
+      pagination: buildPaginationMeta(page, limit, result.pagination.totalReviews),
     });
   } catch (error) {
     logger.error("Error fetching reviews:", error);
@@ -191,18 +188,20 @@ router.delete(
 // Get all reviews (admin only)
 router.get("/", auth, validatePagination, handleValidationErrors, async (req, res) => {
   try {
-    const { page = 1, limit = 20, packageId, verified, rating } = req.query;
+    const { page, limit } = parsePaginationParams(req.query);
+    const { packageId, verified, rating } = req.query;
     const filter = {};
 
     if (packageId) filter.packageId = packageId;
     if (verified !== undefined) filter.verified = verified === "true";
     if (rating) filter.rating = parseInt(rating);
 
-    const result = await reviewService.getAllReviews(parseInt(page), parseInt(limit), filter);
+    const result = await reviewService.getAllReviews(page, limit, filter);
 
     res.json({
       success: true,
-      data: result,
+      data: result.reviews,
+      pagination: buildPaginationMeta(page, limit, result.pagination.totalReviews),
     });
   } catch (error) {
     logger.error("Error fetching all reviews:", error);

@@ -82,13 +82,13 @@ const ServiceCard = ({ service, index }) => {
   );
 };
 
-const Services = () => {
+const Services = ({ sectionId = "services" }) => {
   const header = useReveal(0.2);
   const cta = useReveal(0.2);
 
   return (
     <section
-      id="services"
+      id={sectionId || undefined}
       className="section-padding relative overflow-hidden scroll-mt-24 md:scroll-mt-28"
     >
       {/* Mesh gradient background */}

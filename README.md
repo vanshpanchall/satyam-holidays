@@ -23,6 +23,8 @@ Quick steps to run in development and deploy safely.
 - Build frontend: npm --prefix satyam-holidays-react run build
 - Serve frontend via your hosting and point API requests to your backend URL.
 - Backend env in prod must include FRONTEND_ORIGIN set to the deployed site origin for CORS.
+- Run post-deploy checks: npm --prefix satyam-holidays-backend run ops:verify-production
+- Full ops steps (monitoring, backup/restore, rollback, Lighthouse): see OPERATIONS_RUNBOOK.md
 
 ## Security
 
@@ -186,16 +188,28 @@ A modern, responsive tourism website built with React.js, Node.js, and MongoDB. 
 
 ## 🚀 Deployment
 
-### Frontend Deployment (Vercel/Netlify)
+### Vercel Deployment (Frontend + Backend)
 
-1. Build the project: `npm run build`
-2. Deploy `build` folder to your hosting platform
+This monorepo uses two Vercel projects:
 
-### Backend Deployment (Heroku/Railway)
+1. Frontend project root: `satyam-holidays-react`
+2. Backend project root: `satyam-holidays-backend`
 
-1. Set environment variables
-2. Deploy to your hosting platform
-3. Update frontend API endpoints
+Recommended setup:
+
+1. Connect both projects to this GitHub repository in Vercel.
+2. Set Production/Preview environment variables in each project.
+3. Keep GitHub branch protection enabled so CI in `.github/workflows/ci.yml` passes before merge.
+4. Use Vercel Preview deployments for pull requests.
+5. Merge to `main` for automatic Production deployment.
+
+Local preflight checks before merge:
+
+```bash
+npm run lint
+npm --prefix satyam-holidays-backend test -- --runInBand
+npm --prefix satyam-holidays-react run build
+```
 
 ## 📁 Project Structure
 

@@ -1,14 +1,16 @@
-import { useState, useRef } from "react";
-import ReCAPTCHA from "react-google-recaptcha";
-import HCaptcha from "@hcaptcha/react-hcaptcha";
+import { useState, useRef, lazy, Suspense } from "react";
 import { useToast } from "./ToastProvider";
 import { useForm } from "react-hook-form";
 import { FaPaperPlane, FaCheck, FaExclamationTriangle } from "react-icons/fa";
 import { apiUrl } from "../config/siteConfig";
+import { csrfFetch, refreshCsrfToken } from "../utils/csrf";
 import { useSiteConfig } from "../contexts/SettingsContext";
 import useReveal from "../utils/useReveal";
 
-const Enquiry = () => {
+const ReCAPTCHA = lazy(() => import("react-google-recaptcha"));
+const HCaptcha = lazy(() => import("@hcaptcha/react-hcaptcha"));
+
+const Enquiry = ({ sectionId = "enquiry" }) => {
   const siteConfig = useSiteConfig();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
@@ -65,7 +67,11 @@ const Enquiry = () => {
         }).filter(([, v]) => v !== undefined && v !== null && v !== "")
       );
 
-      const response = await fetch(apiUrl("/api/enquiries"), {
+      // Ensure CSRF cookie exists before sending state-changing request
+      const apiBase = apiUrl("").replace(/\/$/, "");
+      await refreshCsrfToken(apiBase);
+
+      const response = await csrfFetch(apiUrl("/api/enquiries"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -100,7 +106,7 @@ const Enquiry = () => {
 
   return (
     <section
-      id="enquiry"
+      id={sectionId || undefined}
       className="section-padding relative overflow-hidden scroll-mt-24 md:scroll-mt-28"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-primary-50/80 to-navy-50/80 dark:from-navy-900 dark:to-navy-800"></div>
@@ -408,35 +414,43 @@ const Enquiry = () => {
 
                   {/* CAPTCHA */}
                   {useCaptcha ? (
-                    PROVIDER === "hcaptcha" ? (
-                      <div>
-                        <HCaptcha
-                          sitekey={HCAPTCHA_SITE_KEY}
-                          onVerify={(val) => setCaptchaToken(val || "")}
-                          onExpire={() => setCaptchaToken("")}
-                        />
-                      </div>
-                    ) : PROVIDER === "recaptcha_v3" ? (
-                      <div>
-                        <ReCAPTCHA
-                          ref={recaptchaRef}
-                          sitekey={RECAPTCHA_SITE_KEY}
-                          size="invisible"
-                          onChange={(val) => setCaptchaToken(val || "")}
-                        />
-                        <p className="text-xs text-navy-500 dark:text-navy-400">
-                          Protected by reCAPTCHA v3
+                    <Suspense
+                      fallback={
+                        <p className="text-sm text-navy-600 dark:text-navy-300">
+                          Loading CAPTCHA...
                         </p>
-                      </div>
-                    ) : (
-                      <div>
-                        <ReCAPTCHA
-                          sitekey={RECAPTCHA_SITE_KEY}
-                          onChange={(val) => setCaptchaToken(val || "")}
-                          onExpired={() => setCaptchaToken("")}
-                        />
-                      </div>
-                    )
+                      }
+                    >
+                      {PROVIDER === "hcaptcha" ? (
+                        <div>
+                          <HCaptcha
+                            sitekey={HCAPTCHA_SITE_KEY}
+                            onVerify={(val) => setCaptchaToken(val || "")}
+                            onExpire={() => setCaptchaToken("")}
+                          />
+                        </div>
+                      ) : PROVIDER === "recaptcha_v3" ? (
+                        <div>
+                          <ReCAPTCHA
+                            ref={recaptchaRef}
+                            sitekey={RECAPTCHA_SITE_KEY}
+                            size="invisible"
+                            onChange={(val) => setCaptchaToken(val || "")}
+                          />
+                          <p className="text-xs text-navy-500 dark:text-navy-400">
+                            Protected by reCAPTCHA v3
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <ReCAPTCHA
+                            sitekey={RECAPTCHA_SITE_KEY}
+                            onChange={(val) => setCaptchaToken(val || "")}
+                            onExpired={() => setCaptchaToken("")}
+                          />
+                        </div>
+                      )}
+                    </Suspense>
                   ) : null}
 
                   {/* Submit Button */}

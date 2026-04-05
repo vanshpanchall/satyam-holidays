@@ -15,16 +15,28 @@ const adminToken = jwt.sign(
   { expiresIn: "1h" }
 );
 
+async function getCsrfContext() {
+  const csrfRes = await request(app).get("/api/csrf-token");
+  const csrfToken = csrfRes.body?.csrfToken || "";
+  const csrfCookie = `csrf_token=${csrfToken}`;
+  return { csrfToken, csrfCookie };
+}
+
 describe("Enquiries API", () => {
   test("POST /api/enquiries creates an enquiry", async () => {
-    const res = await request(app).post("/api/enquiries").send({
-      name: "Test User",
-      email: "test@example.com",
-      phone: "+1 555-555-5555",
-      destination: "custom",
-      travelers: "2",
-      budget: "20k-50k",
-    });
+    const { csrfToken, csrfCookie } = await getCsrfContext();
+    const res = await request(app)
+      .post("/api/enquiries")
+      .set("x-csrf-token", csrfToken)
+      .set("Cookie", csrfCookie)
+      .send({
+        name: "Test User",
+        email: "test@example.com",
+        phone: "+1 555-555-5555",
+        destination: "custom",
+        travelers: "2",
+        budget: "20k-50k",
+      });
     expect(res.statusCode).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toHaveProperty("id");
@@ -41,7 +53,12 @@ describe("Enquiries API", () => {
   });
 
   test("POST /api/enquiries invalid payload returns 400", async () => {
-    const res = await request(app).post("/api/enquiries").send({ email: "bad", phone: "x" });
+    const { csrfToken, csrfCookie } = await getCsrfContext();
+    const res = await request(app)
+      .post("/api/enquiries")
+      .set("x-csrf-token", csrfToken)
+      .set("Cookie", csrfCookie)
+      .send({ email: "bad", phone: "x" });
     expect(res.statusCode).toBe(400);
     expect(res.body.success).toBe(false);
   });

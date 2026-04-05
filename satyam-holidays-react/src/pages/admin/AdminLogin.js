@@ -21,11 +21,15 @@ const AdminLogin = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include", // Important: allows setting HTTPOnly cookies
       });
 
       const json = await res.json();
       if (res.ok && json.success) {
-        localStorage.setItem("adminToken", json.token);
+        // Token is now in HTTPOnly cookie, but we keep localStorage for backward compat
+        if (json.token) {
+          localStorage.setItem("adminToken", json.token);
+        }
         toast.success("Welcome back, Administrator!");
         navigate("/admin");
       } else {

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import PropTypes from "prop-types";
 import { FaTimes, FaMapMarkerAlt, FaClock, FaStar, FaRupeeSign, FaCheck } from "react-icons/fa";
 import ReviewsSection from "./ReviewsSection";
 import Meta from "./Meta";
@@ -12,27 +13,66 @@ const scrollToEnquiry = () => {
 
 const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState("overview");
+  const modalRef = useRef(null);
+  const previousActiveElement = useRef(null);
+  const closeButtonRef = useRef(null);
 
   // Close on Escape key
   const handleKeyDown = useCallback(
     (e) => {
       if (e.key === "Escape") onClose();
+
+      // Trap focus within modal
+      if (e.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
     },
     [onClose]
   );
 
   useEffect(() => {
     if (isOpen) {
+      // Save the previously focused element
+      previousActiveElement.current = document.activeElement;
+
       document.addEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "hidden";
+
+      // Focus the close button when modal opens
+      requestAnimationFrame(() => {
+        closeButtonRef.current?.focus();
+      });
+
       return () => {
         document.removeEventListener("keydown", handleKeyDown);
         document.body.style.overflow = "";
+
+        // Restore focus to the previously focused element
+        if (
+          previousActiveElement.current &&
+          typeof previousActiveElement.current.focus === "function"
+        ) {
+          previousActiveElement.current.focus();
+        }
       };
     }
   }, [isOpen, handleKeyDown]);
 
   if (!isOpen || !pkg) return null;
+
+  const modalTitleId = `modal-title-${pkg.id}`;
 
   const tabs = [
     { id: "overview", name: "Overview" },
@@ -64,6 +104,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
             {/* Modal */}
             <div className="flex min-h-screen items-center justify-center p-4">
               <motion.div
+                ref={modalRef}
                 className="relative w-full max-w-6xl rounded-2xl max-h-[90vh] overflow-hidden shadow-glass-lg"
                 style={{
                   background: "rgba(255,255,255,0.85)",
@@ -73,6 +114,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                 }}
                 role="dialog"
                 aria-modal="true"
+                aria-labelledby={modalTitleId}
                 initial={{ opacity: 0, y: 24, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 24, scale: 0.98 }}
@@ -87,6 +129,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                     loading="lazy"
                   />
                   <button
+                    ref={closeButtonRef}
                     onClick={onClose}
                     className="absolute top-4 right-4 glass-badge p-2 rounded-full text-gray-700 dark:text-navy-200 hover:text-gray-900 dark:hover:text-white transition-colors"
                     aria-label="Close package details"
@@ -105,7 +148,10 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                   <div className="mb-6">
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-2">
+                        <h1
+                          id={modalTitleId}
+                          className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-2"
+                        >
                           {pkg.name}
                         </h1>
                         <div className="flex items-center space-x-4 text-gray-600 dark:text-navy-300">
@@ -293,6 +339,27 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
       </AnimatePresence>
     </div>
   );
+};
+
+PackageDetailModal.propTypes = {
+  package: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    name: PropTypes.string.isRequired,
+    location: PropTypes.string.isRequired,
+    duration: PropTypes.string.isRequired,
+    price: PropTypes.string.isRequired,
+    rating: PropTypes.number,
+    reviews: PropTypes.number,
+    image: PropTypes.string,
+    description: PropTypes.string,
+    highlights: PropTypes.arrayOf(PropTypes.string),
+  }),
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+};
+
+PackageDetailModal.defaultProps = {
+  package: null,
 };
 
 export default PackageDetailModal;

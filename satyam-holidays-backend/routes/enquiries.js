@@ -41,15 +41,42 @@ const enquirySchema = Joi.object({
 // Create new enquiry
 router.post("/", async (req, res) => {
   try {
-    // Verify CAPTCHA (only when configured; skip in dev/test unless enforced)
+    // Verify CAPTCHA (must be enforced in production)
     const isProd = (process.env.NODE_ENV || "development") === "production";
     const provider = (process.env.CAPTCHA_PROVIDER || "recaptcha_v2").toLowerCase();
-    const enforce = process.env.CAPTCHA_ENFORCE === "true"; // allow testing in dev
+    const enforce = process.env.CAPTCHA_ENFORCE === "true";
+    const isSupportedProvider = provider.startsWith("hcaptcha") || provider.startsWith("recaptcha");
+
+    if (isProd && !enforce) {
+      logger.error("CAPTCHA_ENFORCE is false in production. Blocking enquiry submission.");
+      return res.status(503).json({
+        success: false,
+        message: "Server configuration error: CAPTCHA must be enforced in production",
+      });
+    }
+
+    if (enforce && !isSupportedProvider) {
+      logger.error("Unsupported CAPTCHA provider", { provider });
+      return res.status(503).json({
+        success: false,
+        message: "Server configuration error: unsupported CAPTCHA provider",
+      });
+    }
+
     const secret = provider.startsWith("hcaptcha")
       ? process.env.HCAPTCHA_SECRET
       : process.env.RECAPTCHA_SECRET;
+
+    if (enforce && !secret) {
+      logger.error("CAPTCHA is enforced but provider secret is missing", { provider });
+      return res.status(503).json({
+        success: false,
+        message: "Server configuration error: CAPTCHA secret is missing",
+      });
+    }
+
     const minScore = Number(process.env.RECAPTCHA_MIN_SCORE || 0.5);
-    const shouldVerifyCaptcha = !!secret && (isProd || enforce);
+    const shouldVerifyCaptcha = enforce;
 
     if (shouldVerifyCaptcha) {
       const token = req.body?.captchaToken || req.body?.recaptchaToken || req.body?.hcaptchaToken;
@@ -64,7 +91,14 @@ router.post("/", async (req, res) => {
         params.append("secret", secret);
         params.append("response", token);
         if (req.ip) params.append("remoteip", req.ip);
-        const _fetch = global.fetch || (await import("node-fetch")).default;
+        const _fetch = global.fetch;
+        if (typeof _fetch !== "function") {
+          logger.error("Global fetch unavailable for CAPTCHA verification");
+          return res.status(503).json({
+            success: false,
+            message: "Server configuration error: fetch API unavailable",
+          });
+        }
         const verifyUrl = provider.startsWith("hcaptcha")
           ? "https://hcaptcha.com/siteverify"
           : "https://www.google.com/recaptcha/api/siteverify";

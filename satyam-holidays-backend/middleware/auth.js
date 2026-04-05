@@ -3,7 +3,10 @@ const logger = require("../utils/logger");
 
 const auth = (req, res, next) => {
   try {
-    const token = req.header("Authorization")?.replace("Bearer ", "");
+    // Check HTTPOnly cookie first, then fall back to Authorization header
+    const cookieToken = req.cookies?.adminToken;
+    const headerToken = req.header("Authorization")?.replace("Bearer ", "");
+    const token = cookieToken || headerToken;
 
     if (!token) {
       return res.status(401).json({ success: false, message: "No token, authorization denied" });
@@ -18,6 +21,10 @@ const auth = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
+    // Clear invalid cookie if present
+    if (req.cookies?.adminToken) {
+      res.clearCookie("adminToken", { path: "/" });
+    }
     logger.warn("Auth token rejected", { ip: req.ip, path: req.path });
     res.status(401).json({ success: false, message: "Token is not valid" });
   }

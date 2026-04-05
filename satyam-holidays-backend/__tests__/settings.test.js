@@ -8,8 +8,16 @@ const app = require("../server");
 
 describe("Settings API", () => {
   let token;
+  let csrfToken;
+  let csrfCookie;
+
+  const withCsrf = (req) => req.set("Cookie", csrfCookie).set("x-csrf-token", csrfToken);
 
   beforeAll(async () => {
+    const csrfRes = await request(app).get("/api/csrf-token").send();
+    csrfToken = csrfRes.body?.csrfToken;
+    csrfCookie = `csrf_token=${csrfToken}`;
+
     const loginRes = await request(app).post("/api/auth/login").send({
       email: process.env.ADMIN_EMAIL,
       password: process.env.ADMIN_PASSWORD,
@@ -28,16 +36,22 @@ describe("Settings API", () => {
     expect(res.body.data["hero.stats"]).toBeDefined();
   });
 
-  test("PUT /api/settings without auth returns 401", async () => {
+  test("PUT /api/settings without CSRF returns 403", async () => {
     const res = await request(app).put("/api/settings").send({ "company.name": "Test Name" });
+    expect(res.statusCode).toBe(403);
+  });
+
+  test("PUT /api/settings with CSRF but without auth returns 401", async () => {
+    const res = await withCsrf(request(app).put("/api/settings")).send({
+      "company.name": "Test Name",
+    });
     expect(res.statusCode).toBe(401);
   });
 
   test("PUT /api/settings with auth updates settings", async () => {
     if (!token) return; // skip if login failed (CI without DB)
 
-    const res = await request(app)
-      .put("/api/settings")
+    const res = await withCsrf(request(app).put("/api/settings"))
       .set("Authorization", `Bearer ${token}`)
       .send({ "company.name": "Test Travel Co" });
 
@@ -50,8 +64,7 @@ describe("Settings API", () => {
     if (!token) return;
 
     // Send an array instead of object (invalid)
-    const res = await request(app)
-      .put("/api/settings")
+    const res = await withCsrf(request(app).put("/api/settings"))
       .set("Authorization", `Bearer ${token}`)
       .set("Content-Type", "application/json")
       .send([1, 2, 3]);

@@ -45,7 +45,7 @@ const ValueCard = ({ value, index }) => {
   );
 };
 
-const About = () => {
+const About = ({ sectionId = "about" }) => {
   const content = useReveal(0.1);
   const visual = useReveal(0.1);
   const valuesHeader = useReveal(0.2);
@@ -53,7 +53,7 @@ const About = () => {
 
   return (
     <section
-      id="about"
+      id={sectionId || undefined}
       className="section-padding relative overflow-hidden scroll-mt-24 md:scroll-mt-28"
     >
       <div className="absolute inset-0 bg-white/60 dark:bg-navy-900/80"></div>

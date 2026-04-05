@@ -1,0 +1,94 @@
+groups:
+  - name: satyam-availability
+    rules:
+      - alert: BackendDown
+        expr: up{job="satyam-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend API is down"
+          description: "No metrics scrape from backend for more than 2 minutes."
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            rate(http_requests_total{job="satyam-backend",status=~"5.."}[5m])
+            /
+            clamp_min(rate(http_requests_total{job="satyam-backend"}[5m]), 0.001)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High backend error rate"
+          description: "5xx responses exceed 5% for 5 minutes."
+
+      - alert: HighProcessCpu
+        expr: |
+          (
+            rate(process_cpu_user_seconds_total{job="satyam-backend"}[5m])
+            +
+            rate(process_cpu_system_seconds_total{job="satyam-backend"}[5m])
+          ) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "Process CPU usage has stayed above 80% for 10 minutes."
+
+      - alert: HighProcessMemory
+        expr: process_resident_memory_bytes{job="satyam-backend"} > 750000000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Backend process memory is above 750MB."
+
+      - alert: HighDiskUsage
+        expr: system_disk_usage_ratio{job="satyam-backend"} > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage ratio is above 85%."
+
+      - alert: MongoConnectionStateNotHealthy
+        expr: mongodb_connection_state{job="satyam-backend"} != 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MongoDB connection unhealthy"
+          description: "MongoDB ready state is not connected for more than 2 minutes."
+
+      - alert: MongoConnectionPoolNearCapacity
+        expr: |
+          mongodb_connections_available{job="satyam-backend"} > 0
+          and
+          (
+            mongodb_connections_current{job="satyam-backend"}
+            /
+            (mongodb_connections_current{job="satyam-backend"} + mongodb_connections_available{job="satyam-backend"})
+          ) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MongoDB connection pool near capacity"
+          description: "MongoDB connection usage exceeds 80%."
+
+      - alert: RedisRequiredButDisconnected
+        expr: |
+          redis_connection_expected{job="satyam-backend"} == 1
+          and
+          redis_connection_up{job="satyam-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis required but disconnected"
+          description: "REDIS_REQUIRED=true but Redis is not connected."

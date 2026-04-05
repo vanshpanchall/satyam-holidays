@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { apiUrl } from "../config/siteConfig";
 
 const SettingsContext = createContext(null);
@@ -40,29 +40,53 @@ const FALLBACK = {
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(FALLBACK);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(apiUrl("/api/settings"));
-        const json = await res.json();
-        if (!cancelled && json.success && json.data) {
-          setSettings((prev) => ({ ...prev, ...json.data }));
-        }
-      } catch {
-        // silently use fallback
-      } finally {
-        if (!cancelled) setLoading(false);
+  const fetchSettings = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(apiUrl("/api/settings"));
+      if (!res.ok) {
+        throw new Error(`Failed to fetch settings: ${res.status}`);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      const json = await res.json();
+      if (json.success && json.data) {
+        setSettings((prev) => ({ ...prev, ...json.data }));
+      }
+    } catch (err) {
+      setError(err.message || "Failed to load settings");
+      // Keep using fallback values
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    const isAdminPath =
+      typeof window !== "undefined" && window.location.pathname.startsWith("/admin");
+    const shouldDeferPublicFetch = process.env.NODE_ENV === "production" && !isAdminPath;
+
+    if (!shouldDeferPublicFetch) {
+      fetchSettings();
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      fetchSettings();
+    }, 3500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [fetchSettings]);
+
+  const refetch = useCallback(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
   return (
-    <SettingsContext.Provider value={{ settings, loading, setSettings }}>
+    <SettingsContext.Provider value={{ settings, loading, error, setSettings, refetch }}>
       {children}
     </SettingsContext.Provider>
   );
@@ -80,12 +104,18 @@ export function useSetting(key, fallback) {
 }
 
 /**
- * Hook to get the full settings object + loading state
+ * Hook to get the full settings object + loading/error states
  */
 export function useSettings() {
   const ctx = useContext(SettingsContext);
-  if (!ctx) return { settings: FALLBACK, loading: false };
-  return ctx;
+  if (!ctx) return { settings: FALLBACK, loading: false, error: null, refetch: () => {} };
+  return {
+    settings: ctx.settings,
+    loading: ctx.loading,
+    error: ctx.error,
+    setSettings: ctx.setSettings,
+    refetch: ctx.refetch,
+  };
 }
 
 /**
@@ -93,7 +123,7 @@ export function useSettings() {
  * Drop-in replacement for `import siteConfig from "../config/siteConfig"`
  */
 export function useSiteConfig() {
-  const { settings } = useSettings();
+  const { settings, loading, error } = useSettings();
 
   return {
     company: {
@@ -117,6 +147,8 @@ export function useSiteConfig() {
       primaryColor: settings["brand.primaryColor"] || FALLBACK["brand.primaryColor"],
     },
     website: settings["company.website"] || FALLBACK["company.website"],
+    // Expose loading/error states for components that need them
+    _meta: { loading, error },
   };
 }
 

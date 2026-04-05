@@ -12,6 +12,7 @@ import {
   FaCog,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
+import { apiUrl } from "../../config/siteConfig";
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -27,13 +28,26 @@ const AdminLayout = () => {
   });
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    if (!token) {
-      navigate("/admin/login", { replace: true });
-    } else {
-      setIsAuthenticated(true);
-    }
-    setIsChecking(false);
+    // Verify authentication via API (supports HTTPOnly cookies)
+    const verifyAuth = async () => {
+      try {
+        const res = await fetch(apiUrl("/api/auth/verify"), {
+          credentials: "include",
+        });
+        if (res.ok) {
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem("adminToken");
+          navigate("/admin/login", { replace: true });
+        }
+      } catch {
+        navigate("/admin/login", { replace: true });
+      } finally {
+        setIsChecking(false);
+      }
+    };
+
+    verifyAuth();
   }, [navigate]);
 
   const toggleTheme = () => {
@@ -56,7 +70,15 @@ const AdminLayout = () => {
     { name: "Settings", path: "/admin/settings", icon: <FaCog /> },
   ];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch(apiUrl("/api/auth/logout"), {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // Ignore errors during logout
+    }
     localStorage.removeItem("adminToken");
     navigate("/admin/login", { replace: true });
   };

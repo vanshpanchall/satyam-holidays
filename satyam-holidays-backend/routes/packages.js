@@ -2,12 +2,85 @@ const express = require("express");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const path = require("path");
+const Joi = require("joi");
 const router = express.Router();
 const packageService = require("../services/packageService");
 const cacheService = require("../utils/cache");
 const auth = require("../middleware/auth");
 const logger = require("../utils/logger");
 const { uploadImage } = require("../utils/cloudinary");
+
+// ─── Joi validation schemas ───
+const packageSchema = Joi.object({
+  category: Joi.string().valid("domestic", "international").required().messages({
+    "any.only": "Category must be either domestic or international",
+    "any.required": "Category is required",
+  }),
+  subcategory: Joi.string().trim().max(100).required().messages({
+    "string.max": "Subcategory cannot exceed 100 characters",
+    "any.required": "Subcategory is required",
+  }),
+  name: Joi.string().trim().max(200).required().messages({
+    "string.max": "Package name cannot exceed 200 characters",
+    "any.required": "Package name is required",
+  }),
+  duration: Joi.string().max(50).required().messages({
+    "string.max": "Duration cannot exceed 50 characters",
+    "any.required": "Duration is required",
+  }),
+  price: Joi.string().max(50).required().messages({
+    "string.max": "Price cannot exceed 50 characters",
+    "any.required": "Price is required",
+  }),
+  numericPrice: Joi.number().min(0).default(0).messages({
+    "number.min": "Price cannot be negative",
+  }),
+  rating: Joi.number().min(0).max(5).default(4.5).messages({
+    "number.min": "Rating cannot be below 0",
+    "number.max": "Rating cannot exceed 5",
+  }),
+  reviews: Joi.number().min(0).default(0),
+  image: Joi.string().uri().max(500).allow("").messages({
+    "string.uri": "Image must be a valid URL",
+    "string.max": "Image URL cannot exceed 500 characters",
+  }),
+  description: Joi.string().max(2000).required().messages({
+    "string.max": "Description cannot exceed 2000 characters",
+    "any.required": "Description is required",
+  }),
+  highlights: Joi.array().items(Joi.string().max(200)).max(20).default([]).messages({
+    "array.max": "Cannot have more than 20 highlights",
+  }),
+  location: Joi.string().max(200).required().messages({
+    "string.max": "Location cannot exceed 200 characters",
+    "any.required": "Location is required",
+  }),
+  visa: Joi.string().max(100).default("Not Required"),
+  isActive: Joi.boolean().default(true),
+});
+
+const updatePackageSchema = packageSchema.fork(
+  ["category", "subcategory", "name", "duration", "price", "description", "location"],
+  (schema) => schema.optional()
+);
+
+// Validation middleware
+const validate = (schema) => (req, res, next) => {
+  const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    const errors = error.details.map((d) => ({
+      field: d.path.join("."),
+      message: d.message,
+    }));
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed",
+      errors,
+    });
+  }
+  req.body = value;
+  next();
+};
 
 // ─── Multer config (memory storage for Cloudinary) ───
 const fileFilter = (_req, file, cb) => {
@@ -54,24 +127,22 @@ router.use((err, _req, res, next) => {
   next(err);
 });
 
+// Import pagination utility
+const { parsePaginationParams, buildPaginationMeta } = require("../utils/pagination");
+
 // Get all packages
 router.get("/", async (req, res) => {
   try {
-    const { category, subcategory, limit = 20, page = 1 } = req.query;
+    const { category, subcategory } = req.query;
+    const { page, limit } = parsePaginationParams(req.query);
 
-    const options = {
-      category,
-      subcategory,
-      limit: parseInt(limit),
-      page: parseInt(page),
-    };
-
+    const options = { category, subcategory, limit, page };
     const result = await packageService.getPackages(options);
 
     res.json({
       success: true,
       data: result.data,
-      pagination: result.pagination,
+      pagination: buildPaginationMeta(page, limit, result.pagination.totalItems),
     });
   } catch (error) {
     logger.error("Get packages error:", error);
@@ -147,7 +218,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Create package
-router.post("/", auth, async (req, res) => {
+router.post("/", auth, validate(packageSchema), async (req, res) => {
   try {
     const pkg = await packageService.createPackage(req.body);
     await cacheService.invalidatePackages();
@@ -165,7 +236,7 @@ router.post("/", auth, async (req, res) => {
 });
 
 // Update package
-router.put("/:id", auth, async (req, res) => {
+router.put("/:id", auth, validate(updatePackageSchema), async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return res.status(400).json({ success: false, message: "Invalid ID format" });
   }

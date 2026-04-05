@@ -1,98 +1,80 @@
-import React, { Suspense, lazy } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import * as Sentry from "@sentry/react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 
 import { ToastProvider } from "./components/ToastProvider";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { PageSkeleton } from "./components/SkeletonLoaders";
-import PageTransition from "./components/PageTransition";
 
-// Initialize Sentry (optional — only if DSN is set)
-if (process.env.REACT_APP_SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.REACT_APP_SENTRY_DSN,
-    environment: process.env.NODE_ENV || "development",
-    tracesSampleRate: process.env.NODE_ENV === "production" ? 0.2 : 1.0,
-  });
-}
-
-// Lazy load routes
 const Home = lazy(() => import("./components/Home"));
-const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const AdminEnquiries = lazy(() => import("./pages/admin/AdminEnquiries"));
-const AdminPackages = lazy(() => import("./pages/admin/AdminPackages"));
-const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
-const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
-
-const AnimatedRoutes = () => {
-  const location = useLocation();
-
-  return (
-    <AnimatePresence mode="wait">
-      <Suspense fallback={<PageSkeleton />}>
-        <Routes location={location} key={location.pathname}>
-          <Route
-            path="/"
-            element={
-              <PageTransition>
-                <Home />
-              </PageTransition>
-            }
-          />
-          <Route
-            path="/admin/login"
-            element={
-              <PageTransition>
-                <AdminLogin />
-              </PageTransition>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <PageTransition>
-                <AdminLayout />
-              </PageTransition>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="enquiries" element={<AdminEnquiries />} />
-            <Route path="packages" element={<AdminPackages />} />
-            <Route path="settings" element={<AdminSettings />} />
-          </Route>
-        </Routes>
-      </Suspense>
-    </AnimatePresence>
-  );
-};
+const AdminRouter = lazy(() => import("./pages/admin/AdminRouter.jsx"));
 
 function App() {
+  const [ToastContainerComponent, setToastContainerComponent] = useState(null);
+  const isAdminPath =
+    typeof window !== "undefined" && window.location.pathname.startsWith("/admin");
+
+  useEffect(() => {
+    const dsn = process.env.REACT_APP_SENTRY_DSN;
+    if (!dsn) return;
+
+    import("@sentry/react")
+      .then((Sentry) => {
+        Sentry.init({
+          dsn,
+          environment: process.env.NODE_ENV || "development",
+          tracesSampleRate: process.env.NODE_ENV === "production" ? 0.2 : 1.0,
+        });
+      })
+      .catch(() => {
+        // Ignore Sentry bootstrap failures in the client.
+      });
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadToastUi = () => {
+      Promise.all([import("react-toastify"), import("react-toastify/dist/ReactToastify.css")])
+        .then(([module]) => {
+          if (!isCancelled) {
+            setToastContainerComponent(() => module.ToastContainer);
+          }
+        })
+        .catch(() => {
+          // Ignore toast UI bootstrap failures; custom toast provider still works.
+        });
+    };
+
+    const timer = setTimeout(loadToastUi, 10000);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, []);
+
   return (
     <ThemeProvider>
       <SettingsProvider>
         <ToastProvider>
           <ErrorBoundary>
             <div className="App min-h-screen bg-white dark:bg-navy-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-              <BrowserRouter>
-                <AnimatedRoutes />
-              </BrowserRouter>
-              <ToastContainer
-                position="bottom-right"
-                autoClose={4000}
-                hideProgressBar={false}
-                newestOnTop
-                closeOnClick
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="colored"
-              />
+              <Suspense fallback={<PageSkeleton />}>
+                {isAdminPath ? <AdminRouter /> : <Home />}
+              </Suspense>
+              {ToastContainerComponent ? (
+                <ToastContainerComponent
+                  position="bottom-right"
+                  autoClose={4000}
+                  hideProgressBar={false}
+                  newestOnTop
+                  closeOnClick
+                  pauseOnFocusLoss
+                  draggable
+                  pauseOnHover
+                  theme="colored"
+                />
+              ) : null}
             </div>
           </ErrorBoundary>
         </ToastProvider>

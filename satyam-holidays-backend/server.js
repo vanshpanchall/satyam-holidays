@@ -4,17 +4,20 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
+const fs = require("fs");
 const path = require("path");
 const compression = require("compression");
 const morgan = require("morgan");
 const hpp = require("hpp");
 const mongoSanitize = require("express-mongo-sanitize");
+const cookieParser = require("cookie-parser");
 const { randomUUID } = require("crypto");
 const client = require("prom-client");
 require("dotenv").config();
 
 const logger = require("./utils/logger");
 const socketManager = require("./utils/socketManager");
+const { setCsrfToken, validateCsrf, getCsrfToken } = require("./middleware/csrf");
 
 // Sentry error tracking (optional — only if SENTRY_DSN is configured)
 let Sentry = null;
@@ -69,6 +72,110 @@ cacheService.init(redisClient);
 const app = express();
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || "development";
+const IS_PRODUCTION = NODE_ENV === "production";
+const ENFORCE_HTTPS = IS_PRODUCTION && process.env.ENFORCE_HTTPS !== "false";
+const DEV_CORS_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://localhost:5173",
+];
+
+function parseOrigins(origins = "") {
+  return String(origins)
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function validateProductionConfig() {
+  if (!IS_PRODUCTION) return;
+
+  const errors = [];
+  const warnings = [];
+
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    errors.push("JWT_SECRET must be set and at least 32 characters long.");
+  }
+
+  if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.length < 12) {
+    errors.push("ADMIN_PASSWORD must be set and at least 12 characters long.");
+  }
+
+  const mongoUri = process.env.MONGODB_URI || "";
+  if (!mongoUri) {
+    errors.push("MONGODB_URI must be set in production.");
+  } else if (!/^mongodb\+srv:\/\//i.test(mongoUri)) {
+    if (process.env.ALLOW_NON_ATLAS_DB === "true") {
+      warnings.push("Non-Atlas MongoDB URI is enabled via ALLOW_NON_ATLAS_DB=true.");
+    } else {
+      errors.push("MONGODB_URI must use mongodb+srv:// (MongoDB Atlas) in production.");
+    }
+  }
+
+  const corsOrigins = new Set(parseOrigins(process.env.CORS_ORIGIN));
+  if (process.env.FRONTEND_ORIGIN) {
+    corsOrigins.add(process.env.FRONTEND_ORIGIN.trim());
+  }
+
+  if (corsOrigins.size === 0) {
+    errors.push("CORS_ORIGIN or FRONTEND_ORIGIN must be configured in production.");
+  }
+
+  for (const origin of corsOrigins) {
+    if (/localhost|127\.0\.0\.1/i.test(origin)) {
+      warnings.push(`Localhost origin is configured in production CORS allowlist: ${origin}`);
+    }
+  }
+
+  if (process.env.CAPTCHA_ENFORCE !== "true") {
+    errors.push("CAPTCHA_ENFORCE must be true in production.");
+  }
+
+  if (!process.env.SENTRY_DSN) {
+    errors.push("SENTRY_DSN must be set in production for error monitoring.");
+  }
+
+  const hasCloudinary =
+    !!process.env.CLOUDINARY_CLOUD_NAME &&
+    !!process.env.CLOUDINARY_API_KEY &&
+    !!process.env.CLOUDINARY_API_SECRET;
+  if (!hasCloudinary) {
+    errors.push("Cloudinary credentials must be set in production.");
+  }
+
+  const hasSmtpConfig =
+    !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS;
+  const hasGmailFallback = !!process.env.EMAIL_USER && !!process.env.EMAIL_PASS;
+  if (!hasSmtpConfig && !hasGmailFallback) {
+    errors.push("Email provider credentials must be configured in production.");
+  }
+
+  if (!process.env.REDIS_URL) {
+    warnings.push("REDIS_URL is not configured. Caching and Redis alerts will be limited.");
+  }
+
+  const provider = (process.env.CAPTCHA_PROVIDER || "recaptcha_v2").toLowerCase();
+  if (provider.startsWith("hcaptcha")) {
+    if (!process.env.HCAPTCHA_SECRET) {
+      errors.push("HCAPTCHA_SECRET is required when CAPTCHA_PROVIDER is hcaptcha.");
+    }
+  } else if (provider.startsWith("recaptcha")) {
+    if (!process.env.RECAPTCHA_SECRET) {
+      errors.push("RECAPTCHA_SECRET is required when CAPTCHA_PROVIDER uses recaptcha.");
+    }
+  } else {
+    errors.push(`Unsupported CAPTCHA_PROVIDER "${provider}".`);
+  }
+
+  if (errors.length > 0) {
+    const message = `Invalid production configuration:\n- ${errors.join("\n- ")}`;
+    throw new Error(message);
+  }
+
+  warnings.forEach((warning) => logger.warn(warning));
+}
+
+validateProductionConfig();
 
 // Import routes
 const enquiryRoutes = require("./routes/enquiries");
@@ -77,12 +184,36 @@ const reviewRoutes = require("./routes/reviews");
 const authRoutes = require("./routes/auth");
 const settingsRoutes = require("./routes/settings");
 
+// Security middleware with production hardening
+app.use(
+  helmet({
+    contentSecurityPolicy: IS_PRODUCTION,
+    crossOriginEmbedderPolicy: IS_PRODUCTION,
+    hsts: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true,
+    },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  })
+);
+
+// Explicit legacy XSS header for scanners and legacy user agents
+app.use((_req, res, next) => {
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  next();
+});
+
+// Trust proxy for rate limiting behind reverse proxy/load balancer
+app.set("trust proxy", IS_PRODUCTION ? 1 : false);
+
 // Security middleware
-app.use(helmet());
-app.set("trust proxy", 1);
-app.use(hpp());
-app.use(mongoSanitize());
-app.use(compression());
+app.use(hpp()); // HTTP Parameter Pollution protection
+app.use(mongoSanitize()); // Prevent NoSQL injection
+app.use(compression()); // Gzip compression
+app.use(cookieParser());
+
+// Request logging
 if (NODE_ENV !== "test") {
   app.use(morgan(NODE_ENV === "production" ? "combined" : "dev", { stream: logger.stream }));
 }
@@ -103,6 +234,24 @@ app.use((req, _res, next) => {
 });
 morgan.token("id", (req) => req.id);
 
+// Redirect HTTP -> HTTPS in production (except local/dev hosts and health checks)
+app.use((req, res, next) => {
+  if (!ENFORCE_HTTPS) return next();
+  if (req.path === "/api/health" || req.path === "/api/v1/health") return next();
+
+  const forwardedProto = String(req.headers["x-forwarded-proto"] || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+  const isSecure = req.secure || forwardedProto === "https";
+  const host = String(req.headers.host || "");
+  const isLocalHost = /^localhost(:\d+)?$/i.test(host) || /^127\.0\.0\.1(:\d+)?$/i.test(host);
+
+  if (isSecure || isLocalHost || !host) return next();
+
+  return res.redirect(301, `https://${host}${req.originalUrl}`);
+});
+
 // Prometheus metrics
 client.collectDefaultMetrics();
 const httpRequestCounter = new client.Counter({
@@ -115,6 +264,38 @@ const httpDurationHistogram = new client.Histogram({
   help: "HTTP request duration in seconds",
   labelNames: ["method", "route", "status"],
   buckets: [0.05, 0.1, 0.2, 0.5, 1, 2, 5],
+});
+const dbConnectionStateGauge = new client.Gauge({
+  name: "mongodb_connection_state",
+  help: "MongoDB connection readyState (0=disconnected,1=connected,2=connecting,3=disconnecting)",
+});
+const dbConnectionsCurrentGauge = new client.Gauge({
+  name: "mongodb_connections_current",
+  help: "Current MongoDB server connections",
+});
+const dbConnectionsAvailableGauge = new client.Gauge({
+  name: "mongodb_connections_available",
+  help: "Available MongoDB server connections",
+});
+const redisConnectionUpGauge = new client.Gauge({
+  name: "redis_connection_up",
+  help: "Redis connection status (1=connected,0=disconnected)",
+});
+const redisConnectionExpectedGauge = new client.Gauge({
+  name: "redis_connection_expected",
+  help: "Whether Redis is expected (1 when REDIS_REQUIRED=true)",
+});
+const diskTotalBytesGauge = new client.Gauge({
+  name: "system_disk_total_bytes",
+  help: "Total bytes on the host filesystem for current working directory",
+});
+const diskFreeBytesGauge = new client.Gauge({
+  name: "system_disk_free_bytes",
+  help: "Free bytes on the host filesystem for current working directory",
+});
+const diskUsageRatioGauge = new client.Gauge({
+  name: "system_disk_usage_ratio",
+  help: "Filesystem disk usage ratio (0-1)",
 });
 
 app.use((req, res, next) => {
@@ -132,6 +313,49 @@ app.use((req, res, next) => {
   });
   next();
 });
+
+async function updateOperationalMetrics() {
+  dbConnectionStateGauge.set(mongoose.connection.readyState);
+  redisConnectionExpectedGauge.set(process.env.REDIS_REQUIRED === "true" ? 1 : 0);
+  redisConnectionUpGauge.set(redisClient && redisClient.isOpen ? 1 : 0);
+
+  try {
+    const stat = await fs.promises.statfs(process.cwd());
+    const total = Number(stat.blocks) * Number(stat.bsize);
+    const free = Number(stat.bavail || stat.bfree) * Number(stat.bsize);
+    if (Number.isFinite(total) && total > 0) {
+      diskTotalBytesGauge.set(total);
+      diskFreeBytesGauge.set(Math.max(0, free));
+      diskUsageRatioGauge.set(Math.min(1, Math.max(0, (total - free) / total)));
+    }
+  } catch (error) {
+    logger.debug("Disk metric collection skipped", { error: error.message });
+  }
+
+  if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
+    try {
+      const status = await mongoose.connection.db.admin().serverStatus();
+      if (status?.connections) {
+        dbConnectionsCurrentGauge.set(Number(status.connections.current || 0));
+        dbConnectionsAvailableGauge.set(Number(status.connections.available || 0));
+      }
+    } catch (error) {
+      logger.debug("MongoDB pool metrics unavailable", { error: error.message });
+    }
+  }
+}
+
+if (NODE_ENV !== "test") {
+  updateOperationalMetrics().catch(() => {
+    /* ignore initial scrape errors */
+  });
+  const metricsInterval = setInterval(() => {
+    updateOperationalMetrics().catch((error) => {
+      logger.debug("Operational metrics update failed", { error: error.message });
+    });
+  }, 30000);
+  metricsInterval.unref();
+}
 
 app.get("/metrics", async (_req, res) => {
   res.set("Content-Type", client.register.contentType);
@@ -167,24 +391,20 @@ const postEnquiryLimiter = rateLimit({
 });
 
 // CORS configuration
+const allowedOrigins = new Set(
+  [
+    ...(IS_PRODUCTION ? [] : DEV_CORS_ORIGINS),
+    process.env.FRONTEND_ORIGIN,
+    ...parseOrigins(process.env.CORS_ORIGIN),
+  ].filter(Boolean)
+);
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      const envList = (process.env.CORS_ORIGIN || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const allowed = new Set(
-        [
-          "http://localhost:3000",
-          "http://localhost:3001",
-          "http://localhost:5173",
-          process.env.FRONTEND_ORIGIN,
-          ...envList,
-        ].filter(Boolean)
-      );
-      if (!origin || allowed.has(origin)) return callback(null, true);
-      callback(new Error(`CORS blocked for origin: ${origin}`));
+      if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+      logger.warn("CORS blocked for origin", { origin });
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
   })
@@ -237,41 +457,83 @@ app.use(async (req, res, next) => {
   }
 });
 
-// Routes
+// CSRF token setup - set on initial requests, provide endpoint to get fresh token
+app.use(setCsrfToken);
+app.get("/api/csrf-token", getCsrfToken);
+app.get("/api/v1/csrf-token", getCsrfToken); // v1 alias
+
+// API v1 Routes - primary versioned endpoints
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/enquiries", (req, res, next) => {
+  if (req.method === "POST") return postEnquiryLimiter(req, res, next);
+  return next();
+});
+app.use("/api/v1/enquiries", validateCsrf, enquiryRoutes);
+app.use("/api/v1/packages", validateCsrf, packageRoutes);
+app.use("/api/v1/reviews", validateCsrf, reviewRoutes);
+app.use("/api/v1/settings", validateCsrf, settingsRoutes);
+
+// Legacy /api/* routes (backward compatibility - will be deprecated)
 app.use("/api/auth", authRoutes);
 app.use("/api/enquiries", (req, res, next) => {
   if (req.method === "POST") return postEnquiryLimiter(req, res, next);
   return next();
 });
-app.use("/api/enquiries", enquiryRoutes);
-app.use("/api/packages", packageRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/settings", settingsRoutes);
+app.use("/api/enquiries", validateCsrf, enquiryRoutes);
+app.use("/api/packages", validateCsrf, packageRoutes);
+app.use("/api/reviews", validateCsrf, reviewRoutes);
+app.use("/api/settings", validateCsrf, settingsRoutes);
 
-// Health check endpoint
-app.get("/api/health", (req, res) => {
+// Health check endpoint (both versioned and non-versioned)
+const healthHandler = (req, res) => {
   const dbState = mongoose.connection.readyState;
   const dbStatus = { 0: "disconnected", 1: "connected", 2: "connecting", 3: "disconnecting" };
   const isHealthy = dbState === 1;
+  const redisStatus = !process.env.REDIS_URL
+    ? "not_configured"
+    : redisClient && redisClient.isOpen
+      ? "connected"
+      : "disconnected";
   res.status(isHealthy ? 200 : 503).json({
     status: isHealthy ? "OK" : "DEGRADED",
     message: "Satyam Holidays API is running",
+    version: "1.0.0",
+    apiVersion: "v1",
     timestamp: new Date().toISOString(),
     database: dbStatus[dbState] || "unknown",
+    redis: redisStatus,
+    integrations: {
+      sentry: !!process.env.SENTRY_DSN,
+      cloudinary:
+        !!process.env.CLOUDINARY_CLOUD_NAME &&
+        !!process.env.CLOUDINARY_API_KEY &&
+        !!process.env.CLOUDINARY_API_SECRET,
+      emailProvider:
+        (!!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS) ||
+        (!!process.env.EMAIL_USER && !!process.env.EMAIL_PASS),
+    },
     uptime: process.uptime(),
   });
-});
+};
+app.get("/api/health", healthHandler);
+app.get("/api/v1/health", healthHandler);
 
 // Root endpoint
 app.get("/", (req, res) => {
   res.json({
     message: "Welcome to Satyam Holidays API",
     version: "1.0.0",
+    apiVersion: "v1",
     endpoints: {
-      health: "/api/health",
-      enquiries: "/api/enquiries",
-      packages: "/api/packages",
-      reviews: "/api/reviews",
+      health: "/api/v1/health",
+      enquiries: "/api/v1/enquiries",
+      packages: "/api/v1/packages",
+      reviews: "/api/v1/reviews",
+      settings: "/api/v1/settings",
+      auth: "/api/v1/auth",
+    },
+    deprecation: {
+      message: "Non-versioned /api/* endpoints are deprecated. Please migrate to /api/v1/*",
     },
   });
 });

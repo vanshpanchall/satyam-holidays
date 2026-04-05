@@ -8,8 +8,16 @@ const app = require("../server");
 
 describe("Packages API", () => {
   let token;
+  let csrfToken;
+  let csrfCookie;
+
+  const withCsrf = (req) => req.set("Cookie", csrfCookie).set("x-csrf-token", csrfToken);
 
   beforeAll(async () => {
+    const csrfRes = await request(app).get("/api/csrf-token").send();
+    csrfToken = csrfRes.body?.csrfToken;
+    csrfCookie = `csrf_token=${csrfToken}`;
+
     const loginRes = await request(app).post("/api/auth/login").send({
       email: process.env.ADMIN_EMAIL,
       password: process.env.ADMIN_PASSWORD,
@@ -39,7 +47,7 @@ describe("Packages API", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body).toHaveProperty("pagination");
-    expect(res.body.pagination).toHaveProperty("currentPage");
+    expect(res.body.pagination).toHaveProperty("page");
     expect(res.body.pagination).toHaveProperty("totalPages");
   });
 
@@ -56,16 +64,24 @@ describe("Packages API", () => {
     expect(res.body.success).toBe(false);
   });
 
-  test("POST /api/packages without auth returns 401", async () => {
+  test("POST /api/packages without CSRF returns 403", async () => {
     const res = await request(app).post("/api/packages").send({
+      name: "Test Package",
+      category: "domestic",
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  test("POST /api/packages with CSRF but without auth returns 401", async () => {
+    const res = await withCsrf(request(app).post("/api/packages")).send({
       name: "Test Package",
       category: "domestic",
     });
     expect(res.statusCode).toBe(401);
   });
 
-  test("DELETE /api/packages/:id without auth returns 401", async () => {
-    const res = await request(app).delete("/api/packages/some-id").send();
+  test("DELETE /api/packages/:id with CSRF but without auth returns 401", async () => {
+    const res = await withCsrf(request(app).delete("/api/packages/some-id")).send();
     expect(res.statusCode).toBe(401);
   });
 
@@ -85,8 +101,7 @@ describe("Packages API", () => {
       reviews: 0,
     };
 
-    const createRes = await request(app)
-      .post("/api/packages")
+    const createRes = await withCsrf(request(app).post("/api/packages"))
       .set("Authorization", `Bearer ${token}`)
       .send(payload);
     expect(createRes.statusCode).toBe(201);
@@ -94,16 +109,16 @@ describe("Packages API", () => {
     const id = createRes.body.data?._id || createRes.body.data?.id;
     expect(id).toBeTruthy();
 
-    const updateRes = await request(app)
-      .put(`/api/packages/${id}`)
+    const updateRes = await withCsrf(request(app).put(`/api/packages/${id}`))
       .set("Authorization", `Bearer ${token}`)
       .send({ ...payload, name: `${payload.name} Updated` });
     expect(updateRes.statusCode).toBe(200);
     expect(updateRes.body.data.name).toContain("Updated");
 
-    const deleteRes = await request(app)
-      .delete(`/api/packages/${id}`)
-      .set("Authorization", `Bearer ${token}`);
+    const deleteRes = await withCsrf(request(app).delete(`/api/packages/${id}`)).set(
+      "Authorization",
+      `Bearer ${token}`
+    );
     expect(deleteRes.statusCode).toBe(200);
     expect(deleteRes.body.success).toBe(true);
   });
