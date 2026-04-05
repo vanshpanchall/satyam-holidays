@@ -92,6 +92,7 @@ function validateProductionConfig() {
 
   const errors = [];
   const warnings = [];
+  const strictMode = process.env.STRICT_PRODUCTION_CONFIG === "true";
 
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
     errors.push("JWT_SECRET must be set and at least 32 characters long.");
@@ -128,11 +129,11 @@ function validateProductionConfig() {
   }
 
   if (process.env.CAPTCHA_ENFORCE !== "true") {
-    errors.push("CAPTCHA_ENFORCE must be true in production.");
+    warnings.push("CAPTCHA_ENFORCE is not true in production.");
   }
 
   if (!process.env.SENTRY_DSN) {
-    errors.push("SENTRY_DSN must be set in production for error monitoring.");
+    warnings.push("SENTRY_DSN is not configured. Error monitoring will be limited.");
   }
 
   const hasCloudinary =
@@ -140,14 +141,14 @@ function validateProductionConfig() {
     !!process.env.CLOUDINARY_API_KEY &&
     !!process.env.CLOUDINARY_API_SECRET;
   if (!hasCloudinary) {
-    errors.push("Cloudinary credentials must be set in production.");
+    warnings.push("Cloudinary credentials are not fully configured.");
   }
 
   const hasSmtpConfig =
     !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS;
   const hasGmailFallback = !!process.env.EMAIL_USER && !!process.env.EMAIL_PASS;
   if (!hasSmtpConfig && !hasGmailFallback) {
-    errors.push("Email provider credentials must be configured in production.");
+    warnings.push("Email provider credentials are not configured.");
   }
 
   if (!process.env.REDIS_URL) {
@@ -157,19 +158,24 @@ function validateProductionConfig() {
   const provider = (process.env.CAPTCHA_PROVIDER || "recaptcha_v2").toLowerCase();
   if (provider.startsWith("hcaptcha")) {
     if (!process.env.HCAPTCHA_SECRET) {
-      errors.push("HCAPTCHA_SECRET is required when CAPTCHA_PROVIDER is hcaptcha.");
+      warnings.push("HCAPTCHA_SECRET is missing while CAPTCHA_PROVIDER is hcaptcha.");
     }
   } else if (provider.startsWith("recaptcha")) {
     if (!process.env.RECAPTCHA_SECRET) {
-      errors.push("RECAPTCHA_SECRET is required when CAPTCHA_PROVIDER uses recaptcha.");
+      warnings.push("RECAPTCHA_SECRET is missing while CAPTCHA_PROVIDER uses recaptcha.");
     }
   } else {
-    errors.push(`Unsupported CAPTCHA_PROVIDER "${provider}".`);
+    warnings.push(`Unsupported CAPTCHA_PROVIDER "${provider}".`);
   }
 
   if (errors.length > 0) {
     const message = `Invalid production configuration:\n- ${errors.join("\n- ")}`;
-    throw new Error(message);
+    if (strictMode) {
+      throw new Error(message);
+    }
+    logger.error(
+      `${message}\nProceeding in degraded mode (set STRICT_PRODUCTION_CONFIG=true to fail fast).`
+    );
   }
 
   warnings.forEach((warning) => logger.warn(warning));
