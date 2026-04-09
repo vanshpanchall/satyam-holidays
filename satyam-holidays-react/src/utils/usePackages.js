@@ -24,7 +24,12 @@ export function usePackages(category) {
         const json = await response.json();
         if (!cancelled) {
           if (json.success) {
-            setPackages(json.data);
+            if (Array.isArray(json.data)) {
+              setPackages(json.data);
+            } else {
+              setPackages([]);
+              setError("Received unexpected package data. Please try again.");
+            }
           } else {
             setError(json.message || "Failed to load packages");
           }
@@ -48,6 +53,7 @@ export function usePackages(category) {
   }, [category]);
 
   const filteredPackages = useMemo(() => {
+    if (!Array.isArray(packages)) return [];
     if (activeFilter === "all") return packages;
     return packages.filter(
       (pkg) => pkg.category === activeFilter || pkg.subcategory === activeFilter

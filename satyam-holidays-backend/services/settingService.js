@@ -52,6 +52,76 @@ const DEFAULTS = {
   "brand.primaryColor": "#f59e0b",
 };
 
+const isPlainObject = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+const sanitizeByShape = (value, fallbackValue) => {
+  if (Array.isArray(fallbackValue)) {
+    return Array.isArray(value) ? value : fallbackValue;
+  }
+
+  if (isPlainObject(fallbackValue)) {
+    if (!isPlainObject(value)) return fallbackValue;
+
+    const sanitized = {};
+    for (const [key, nestedFallback] of Object.entries(fallbackValue)) {
+      sanitized[key] = sanitizeByShape(value[key], nestedFallback);
+    }
+    return sanitized;
+  }
+
+  if (typeof fallbackValue === "string") {
+    return typeof value === "string" ? value : fallbackValue;
+  }
+
+  if (typeof fallbackValue === "number") {
+    return Number.isFinite(value) ? value : fallbackValue;
+  }
+
+  if (typeof fallbackValue === "boolean") {
+    return typeof value === "boolean" ? value : fallbackValue;
+  }
+
+  return value ?? fallbackValue;
+};
+
+const sanitizeHeroStats = (value, fallbackValue) => {
+  if (!Array.isArray(value)) return fallbackValue;
+
+  return value
+    .filter((stat) => isPlainObject(stat))
+    .map((stat) => {
+      const numericValue = Number(stat.value);
+      return {
+        value: Number.isFinite(numericValue) ? numericValue : 0,
+        suffix: typeof stat.suffix === "string" ? stat.suffix : "+",
+        label: typeof stat.label === "string" ? stat.label : "",
+      };
+    });
+};
+
+const sanitizeStringArray = (value, fallbackValue) => {
+  if (!Array.isArray(value)) return fallbackValue;
+  return value.filter((item) => typeof item === "string");
+};
+
+const sanitizeSettingValue = (key, value) => {
+  const fallbackValue = DEFAULTS[key];
+  if (typeof fallbackValue === "undefined") {
+    return value;
+  }
+
+  if (key === "hero.stats") {
+    return sanitizeHeroStats(value, fallbackValue);
+  }
+
+  if (key === "company.phones") {
+    return sanitizeStringArray(value, fallbackValue);
+  }
+
+  return sanitizeByShape(value, fallbackValue);
+};
+
 class SettingService {
   /**
    * Get all settings as a flat { key: value } object
@@ -61,7 +131,7 @@ class SettingService {
       const docs = await Setting.find({}).lean();
       const settings = { ...DEFAULTS };
       for (const doc of docs) {
-        settings[doc.key] = doc.value;
+        settings[doc.key] = sanitizeSettingValue(doc.key, doc.value);
       }
       return settings;
     } catch (error) {
@@ -75,16 +145,20 @@ class SettingService {
    */
   async get(key) {
     const doc = await Setting.findOne({ key }).lean();
-    return doc ? doc.value : (DEFAULTS[key] ?? null);
+    if (!doc) {
+      return DEFAULTS[key] ?? null;
+    }
+    return sanitizeSettingValue(key, doc.value);
   }
 
   /**
    * Upsert a single setting
    */
   async upsert(key, value) {
+    const sanitizedValue = sanitizeSettingValue(key, value);
     return Setting.findOneAndUpdate(
       { key },
-      { key, value },
+      { key, value: sanitizedValue },
       { upsert: true, new: true, runValidators: true }
     );
   }
@@ -96,7 +170,7 @@ class SettingService {
     const ops = Object.entries(settings).map(([key, value]) => ({
       updateOne: {
         filter: { key },
-        update: { key, value },
+        update: { key, value: sanitizeSettingValue(key, value) },
         upsert: true,
       },
     }));

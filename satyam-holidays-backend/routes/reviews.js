@@ -75,11 +75,16 @@ router.get("/package/:packageId", validatePagination, handleValidationErrors, as
     const { sortBy = "createdAt", sortOrder = "desc" } = req.query;
 
     const result = await reviewService.getReviews(packageId, page, limit, sortBy, sortOrder);
+    const pagination = buildPaginationMeta(page, limit, result.pagination.totalReviews);
 
     res.json({
       success: true,
-      data: result.reviews,
-      pagination: buildPaginationMeta(page, limit, result.pagination.totalReviews),
+      data: {
+        reviews: result.reviews,
+        pagination,
+      },
+      // Keep top-level pagination for backward compatibility with existing clients.
+      pagination,
     });
   } catch (error) {
     logger.error("Error fetching reviews:", error);

@@ -72,4 +72,22 @@ describe("Settings API", () => {
     expect(res.statusCode).toBe(400);
     expect(res.body.success).toBe(false);
   });
+
+  test("PUT /api/settings sanitizes malformed setting value types", async () => {
+    if (!token) return;
+
+    const res = await withCsrf(request(app).put("/api/settings"))
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        "company.name": { bad: true },
+        "hero.stats": "not-an-array",
+        "company.phones": "not-an-array",
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(typeof res.body.data["company.name"]).toBe("string");
+    expect(Array.isArray(res.body.data["hero.stats"])).toBe(true);
+    expect(Array.isArray(res.body.data["company.phones"])).toBe(true);
+  });
 });

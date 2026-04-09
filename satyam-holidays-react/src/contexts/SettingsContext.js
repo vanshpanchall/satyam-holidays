@@ -37,6 +37,92 @@ const FALLBACK = {
   "company.website": "https://satyamholidays.com",
 };
 
+const isPlainObject = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+const sanitizeToFallbackShape = (value, fallbackValue) => {
+  if (Array.isArray(fallbackValue)) {
+    return Array.isArray(value) ? value : fallbackValue;
+  }
+
+  if (isPlainObject(fallbackValue)) {
+    if (!isPlainObject(value)) return fallbackValue;
+
+    const sanitized = {};
+    for (const [key, nestedFallback] of Object.entries(fallbackValue)) {
+      sanitized[key] = sanitizeToFallbackShape(value[key], nestedFallback);
+    }
+    return sanitized;
+  }
+
+  if (typeof fallbackValue === "string") {
+    return typeof value === "string" ? value : fallbackValue;
+  }
+
+  if (typeof fallbackValue === "number") {
+    return Number.isFinite(value) ? value : fallbackValue;
+  }
+
+  if (typeof fallbackValue === "boolean") {
+    return typeof value === "boolean" ? value : fallbackValue;
+  }
+
+  return value ?? fallbackValue;
+};
+
+const sanitizeHeroStats = (value, fallbackValue) => {
+  if (!Array.isArray(value)) return fallbackValue;
+
+  return value
+    .filter((stat) => isPlainObject(stat))
+    .map((stat) => {
+      const numericValue = Number(stat.value);
+      return {
+        value: Number.isFinite(numericValue) ? numericValue : 0,
+        suffix: typeof stat.suffix === "string" ? stat.suffix : "+",
+        label: typeof stat.label === "string" ? stat.label : "",
+      };
+    });
+};
+
+const sanitizeStringArray = (value, fallbackValue) => {
+  if (!Array.isArray(value)) return fallbackValue;
+  return value.filter((item) => typeof item === "string");
+};
+
+const sanitizeSettingValue = (key, value, fallbackValue) => {
+  if (typeof fallbackValue === "undefined") {
+    return value;
+  }
+
+  if (key === "hero.stats") {
+    return sanitizeHeroStats(value, fallbackValue);
+  }
+
+  if (key === "company.phones") {
+    return sanitizeStringArray(value, fallbackValue);
+  }
+
+  return sanitizeToFallbackShape(value, fallbackValue);
+};
+
+const sanitizeSettingsPayload = (rawSettings = {}) => {
+  const incoming = isPlainObject(rawSettings) ? rawSettings : {};
+  const sanitized = {};
+
+  for (const [key, fallbackValue] of Object.entries(FALLBACK)) {
+    sanitized[key] = sanitizeSettingValue(key, incoming[key], fallbackValue);
+  }
+
+  for (const [key, value] of Object.entries(incoming)) {
+    if (!(key in sanitized)) {
+      sanitized[key] = value;
+    }
+  }
+
+  return sanitized;
+};
+
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(FALLBACK);
   const [loading, setLoading] = useState(true);
@@ -52,7 +138,7 @@ export function SettingsProvider({ children }) {
       }
       const json = await res.json();
       if (json.success && json.data) {
-        setSettings((prev) => ({ ...prev, ...json.data }));
+        setSettings(sanitizeSettingsPayload(json.data));
       }
     } catch (err) {
       setError(err.message || "Failed to load settings");
@@ -99,8 +185,9 @@ export function SettingsProvider({ children }) {
  */
 export function useSetting(key, fallback) {
   const ctx = useContext(SettingsContext);
-  if (!ctx) return fallback ?? FALLBACK[key];
-  return ctx.settings[key] ?? fallback ?? FALLBACK[key];
+  const fallbackValue = fallback ?? FALLBACK[key];
+  if (!ctx) return fallbackValue;
+  return sanitizeSettingValue(key, ctx.settings[key], fallbackValue);
 }
 
 /**
@@ -124,29 +211,30 @@ export function useSettings() {
  */
 export function useSiteConfig() {
   const { settings, loading, error } = useSettings();
+  const getSetting = (key) => sanitizeSettingValue(key, settings[key], FALLBACK[key]);
 
   return {
     company: {
-      name: settings["company.name"] || FALLBACK["company.name"],
-      tagline: settings["company.tagline"] || FALLBACK["company.tagline"],
-      logo: settings["company.logo"] || FALLBACK["company.logo"],
-      email: settings["company.email"] || FALLBACK["company.email"],
-      phones: settings["company.phones"] || FALLBACK["company.phones"],
-      emergencyPhone: settings["company.emergencyPhone"] || FALLBACK["company.emergencyPhone"],
+      name: getSetting("company.name"),
+      tagline: getSetting("company.tagline"),
+      logo: getSetting("company.logo"),
+      email: getSetting("company.email"),
+      phones: getSetting("company.phones"),
+      emergencyPhone: getSetting("company.emergencyPhone"),
       emergencyEmail: "emergency@satyamholidays.com",
-      whatsapp: settings["company.whatsapp"] || FALLBACK["company.whatsapp"],
-      address: settings["company.address"] || FALLBACK["company.address"],
-      hours: settings["company.hours"] || FALLBACK["company.hours"],
+      whatsapp: getSetting("company.whatsapp"),
+      address: getSetting("company.address"),
+      hours: getSetting("company.hours"),
     },
     social: {
-      facebook: settings["social.facebook"] || FALLBACK["social.facebook"],
-      instagram: settings["social.instagram"] || FALLBACK["social.instagram"],
-      twitter: settings["social.twitter"] || FALLBACK["social.twitter"],
+      facebook: getSetting("social.facebook"),
+      instagram: getSetting("social.instagram"),
+      twitter: getSetting("social.twitter"),
     },
     brand: {
-      primaryColor: settings["brand.primaryColor"] || FALLBACK["brand.primaryColor"],
+      primaryColor: getSetting("brand.primaryColor"),
     },
-    website: settings["company.website"] || FALLBACK["company.website"],
+    website: getSetting("company.website"),
     // Expose loading/error states for components that need them
     _meta: { loading, error },
   };

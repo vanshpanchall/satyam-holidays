@@ -72,7 +72,12 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
 
   if (!isOpen || !pkg) return null;
 
-  const modalTitleId = `modal-title-${pkg.id}`;
+  const packageId = String(pkg.id ?? pkg._id ?? "package");
+  const packageName = typeof pkg.name === "string" ? pkg.name : "Travel Package";
+  const packageLocation = typeof pkg.location === "string" ? pkg.location : "";
+  const packagePrice = pkg.price == null ? "" : String(pkg.price);
+  const packageHighlights = Array.isArray(pkg.highlights) ? pkg.highlights : [];
+  const modalTitleId = `modal-title-${packageId}`;
 
   const tabs = [
     { id: "overview", name: "Overview" },
@@ -84,7 +89,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Dynamic Meta for package detail */}
       <Meta
-        title={`${pkg.name} — ${pkg.location} | Satyam Holidays`}
+        title={`${packageName} — ${packageLocation} | Satyam Holidays`}
         description={pkg.description}
         image={resolveImageUrl(pkg.image)}
         url={typeof window !== "undefined" ? window.location.href : undefined}
@@ -124,7 +129,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                 <div className="relative h-64 md:h-80 overflow-hidden rounded-t-2xl">
                   <img
                     src={resolveImageUrl(pkg.image)}
-                    alt={pkg.name}
+                    alt={packageName}
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />
@@ -138,7 +143,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                   </button>
                   <div className="absolute bottom-4 left-4 bg-primary-500 text-white px-4 py-2 rounded-full font-medium">
                     <FaRupeeSign className="inline mr-1" />
-                    {pkg.price.replace("₹", "")}
+                    {packagePrice.replace("₹", "")}
                   </div>
                 </div>
 
@@ -152,12 +157,12 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                           id={modalTitleId}
                           className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-2"
                         >
-                          {pkg.name}
+                          {packageName}
                         </h1>
                         <div className="flex items-center space-x-4 text-gray-600 dark:text-navy-300">
                           <div className="flex items-center">
                             <FaMapMarkerAlt className="mr-1" />
-                            <span>{pkg.location}</span>
+                            <span>{packageLocation}</span>
                           </div>
                           <div className="flex items-center">
                             <FaClock className="mr-1" />
@@ -205,7 +210,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                             Package Highlights
                           </h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {pkg.highlights.map((highlight, index) => (
+                            {packageHighlights.map((highlight, index) => (
                               <div key={index} className="flex items-center space-x-3">
                                 <FaCheck className="text-green-500 flex-shrink-0" />
                                 <span className="text-gray-700 dark:text-navy-200">
@@ -293,7 +298,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                     )}
 
                     {activeTab === "reviews" && (
-                      <ReviewsSection packageId={pkg.id.toString()} packageTitle={pkg.name} />
+                      <ReviewsSection packageId={packageId} packageTitle={packageName} />
                     )}
                   </div>
                 </div>
@@ -306,7 +311,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                   <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
                     <div className="text-center sm:text-left">
                       <div className="text-2xl font-bold text-gray-800 dark:text-white">
-                        {pkg.price}
+                        {packagePrice}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-navy-300">per person</div>
                     </div>

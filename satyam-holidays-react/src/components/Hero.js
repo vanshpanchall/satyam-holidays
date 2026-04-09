@@ -18,16 +18,25 @@ const StatCard = ({ stat, delay }) => {
 };
 
 const Hero = () => {
-  const stats = useSetting("hero.stats", [
+  const fallbackStats = [
     { value: 500, suffix: "+", label: "Happy Travelers" },
     { value: 50, suffix: "+", label: "Destinations" },
     { value: 10, suffix: "+", label: "Years Experience" },
-  ]);
-  const heroHeading = useSetting("hero.heading", "Discover Amazing Adventures With Us!");
-  const heroSubheading = useSetting(
+  ];
+  const rawStats = useSetting("hero.stats", fallbackStats);
+  const rawHeroHeading = useSetting("hero.heading", "Discover Amazing Adventures With Us!");
+  const rawHeroSubheading = useSetting(
     "hero.subheading",
     "Experience the world's most beautiful destinations with our carefully crafted travel packages. From spiritual journeys to exotic beaches, we make your dream vacation a reality."
   );
+
+  const stats = Array.isArray(rawStats) ? rawStats : fallbackStats;
+  const heroHeading =
+    typeof rawHeroHeading === "string" ? rawHeroHeading : "Discover Amazing Adventures With Us!";
+  const heroSubheading =
+    typeof rawHeroSubheading === "string"
+      ? rawHeroSubheading
+      : "Experience the world's most beautiful destinations with our carefully crafted travel packages. From spiritual journeys to exotic beaches, we make your dream vacation a reality.";
 
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);

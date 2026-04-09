@@ -43,7 +43,7 @@ const ReviewCard = ({ review, onHelpfulClick }) => {
             </div>
             <div className="flex items-center text-gray-500 dark:text-navy-300 text-sm">
               <FaCalendarAlt className="w-3 h-3 mr-1" />
-              <span>{review.createdAt}</span>
+              <span>{review.formattedDate || review.createdAt || ""}</span>
             </div>
           </div>
         </div>
@@ -89,6 +89,58 @@ const ReviewList = ({ packageId }) => {
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
 
+  const defaultPagination = {
+    currentPage: 1,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+  };
+
+  const parseReviewsPayload = (apiResponse) => {
+    const payload = apiResponse?.data;
+
+    // Supports both shapes:
+    // 1) { data: { reviews: [...], pagination: {...} } }
+    // 2) { data: [...], pagination: {...} }
+    if (Array.isArray(payload)) {
+      return {
+        reviews: payload,
+        pagination: apiResponse?.pagination || defaultPagination,
+      };
+    }
+
+    if (payload && Array.isArray(payload.reviews)) {
+      return {
+        reviews: payload.reviews,
+        pagination: payload.pagination || apiResponse?.pagination || defaultPagination,
+      };
+    }
+
+    return {
+      reviews: [],
+      pagination: apiResponse?.pagination || defaultPagination,
+    };
+  };
+
+  const parseSummaryPayload = (apiResponse) => {
+    const raw = apiResponse?.data || {};
+    const averageRatingValue = Number(raw.averageRating);
+    const distribution = raw.ratingDistribution || {};
+
+    return {
+      totalReviews: Number(raw.totalReviews) || 0,
+      averageRating: Number.isFinite(averageRatingValue) ? averageRatingValue : 0,
+      ratingDistribution: {
+        1: Number(distribution[1]) || 0,
+        2: Number(distribution[2]) || 0,
+        3: Number(distribution[3]) || 0,
+        4: Number(distribution[4]) || 0,
+        5: Number(distribution[5]) || 0,
+      },
+      verifiedReviews: Number(raw.verifiedReviews) || 0,
+    };
+  };
+
   const fetchReviews = useCallback(
     async (page = 1) => {
       try {
@@ -106,8 +158,9 @@ const ReviewList = ({ packageId }) => {
         const data = await response.json();
 
         if (data.success) {
-          setReviews(data.data.reviews);
-          setPagination(data.data.pagination);
+          const parsed = parseReviewsPayload(data);
+          setReviews(parsed.reviews);
+          setPagination(parsed.pagination);
         } else {
           throw new Error(data.message || "Failed to fetch reviews");
         }
@@ -131,7 +184,7 @@ const ReviewList = ({ packageId }) => {
       const data = await response.json();
 
       if (data.success) {
-        setSummary(data.data);
+        setSummary(parseSummaryPayload(data));
       }
     } catch {
       // Summary fetch error handled silently
@@ -149,7 +202,7 @@ const ReviewList = ({ packageId }) => {
       if (data.success) {
         // Update the review in the local state
         setReviews((prevReviews) =>
-          prevReviews.map((review) =>
+          (Array.isArray(prevReviews) ? prevReviews : []).map((review) =>
             review.id === reviewId ? { ...review, helpful: data.data.helpful } : review
           )
         );
@@ -282,18 +335,19 @@ const ReviewList = ({ packageId }) => {
             {/* Overall Rating */}
             <div className="text-center">
               <div className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
-                {summary.averageRating.toFixed(1)}
+                {Number(summary.averageRating || 0).toFixed(1)}
               </div>
               <div className="flex justify-center mb-2">
-                {renderStars(Math.round(summary.averageRating))}
+                {renderStars(Math.round(summary.averageRating || 0))}
               </div>
               <p className="text-gray-600 dark:text-navy-300">
-                Based on {summary.totalReviews} review{summary.totalReviews !== 1 ? "s" : ""}
+                Based on {summary.totalReviews || 0} review
+                {(summary.totalReviews || 0) !== 1 ? "s" : ""}
               </p>
-              {summary.verifiedReviews > 0 && (
+              {(summary.verifiedReviews || 0) > 0 && (
                 <p className="text-green-600 text-sm mt-1">
-                  {summary.verifiedReviews} verified review
-                  {summary.verifiedReviews !== 1 ? "s" : ""}
+                  {summary.verifiedReviews || 0} verified review
+                  {(summary.verifiedReviews || 0) !== 1 ? "s" : ""}
                 </p>
               )}
             </div>
@@ -308,7 +362,7 @@ const ReviewList = ({ packageId }) => {
       )}
 
       {/* Sort Controls */}
-      {reviews.length > 0 && (
+      {Array.isArray(reviews) && reviews.length > 0 && (
         <div className="flex flex-wrap items-center justify-between glass-card rounded-2xl p-4">
           <div className="flex items-center space-x-4">
             <span className="text-gray-700 dark:text-navy-200 font-medium">Sort by:</span>
@@ -363,7 +417,7 @@ const ReviewList = ({ packageId }) => {
             <p className="text-gray-600 dark:text-navy-300">Be the first to review this package!</p>
           </div>
         ) : (
-          reviews.map((review) => (
+          (Array.isArray(reviews) ? reviews : []).map((review) => (
             <ReviewCard key={review.id} review={review} onHelpfulClick={handleHelpfulClick} />
           ))
         )}
