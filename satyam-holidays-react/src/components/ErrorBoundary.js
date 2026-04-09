@@ -1,4 +1,5 @@
 import React from "react";
+import { isChunkLoadError, triggerChunkReloadOnce } from "../utils/lazyWithRecovery";
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -11,11 +12,20 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
+    if (triggerChunkReloadOnce(error, "error-boundary")) {
+      return;
+    }
+
     // Optionally log to an error reporting service
     console.error("ErrorBoundary caught an error:", error, info);
   }
 
   handleRetry = () => {
+    if (isChunkLoadError(this.state.error)) {
+      window.location.reload();
+      return;
+    }
+
     this.setState({ hasError: false, error: null });
   };
 

@@ -1,44 +1,14 @@
-import React, { Suspense, lazy, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 
 import { ToastProvider } from "./components/ToastProvider";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { PageSkeleton } from "./components/SkeletonLoaders";
+import { lazyWithRecovery } from "./utils/lazyWithRecovery";
 
-const isChunkLoadError = (error) => {
-  const message = error?.message || "";
-  return /ChunkLoadError|Loading chunk [\d]+ failed|Failed to fetch dynamically imported module|Importing a module script failed/i.test(
-    message
-  );
-};
-
-const lazyWithRecovery = (importer, storageKey) =>
-  lazy(async () => {
-    try {
-      const module = await importer();
-      if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem(storageKey);
-      }
-      return module;
-    } catch (error) {
-      if (typeof window !== "undefined" && isChunkLoadError(error)) {
-        const hasRetried = window.sessionStorage.getItem(storageKey);
-        if (!hasRetried) {
-          window.sessionStorage.setItem(storageKey, "1");
-          window.location.reload();
-          return new Promise(() => {});
-        }
-      }
-      throw error;
-    }
-  });
-
-const Home = lazyWithRecovery(() => import("./components/Home"), "lazy-retry:home");
-const AdminRouter = lazyWithRecovery(
-  () => import("./pages/admin/AdminRouter.jsx"),
-  "lazy-retry:admin-router"
-);
+const Home = lazyWithRecovery(() => import("./components/Home"), "home");
+const AdminRouter = lazyWithRecovery(() => import("./pages/admin/AdminRouter.jsx"), "admin-router");
 
 function App() {
   const [ToastContainerComponent, setToastContainerComponent] = useState(null);

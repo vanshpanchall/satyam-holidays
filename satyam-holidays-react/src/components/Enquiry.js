@@ -1,4 +1,4 @@
-import { useState, useRef, lazy, Suspense } from "react";
+import { useState, useRef, Suspense } from "react";
 import { useToast } from "./ToastProvider";
 import { useForm } from "react-hook-form";
 import { FaPaperPlane, FaCheck, FaExclamationTriangle } from "react-icons/fa";
@@ -6,9 +6,10 @@ import { apiUrl } from "../config/siteConfig";
 import { csrfFetch, refreshCsrfToken } from "../utils/csrf";
 import { useSiteConfig } from "../contexts/SettingsContext";
 import useReveal from "../utils/useReveal";
+import { lazyWithRecovery } from "../utils/lazyWithRecovery";
 
-const ReCAPTCHA = lazy(() => import("react-google-recaptcha"));
-const HCaptcha = lazy(() => import("@hcaptcha/react-hcaptcha"));
+const ReCAPTCHA = lazyWithRecovery(() => import("react-google-recaptcha"), "enquiry-recaptcha");
+const HCaptcha = lazyWithRecovery(() => import("@hcaptcha/react-hcaptcha"), "enquiry-hcaptcha");
 
 const Enquiry = ({ sectionId = "enquiry" }) => {
   const siteConfig = useSiteConfig();

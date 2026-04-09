@@ -1,16 +1,17 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 
 import { PageSkeleton } from "../../components/SkeletonLoaders";
 import PageTransition from "../../components/PageTransition";
+import { lazyWithRecovery } from "../../utils/lazyWithRecovery";
 
-const AdminLayout = lazy(() => import("./AdminLayout"));
-const AdminDashboard = lazy(() => import("./AdminDashboard"));
-const AdminEnquiries = lazy(() => import("./AdminEnquiries"));
-const AdminPackages = lazy(() => import("./AdminPackages"));
-const AdminSettings = lazy(() => import("./AdminSettings"));
-const AdminLogin = lazy(() => import("./AdminLogin"));
+const AdminLayout = lazyWithRecovery(() => import("./AdminLayout"), "admin-layout");
+const AdminDashboard = lazyWithRecovery(() => import("./AdminDashboard"), "admin-dashboard");
+const AdminEnquiries = lazyWithRecovery(() => import("./AdminEnquiries"), "admin-enquiries");
+const AdminPackages = lazyWithRecovery(() => import("./AdminPackages"), "admin-packages");
+const AdminSettings = lazyWithRecovery(() => import("./AdminSettings"), "admin-settings");
+const AdminLogin = lazyWithRecovery(() => import("./AdminLogin"), "admin-login");
 
 const AnimatedAdminRoutes = () => {
   const location = useLocation();

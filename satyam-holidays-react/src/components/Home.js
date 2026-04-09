@@ -1,16 +1,20 @@
-import React, { lazy, Suspense } from "react";
+import React, { Suspense } from "react";
 import Meta from "./Meta";
 import Header from "./Header";
 import DeferredMount from "./DeferredMount";
 import Hero from "./Hero";
+import { lazyWithRecovery } from "../utils/lazyWithRecovery";
 
-const Services = lazy(() => import("./Services"));
-const About = lazy(() => import("./About"));
-const DomesticPackages = lazy(() => import("./DomesticPackages"));
-const InternationalPackages = lazy(() => import("./InternationalPackages"));
-const Enquiry = lazy(() => import("./Enquiry"));
-const Contact = lazy(() => import("./Contact"));
-const Footer = lazy(() => import("./Footer"));
+const Services = lazyWithRecovery(() => import("./Services"), "home-services");
+const About = lazyWithRecovery(() => import("./About"), "home-about");
+const DomesticPackages = lazyWithRecovery(() => import("./DomesticPackages"), "home-domestic");
+const InternationalPackages = lazyWithRecovery(
+  () => import("./InternationalPackages"),
+  "home-international"
+);
+const Enquiry = lazyWithRecovery(() => import("./Enquiry"), "home-enquiry");
+const Contact = lazyWithRecovery(() => import("./Contact"), "home-contact");
+const Footer = lazyWithRecovery(() => import("./Footer"), "home-footer");
 
 const SectionPlaceholder = ({ height }) => (
   <div aria-hidden="true" style={{ minHeight: height, width: "100%" }} />
