@@ -9,6 +9,7 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const menuRef = useRef(null);
   const menuButtonRef = useRef(null);
+  const bodyOverflowRef = useRef("");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -21,8 +22,8 @@ const Header = () => {
 
   // Lock body scroll when mobile menu is open + a11y focus trap & Escape close
   useEffect(() => {
-    const prev = document.body.style.overflow;
     if (isMenuOpen) {
+      bodyOverflowRef.current = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       // Focus first focusable element inside menu
       setTimeout(() => {
@@ -53,12 +54,18 @@ const Header = () => {
         }
       };
       document.addEventListener("keydown", onKeyDown);
-      return () => document.removeEventListener("keydown", onKeyDown);
+      return () => {
+        document.removeEventListener("keydown", onKeyDown);
+      };
     } else {
-      document.body.style.overflow = prev || "";
+      document.body.style.overflow = bodyOverflowRef.current || "";
+      bodyOverflowRef.current = "";
     }
     return () => {
-      document.body.style.overflow = prev || "";
+      if (document.body.style.overflow === "hidden") {
+        document.body.style.overflow = bodyOverflowRef.current || "";
+      }
+      bodyOverflowRef.current = "";
     };
   }, [isMenuOpen]);
 

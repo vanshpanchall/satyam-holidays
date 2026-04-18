@@ -11,7 +11,7 @@ const scrollToEnquiry = () => {
   if (el) el.scrollIntoView({ behavior: "smooth" });
 };
 
-const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
+const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState("overview");
   const modalRef = useRef(null);
   const previousActiveElement = useRef(null);
@@ -110,7 +110,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
             <div className="flex min-h-screen items-center justify-center p-4">
               <motion.div
                 ref={modalRef}
-                className="relative w-full max-w-6xl rounded-2xl max-h-[90vh] overflow-hidden shadow-glass-lg"
+                className="relative w-full max-w-6xl rounded-2xl max-h-[92vh] overflow-hidden shadow-glass-lg"
                 style={{
                   background: "rgba(255,255,255,0.85)",
                   backdropFilter: "blur(24px) saturate(200%)",
@@ -126,13 +126,14 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                 transition={{ duration: 0.25, ease: "easeOut" }}
               >
                 {/* Header Image */}
-                <div className="relative h-64 md:h-80 overflow-hidden rounded-t-2xl">
+                <div className="relative h-44 sm:h-52 md:h-56 lg:h-60 overflow-hidden rounded-t-2xl">
                   <img
                     src={resolveImageUrl(pkg.image)}
                     alt={packageName}
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/10 to-transparent" />
                   <button
                     ref={closeButtonRef}
                     onClick={onClose}
@@ -141,14 +142,14 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                   >
                     <FaTimes className="w-5 h-5" />
                   </button>
-                  <div className="absolute bottom-4 left-4 bg-primary-500 text-white px-4 py-2 rounded-full font-medium">
+                  <div className="absolute bottom-3 left-3 bg-primary-500 text-white px-3 py-1.5 rounded-full text-sm md:text-base font-medium shadow-lg">
                     <FaRupeeSign className="inline mr-1" />
                     {packagePrice.replace("₹", "")}
                   </div>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 md:p-8 max-h-[calc(90vh-320px)] overflow-y-auto">
+                <div className="p-5 md:p-6 max-h-[calc(92vh-260px)] overflow-y-auto">
                   {/* Package Header */}
                   <div className="mb-6">
                     <div className="flex items-start justify-between mb-4">
@@ -201,7 +202,7 @@ const PackageDetailModal = ({ package: pkg, isOpen, onClose }) => {
                   </div>
 
                   {/* Tab Content */}
-                  <div className="min-h-[400px]">
+                  <div className="min-h-[280px]">
                     {activeTab === "overview" && (
                       <div className="space-y-6">
                         {/* Highlights */}
@@ -361,10 +362,6 @@ PackageDetailModal.propTypes = {
   }),
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-};
-
-PackageDetailModal.defaultProps = {
-  package: null,
 };
 
 export default PackageDetailModal;

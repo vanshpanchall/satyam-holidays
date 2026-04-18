@@ -28,8 +28,8 @@ const ReviewCard = ({ review, onHelpfulClick }) => {
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-100 dark:bg-navy-700 rounded-full flex items-center justify-center">
-            <FaUser className="text-blue-600 dark:text-blue-400 w-5 h-5" />
+          <div className="w-10 h-10 bg-primary-100 dark:bg-navy-700 rounded-full flex items-center justify-center">
+            <FaUser className="text-primary-500 dark:text-primary-400 w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
@@ -63,7 +63,7 @@ const ReviewCard = ({ review, onHelpfulClick }) => {
         <button
           onClick={handleHelpfulClick}
           disabled={isHelpfulLoading}
-          className="flex items-center space-x-2 text-gray-500 dark:text-navy-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900 rounded"
+          className="flex items-center space-x-2 text-gray-500 dark:text-navy-300 hover:text-primary-500 dark:hover:text-primary-400 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900 rounded"
           aria-label={`Mark review by ${review.name} as helpful`}
           aria-pressed="false"
         >
@@ -368,9 +368,9 @@ const ReviewList = ({ packageId }) => {
             <span className="text-gray-700 dark:text-navy-200 font-medium">Sort by:</span>
             <button
               onClick={() => handleSortChange("createdAt")}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900 ${
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900 ${
                 sortBy === "createdAt"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-primary-500 text-white"
                   : "bg-gray-100 dark:bg-navy-700 text-gray-700 dark:text-navy-200 hover:bg-gray-200 dark:hover:bg-navy-600"
               }`}
               aria-pressed={sortBy === "createdAt"}
@@ -380,9 +380,9 @@ const ReviewList = ({ packageId }) => {
             </button>
             <button
               onClick={() => handleSortChange("rating")}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900 ${
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900 ${
                 sortBy === "rating"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-primary-500 text-white"
                   : "bg-gray-100 dark:bg-navy-700 text-gray-700 dark:text-navy-200 hover:bg-gray-200 dark:hover:bg-navy-600"
               }`}
               aria-pressed={sortBy === "rating"}
@@ -392,9 +392,9 @@ const ReviewList = ({ packageId }) => {
             </button>
             <button
               onClick={() => handleSortChange("helpful")}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900 ${
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900 ${
                 sortBy === "helpful"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-primary-500 text-white"
                   : "bg-gray-100 dark:bg-navy-700 text-gray-700 dark:text-navy-200 hover:bg-gray-200 dark:hover:bg-navy-600"
               }`}
               aria-pressed={sortBy === "helpful"}
@@ -429,7 +429,7 @@ const ReviewList = ({ packageId }) => {
           <button
             onClick={() => handlePageChange(pagination.currentPage - 1)}
             disabled={!pagination.hasPrev}
-            className="px-4 py-2 border border-gray-300 dark:border-navy-600 rounded-md text-gray-700 dark:text-navy-200 hover:bg-gray-50 dark:hover:bg-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900"
+            className="px-4 py-2 border border-gray-300 dark:border-navy-600 rounded-md text-gray-700 dark:text-navy-200 hover:bg-gray-50 dark:hover:bg-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900"
             aria-label="Go to previous page"
           >
             Previous
@@ -444,9 +444,9 @@ const ReviewList = ({ packageId }) => {
                 <button
                   key={page}
                   onClick={() => handlePageChange(page)}
-                  className={`px-3 py-2 border rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900 ${
+                  className={`px-3 py-2 border rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900 ${
                     isCurrentPage
-                      ? "bg-blue-600 text-white border-blue-600"
+                      ? "bg-primary-500 text-white border-primary-500"
                       : "border-gray-300 dark:border-navy-600 text-gray-700 dark:text-navy-200 hover:bg-gray-50 dark:hover:bg-navy-700"
                   }`}
                   aria-current={isCurrentPage ? "page" : undefined}
@@ -461,7 +461,7 @@ const ReviewList = ({ packageId }) => {
           <button
             onClick={() => handlePageChange(pagination.currentPage + 1)}
             disabled={!pagination.hasNext}
-            className="px-4 py-2 border border-gray-300 dark:border-navy-600 rounded-md text-gray-700 dark:text-navy-200 hover:bg-gray-50 dark:hover:bg-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900"
+            className="px-4 py-2 border border-gray-300 dark:border-navy-600 rounded-md text-gray-700 dark:text-navy-200 hover:bg-gray-50 dark:hover:bg-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900"
             aria-label="Go to next page"
           >
             Next

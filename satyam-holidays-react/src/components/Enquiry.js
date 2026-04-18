@@ -72,14 +72,25 @@ const Enquiry = ({ sectionId = "enquiry" }) => {
       const apiBase = apiUrl("").replace(/\/$/, "");
       await refreshCsrfToken(apiBase);
 
-      const response = await csrfFetch(apiUrl("/api/enquiries"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-      const resJson = await response.json().catch(() => null);
+      const sendRequest = () =>
+        csrfFetch(apiUrl("/api/enquiries"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+      let response = await sendRequest();
+      let resJson = await response.json().catch(() => null);
+
+      // Retry once if CSRF token expired/missing between initial token refresh and submit.
+      if (!response.ok && (resJson?.code === "CSRF_MISSING" || resJson?.code === "CSRF_INVALID")) {
+        await refreshCsrfToken(apiBase);
+        response = await sendRequest();
+        resJson = await response.json().catch(() => null);
+      }
+
       if (response.ok && resJson && resJson.success) {
         setSubmitStatus("success");
         reset();
@@ -88,7 +99,11 @@ const Enquiry = ({ sectionId = "enquiry" }) => {
       } else {
         setSubmitStatus("error");
         const msg =
-          (resJson && (resJson.message || (resJson.errors && resJson.errors.join(", ")))) ||
+          (resJson &&
+            (resJson.message ||
+              resJson.error ||
+              (resJson.errors && resJson.errors.join(", ")) ||
+              resJson.code)) ||
           "Request failed";
         setErrorMsg(msg);
         show(`Failed to submit enquiry: ${msg}`, { type: "error" });

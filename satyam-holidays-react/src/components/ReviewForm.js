@@ -149,7 +149,7 @@ const ReviewForm = ({ packageId, packageTitle, onReviewSubmitted }) => {
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-3 py-2.5 border border-navy-200 dark:border-navy-600 rounded-lg bg-white/80 dark:bg-navy-800/60 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
               placeholder="Enter your full name"
               required
             />
@@ -172,7 +172,7 @@ const ReviewForm = ({ packageId, packageTitle, onReviewSubmitted }) => {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-3 py-2.5 border border-navy-200 dark:border-navy-600 rounded-lg bg-white/80 dark:bg-navy-800/60 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
               placeholder="Enter your email address"
               required
             />
@@ -193,7 +193,7 @@ const ReviewForm = ({ packageId, packageTitle, onReviewSubmitted }) => {
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2.5 border border-navy-200 dark:border-navy-600 rounded-lg bg-white/80 dark:bg-navy-800/60 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             placeholder="Summarize your experience (optional)"
             maxLength="200"
           />
@@ -215,7 +215,7 @@ const ReviewForm = ({ packageId, packageTitle, onReviewSubmitted }) => {
               value={formData.comment}
               onChange={handleInputChange}
               rows="4"
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+              className="w-full pl-10 pr-3 py-2.5 border border-navy-200 dark:border-navy-600 rounded-lg bg-white/80 dark:bg-navy-800/60 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-vertical transition-colors"
               placeholder="Tell others about your experience with this package..."
               required
               minLength="10"
@@ -229,7 +229,7 @@ const ReviewForm = ({ packageId, packageTitle, onReviewSubmitted }) => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-blue-600 text-white py-3 px-4 rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
+          className="w-full btn btn-primary min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <div className="flex items-center justify-center">

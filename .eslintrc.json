@@ -5,14 +5,12 @@
   "overrides": [
     {
       "files": ["satyam-holidays-react/**/*.{js,jsx}"],
-      "plugins": ["react"],
       "parserOptions": {
         "ecmaVersion": 2022,
         "sourceType": "module",
         "ecmaFeatures": { "jsx": true }
       },
-      "extends": ["prettier"],
-      "rules": { "react/prop-types": "off", "react/react-in-jsx-scope": "off" }
+      "extends": ["prettier"]
     },
     {
       "files": ["satyam-holidays-backend/**/*.js"],
