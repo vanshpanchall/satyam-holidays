@@ -24,8 +24,10 @@ const Home = () => {
   return (
     <>
       <Meta
-        title="Satyam Holidays — Journey With Joy!"
-        description="Discover curated domestic and international travel packages with Satyam Holidays. Personalized itineraries, expert guidance, and joyful journeys."
+        title="Satyam Holidays — Best Travel Packages | Domestic & International Tours from Ahmedabad"
+        description="Satyam Holidays — Your trusted travel partner from Ahmedabad, Gujarat. Book affordable Chardham Yatra, Kashmir, Goa, Rajasthan, Dubai, Singapore, Thailand tour packages. 15000+ happy travelers, personalized itineraries, 24/7 support. Journey With Joy!"
+        keywords="Satyam Holidays, travel agency Ahmedabad, domestic tour packages, international tour packages, Chardham Yatra, Kashmir tour, Dubai tour, Singapore tour, Thailand tour, Goa packages, honeymoon packages, family tour, Gujarat travel agent"
+        url="https://satyamholidays.vercel.app/"
       />
       <Header />
       <main>

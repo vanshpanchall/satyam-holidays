@@ -137,6 +137,7 @@ const AdminDashboard = () => {
       icon: <FaSuitcase />,
       color: "bg-blue-500",
       lightBg: "bg-blue-50 dark:bg-blue-500/10",
+      link: "/admin/packages",
     },
     {
       title: "Total Enquiries",
@@ -144,6 +145,7 @@ const AdminDashboard = () => {
       icon: <FaInbox />,
       color: "bg-emerald-500",
       lightBg: "bg-emerald-50 dark:bg-emerald-500/10",
+      link: "/admin/enquiries",
     },
     {
       title: "Pending",
@@ -151,6 +153,7 @@ const AdminDashboard = () => {
       icon: <FaExclamationCircle />,
       color: "bg-amber-500",
       lightBg: "bg-amber-50 dark:bg-amber-500/10",
+      link: "/admin/enquiries",
     },
     {
       title: "Avg Rating",
@@ -160,6 +163,7 @@ const AdminDashboard = () => {
       icon: <FaChartLine />,
       color: "bg-purple-500",
       lightBg: "bg-purple-50 dark:bg-purple-500/10",
+      link: "/admin/packages",
     },
   ];
 
@@ -203,7 +207,7 @@ const AdminDashboard = () => {
         </button>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid — all cards are clickable */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, i) => (
           <motion.div
@@ -211,14 +215,16 @@ const AdminDashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className={`${card.lightBg} rounded-xl p-5 border border-slate-200/50 dark:border-slate-700/50`}
+            onClick={() => navigate(card.link)}
+            className={`${card.lightBg} rounded-xl p-5 border border-slate-200/50 dark:border-slate-700/50 cursor-pointer hover:scale-[1.03] hover:shadow-lg transition-all duration-200 group`}
           >
             <div className="flex items-center justify-between mb-3">
               <div
-                className={`w-10 h-10 ${card.color} rounded-lg flex items-center justify-center text-white`}
+                className={`w-10 h-10 ${card.color} rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform`}
               >
                 {card.icon}
               </div>
+              <FaArrowRight className="text-xs text-slate-400 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <p className="text-2xl font-bold text-slate-800 dark:text-white">{card.value}</p>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{card.title}</p>
@@ -228,7 +234,7 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Recent Enquiries */}
+        {/* Recent Enquiries — each row is clickable */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
             <h2 className="font-semibold text-slate-800 dark:text-white">Recent Enquiries</h2>
@@ -244,14 +250,15 @@ const AdminDashboard = () => {
               recentEnquiries.map((enq) => (
                 <div
                   key={enq._id || enq.id}
-                  className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                  onClick={() => navigate("/admin/enquiries")}
+                  className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 group-hover:shadow-lg group-hover:shadow-amber-500/20 transition-shadow">
                       {enq.name?.charAt(0)?.toUpperCase() || "?"}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium text-slate-800 dark:text-white truncate">
+                      <p className="font-medium text-slate-800 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                         {enq.name}
                       </p>
                       <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
@@ -264,7 +271,10 @@ const AdminDashboard = () => {
                       </p>
                     </div>
                   </div>
-                  {getStatusBadge(enq.status)}
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(enq.status)}
+                    <FaArrowRight className="text-xs text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
                 </div>
               ))
             ) : (
@@ -280,21 +290,31 @@ const AdminDashboard = () => {
             <div className="space-y-2">
               <button
                 onClick={() => navigate("/admin/packages")}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors text-left group"
               >
-                <FaSuitcase /> <span className="font-medium">Manage Packages</span>
+                <FaSuitcase /> <span className="font-medium flex-1">Manage Packages</span>
+                <FaArrowRight className="text-xs opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
               <button
                 onClick={() => navigate("/admin/enquiries")}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-left group"
               >
-                <FaInbox /> <span className="font-medium">View Enquiries</span>
+                <FaInbox /> <span className="font-medium flex-1">View Enquiries</span>
+                <FaArrowRight className="text-xs opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+              <button
+                onClick={() => navigate("/admin/settings")}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-left group"
+              >
+                <FaChartLine /> <span className="font-medium flex-1">Site Settings</span>
+                <FaArrowRight className="text-xs opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
               <button
                 onClick={handleExport}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-left group"
               >
-                <FaDownload /> <span className="font-medium">Export Data</span>
+                <FaDownload /> <span className="font-medium flex-1">Export Data</span>
+                <FaArrowRight className="text-xs opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             </div>
           </div>

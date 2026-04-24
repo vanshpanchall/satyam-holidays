@@ -268,6 +268,14 @@ const PackageModal = ({ pkg, onClose, onSaved }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = React.useRef(null);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    document.body.classList.add("modal-open");
+    return () => {
+      document.body.classList.remove("modal-open");
+    };
+  }, []);
+
   const handleImageUpload = async (file) => {
     if (!file) return;
     if (!file.type.match(/^image\/(jpeg|jpg|png|webp|gif)$/)) {

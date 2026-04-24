@@ -48,7 +48,7 @@ const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
       previousActiveElement.current = document.activeElement;
 
       document.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
+      document.body.classList.add("modal-open");
 
       // Focus the close button when modal opens
       requestAnimationFrame(() => {
@@ -57,7 +57,7 @@ const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
 
       return () => {
         document.removeEventListener("keydown", handleKeyDown);
-        document.body.style.overflow = "";
+        document.body.classList.remove("modal-open");
 
         // Restore focus to the previously focused element
         if (
@@ -86,7 +86,7 @@ const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Dynamic Meta for package detail */}
       <Meta
         title={`${packageName} — ${packageLocation} | Satyam Holidays`}

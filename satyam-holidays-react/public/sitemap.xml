@@ -1,43 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- Homepage -->
   <url>
-    <loc>https://satyamholidays.com/</loc>
+    <loc>https://satyamholidays.vercel.app/</loc>
+    <lastmod>2026-04-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://satyamholidays.vercel.app/og-cover.jpg</image:loc>
+      <image:title>Satyam Holidays — Journey With Joy!</image:title>
+      <image:caption>Discover amazing domestic and international travel packages with Satyam Holidays</image:caption>
+    </image:image>
   </url>
+
+  <!-- Services Section -->
   <url>
-    <loc>https://satyamholidays.com/#about</loc>
+    <loc>https://satyamholidays.vercel.app/#services</loc>
+    <lastmod>2026-04-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+
+  <!-- About Us -->
   <url>
-    <loc>https://satyamholidays.com/#domestic-packages</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://satyamholidays.com/#international-packages</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://satyamholidays.com/#services</loc>
+    <loc>https://satyamholidays.vercel.app/#about</loc>
+    <lastmod>2026-04-25</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://satyamholidays.com/#reviews</loc>
-    <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
+
+  <!-- Tour Packages -->
   <url>
-    <loc>https://satyamholidays.com/#contact</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <loc>https://satyamholidays.vercel.app/#packages</loc>
+    <lastmod>2026-04-25</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
+
+  <!-- Enquiry Form -->
   <url>
-    <loc>https://satyamholidays.com/#enquiry</loc>
+    <loc>https://satyamholidays.vercel.app/#enquiry</loc>
+    <lastmod>2026-04-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+
+  <!-- Contact Us -->
+  <url>
+    <loc>https://satyamholidays.vercel.app/#contact</loc>
+    <lastmod>2026-04-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>

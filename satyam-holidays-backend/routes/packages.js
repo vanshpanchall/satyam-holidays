@@ -40,8 +40,7 @@ const packageSchema = Joi.object({
     "number.max": "Rating cannot exceed 5",
   }),
   reviews: Joi.number().min(0).default(0),
-  image: Joi.string().uri().max(500).allow("").messages({
-    "string.uri": "Image must be a valid URL",
+  image: Joi.string().max(500).allow("", null).optional().messages({
     "string.max": "Image URL cannot exceed 500 characters",
   }),
   description: Joi.string().max(2000).required().messages({

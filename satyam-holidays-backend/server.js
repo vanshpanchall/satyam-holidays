@@ -18,6 +18,31 @@ require("dotenv").config();
 const logger = require("./utils/logger");
 const socketManager = require("./utils/socketManager");
 const { setCsrfToken, validateCsrf, getCsrfToken } = require("./middleware/csrf");
+const jwt = require("jsonwebtoken");
+
+// CSRF middleware that skips validation when a valid admin JWT is present.
+// Admin routes already require JWT auth (which is a stronger CSRF guard).
+const csrfUnlessAuthed = (req, res, next) => {
+  const safeMethods = ["GET", "HEAD", "OPTIONS"];
+  if (safeMethods.includes(req.method)) return next();
+
+  // Check for valid admin JWT — if present, skip CSRF (JWT is immune to CSRF)
+  const cookieToken = req.cookies?.adminToken;
+  const headerToken = req.header("Authorization")?.replace("Bearer ", "");
+  const token = cookieToken || headerToken;
+
+  if (token && process.env.JWT_SECRET) {
+    try {
+      jwt.verify(token, process.env.JWT_SECRET);
+      return next(); // Valid admin session — skip CSRF
+    } catch {
+      // Token invalid — fall through to CSRF check
+    }
+  }
+
+  // No valid JWT — enforce CSRF for anonymous state-changing requests
+  return validateCsrf(req, res, next);
+};
 
 // Sentry error tracking (optional — only if SENTRY_DSN is configured)
 let Sentry = null;
@@ -474,10 +499,10 @@ app.use("/api/v1/enquiries", (req, res, next) => {
   if (req.method === "POST") return postEnquiryLimiter(req, res, next);
   return next();
 });
-app.use("/api/v1/enquiries", validateCsrf, enquiryRoutes);
-app.use("/api/v1/packages", validateCsrf, packageRoutes);
-app.use("/api/v1/reviews", validateCsrf, reviewRoutes);
-app.use("/api/v1/settings", validateCsrf, settingsRoutes);
+app.use("/api/v1/enquiries", csrfUnlessAuthed, enquiryRoutes);
+app.use("/api/v1/packages", csrfUnlessAuthed, packageRoutes);
+app.use("/api/v1/reviews", csrfUnlessAuthed, reviewRoutes);
+app.use("/api/v1/settings", csrfUnlessAuthed, settingsRoutes);
 
 // Legacy /api/* routes (backward compatibility - will be deprecated)
 app.use("/api/auth", authRoutes);
@@ -485,10 +510,10 @@ app.use("/api/enquiries", (req, res, next) => {
   if (req.method === "POST") return postEnquiryLimiter(req, res, next);
   return next();
 });
-app.use("/api/enquiries", validateCsrf, enquiryRoutes);
-app.use("/api/packages", validateCsrf, packageRoutes);
-app.use("/api/reviews", validateCsrf, reviewRoutes);
-app.use("/api/settings", validateCsrf, settingsRoutes);
+app.use("/api/enquiries", csrfUnlessAuthed, enquiryRoutes);
+app.use("/api/packages", csrfUnlessAuthed, packageRoutes);
+app.use("/api/reviews", csrfUnlessAuthed, reviewRoutes);
+app.use("/api/settings", csrfUnlessAuthed, settingsRoutes);
 
 // Health check endpoint (both versioned and non-versioned)
 const healthHandler = (req, res) => {

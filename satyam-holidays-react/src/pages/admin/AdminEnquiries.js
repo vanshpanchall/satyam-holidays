@@ -29,6 +29,18 @@ const AdminEnquiries = () => {
     fetchEnquiries();
   }, []);
 
+  // Lock body scroll when enquiry detail modal is open
+  useEffect(() => {
+    if (selectedEnquiry) {
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.classList.remove("modal-open");
+    }
+    return () => {
+      document.body.classList.remove("modal-open");
+    };
+  }, [selectedEnquiry]);
+
   const fetchEnquiries = async () => {
     try {
       setLoading(true);
