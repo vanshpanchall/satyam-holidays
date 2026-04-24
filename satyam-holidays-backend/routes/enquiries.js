@@ -5,6 +5,8 @@ const generateExcel = require("../utils/excel");
 const auth = require("../middleware/auth");
 const Joi = require("joi");
 const logger = require("../utils/logger");
+const { ApiErrors, successResponse, errorResponse } = require("../utils/apiResponse");
+const { logAudit } = require("../utils/auditLogger");
 
 // Validation schema
 const enquirySchema = Joi.object({
@@ -164,10 +166,11 @@ router.post("/", async (req, res) => {
     });
   } catch (error) {
     logger.error("Enquiry creation error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to submit enquiry. Please try again.",
-    });
+    return errorResponse(
+      res,
+      ApiErrors.internal("Failed to submit enquiry. Please try again."),
+      req.id
+    );
   }
 });
 
@@ -209,10 +212,7 @@ router.get("/", auth, async (req, res) => {
     });
   } catch (error) {
     logger.error("Get enquiries error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch enquiries",
-    });
+    return errorResponse(res, ApiErrors.internal("Failed to fetch enquiries"), req.id);
   }
 });
 
@@ -255,10 +255,7 @@ router.get("/export/excel", auth, async (req, res) => {
     res.send(excelBuffer);
   } catch (error) {
     logger.error("Export error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to export enquiries",
-    });
+    return errorResponse(res, ApiErrors.internal("Failed to export enquiries"), req.id);
   }
 });
 
@@ -273,10 +270,7 @@ router.get("/stats/overview", auth, async (req, res) => {
     });
   } catch (error) {
     logger.error("Stats error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch statistics",
-    });
+    return errorResponse(res, ApiErrors.internal("Failed to fetch statistics"), req.id);
   }
 });
 
@@ -291,10 +285,7 @@ router.get("/analytics/conversion", auth, async (req, res) => {
     });
   } catch (error) {
     logger.error("Analytics error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch analytics",
-    });
+    return errorResponse(res, ApiErrors.internal("Failed to fetch analytics"), req.id);
   }
 });
 
@@ -310,10 +301,7 @@ router.get("/analytics/destinations", auth, async (req, res) => {
     });
   } catch (error) {
     logger.error("Destinations analytics error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch destination analytics",
-    });
+    return errorResponse(res, ApiErrors.internal("Failed to fetch destination analytics"), req.id);
   }
 });
 
@@ -323,22 +311,13 @@ router.get("/:id", auth, async (req, res) => {
     const enquiry = await enquiryService.getEnquiryById(req.params.id);
 
     if (!enquiry) {
-      return res.status(404).json({
-        success: false,
-        message: "Enquiry not found",
-      });
+      return errorResponse(res, ApiErrors.notFound("Enquiry"), req.id);
     }
 
-    res.json({
-      success: true,
-      data: enquiry,
-    });
+    return successResponse(res, enquiry);
   } catch (error) {
     logger.error("Get enquiry error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch enquiry",
-    });
+    return errorResponse(res, ApiErrors.internal("Failed to fetch enquiry"), req.id);
   }
 });
 
@@ -348,32 +327,20 @@ router.patch("/:id/status", auth, async (req, res) => {
     const { status } = req.body;
 
     if (!["pending", "contacted", "confirmed", "cancelled"].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status",
-      });
+      return errorResponse(res, ApiErrors.badRequest("Invalid status"), req.id);
     }
 
     const enquiry = await enquiryService.updateEnquiryStatus(req.params.id, status);
 
     if (!enquiry) {
-      return res.status(404).json({
-        success: false,
-        message: "Enquiry not found",
-      });
+      return errorResponse(res, ApiErrors.notFound("Enquiry"), req.id);
     }
 
-    res.json({
-      success: true,
-      message: "Status updated successfully",
-      data: enquiry,
-    });
+    logAudit(req, "UPDATE_STATUS", "enquiry", req.params.id, { status });
+    return successResponse(res, enquiry, 200, { message: "Status updated successfully" });
   } catch (error) {
     logger.error("Update status error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to update status",
-    });
+    return errorResponse(res, ApiErrors.internal("Failed to update status"), req.id);
   }
 });
 

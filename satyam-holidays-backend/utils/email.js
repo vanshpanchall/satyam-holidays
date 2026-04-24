@@ -355,6 +355,119 @@ function createEmailTemplates(brand) {
         brand
       ),
     }),
+    "mfa-otp": (data) => ({
+      subject: `Your Verification Code - ${safe(brand.NAME)}`,
+      html: baseTemplate(
+        `
+      <!-- Header -->
+      <tr>
+        <td style="background:linear-gradient(135deg,${brand.PRIMARY},${brand.SECONDARY});padding:32px 24px;text-align:center;">
+          <img src="${brand.LOGO_URL}" alt="${safe(brand.NAME)}" style="height:48px;width:auto;margin-bottom:16px;" />
+          <h1 style="color:#ffffff;font-size:24px;font-weight:700;margin:0;">Verification Code</h1>
+          <p style="color:rgba(255,255,255,0.9);font-size:14px;margin:8px 0 0;">Use this code to complete verification</p>
+        </td>
+      </tr>
+      <!-- Content -->
+      <tr>
+        <td style="padding:32px 24px;text-align:center;">
+          <p style="font-size:15px;color:${brand.TEXT};line-height:1.7;margin:0 0 24px;">
+            Here is your 6-digit verification code:
+          </p>
+          <div style="background:#f1f5f9;border-radius:12px;padding:20px;margin-bottom:24px;display:inline-block;letter-spacing:6px;font-size:32px;font-weight:bold;color:${brand.DARK};font-family:monospace;">
+            ${safe(data.code)}
+          </div>
+          <p style="font-size:13px;color:${brand.TEXT_LIGHT};margin:0;">
+            This code will expire in 5 minutes. If you did not request this code, please ignore this email.
+          </p>
+        </td>
+      </tr>
+        `,
+        `Verification Code - ${safe(brand.NAME)}`,
+        brand
+      ),
+    }),
+    "enquiry-nudge": (data) => ({
+      subject: `Still planning your trip to ${safe(data.destination?.toUpperCase())}? - ${safe(brand.NAME)}`,
+      html: baseTemplate(
+        `
+      <!-- Header -->
+      <tr>
+        <td style="background:linear-gradient(135deg,${brand.PRIMARY},${brand.SECONDARY});padding:32px 24px;text-align:center;">
+          <img src="${brand.LOGO_URL}" alt="${safe(brand.NAME)}" style="height:48px;width:auto;margin-bottom:16px;" />
+          <h1 style="color:#ffffff;font-size:24px;font-weight:700;margin:0;">Let's plan your dream holiday!</h1>
+        </td>
+      </tr>
+      <!-- Content -->
+      <tr>
+        <td style="padding:32px 24px;">
+          <p style="font-size:16px;color:${brand.TEXT};line-height:1.7;margin:0 0 16px;">
+            Hi <strong>${safe(data.name)}</strong>,
+          </p>
+          <p style="font-size:15px;color:${brand.TEXT};line-height:1.7;margin:0 0 24px;">
+            We noticed you recently enquired about a trip to <strong>${safe(data.destination?.toUpperCase())}</strong>.
+            We would love to help you customize the itinerary, choose the best hotels, and finalize details to make it a memorable journey!
+          </p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;background:#f8fafc;border-radius:12px;padding:20px;">
+            <tr>
+              <td>
+                <p style="font-size:14px;color:${brand.TEXT};margin:0 0 12px;"><strong>What we offer:</strong></p>
+                <ul style="font-size:14px;color:${brand.TEXT_LIGHT};margin:0;padding-left:20px;line-height:1.6;">
+                  <li>100% Customized Day-by-Day Itineraries</li>
+                  <li>Exclusive dynamic pricing and deals</li>
+                  <li>24/7 Support during your travel</li>
+                  <li>Visa assistance & insurance processing</li>
+                </ul>
+              </td>
+            </tr>
+          </table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td align="center">
+                <a href="https://wa.me/${brand.WHATSAPP}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;">Connect on WhatsApp</a>
+                <a href="${brand.WEBSITE}" style="display:inline-block;background:#ffffff;color:${brand.DARK};text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;border:2px solid ${brand.BORDER};margin-left:8px;">Visit Website</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+        `,
+        `Special Offer - ${safe(brand.NAME)}`,
+        brand
+      ),
+    }),
+    "referral-code": (data) => ({
+      subject: `Your Referral Reward Discount Code! - ${safe(brand.NAME)}`,
+      html: baseTemplate(
+        `
+      <!-- Header -->
+      <tr>
+        <td style="background:linear-gradient(135deg,${brand.PRIMARY},${brand.SECONDARY});padding:32px 24px;text-align:center;">
+          <img src="${brand.LOGO_URL}" alt="${safe(brand.NAME)}" style="height:48px;width:auto;margin-bottom:16px;" />
+          <h1 style="color:#ffffff;font-size:24px;font-weight:700;margin:0;">Referral Reward Earned!</h1>
+        </td>
+      </tr>
+      <!-- Content -->
+      <tr>
+        <td style="padding:32px 24px;text-align:center;">
+          <p style="font-size:16px;color:${brand.TEXT};line-height:1.7;margin:0 0 16px;">
+            Thank you for referring your friends to ${safe(brand.NAME)}!
+          </p>
+          <p style="font-size:15px;color:${brand.TEXT};line-height:1.7;margin:0 0 24px;">
+            Your friend has successfully booked their holiday with us. As a token of our appreciation, here is your exclusive referral reward discount code:
+          </p>
+          <div style="background:#fef3c7;border:2px dashed ${brand.PRIMARY};border-radius:12px;padding:20px;margin-bottom:24px;display:inline-block;font-size:28px;font-weight:bold;color:${brand.PRIMARY_DARK};letter-spacing:2px;font-family:monospace;">
+            ${safe(data.code)}
+          </div>
+          <p style="font-size:14px;color:${brand.TEXT_LIGHT};line-height:1.7;margin:0;">
+            Use this code on your next booking with us to claim your discount!
+          </p>
+        </td>
+      </tr>
+        `,
+        `Referral Reward - ${safe(brand.NAME)}`,
+        brand
+      ),
+    }),
   };
 }
 
@@ -426,8 +539,18 @@ async function sendCustomerConfirmation(enquiry) {
   });
 }
 
+async function sendMfaOtp(email, code) {
+  return sendEmail({
+    to: email,
+    template: "mfa-otp",
+    subject: "Your Verification Code",
+    data: { code },
+  });
+}
+
 module.exports = {
   send: sendEmail,
   sendAdminNotification,
   sendCustomerConfirmation,
+  sendMfaOtp,
 };

@@ -10,6 +10,8 @@ import {
   FaMoon,
   FaSun,
   FaCog,
+  FaChartLine,
+  FaCommentDots,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiUrl, fetchWithAuth } from "../../config/siteConfig";
@@ -65,6 +67,8 @@ const AdminLayout = () => {
     { name: "Dashboard", path: "/admin", icon: <FaTachometerAlt /> },
     { name: "Enquiries", path: "/admin/enquiries", icon: <FaInbox /> },
     { name: "Packages", path: "/admin/packages", icon: <FaSuitcase /> },
+    { name: "CRM Analytics", path: "/admin/crm", icon: <FaChartLine /> },
+    { name: "Review Moderation", path: "/admin/reviews", icon: <FaCommentDots /> },
     { name: "Settings", path: "/admin/settings", icon: <FaCog /> },
   ];
 
@@ -221,7 +225,7 @@ const AdminLayout = () => {
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+      <main id="main-content" className="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
         <div className="p-4 lg:p-6">
           <Outlet />
         </div>

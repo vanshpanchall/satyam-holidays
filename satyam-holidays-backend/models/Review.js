@@ -51,6 +51,15 @@ const reviewSchema = new mongoose.Schema(
     userAgent: {
       type: String,
     },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected", "spam"],
+      default: "pending",
+    },
+    spamScore: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -62,6 +71,9 @@ reviewSchema.index({ packageId: 1, createdAt: -1 });
 reviewSchema.index({ rating: -1 });
 reviewSchema.index({ verified: 1 });
 reviewSchema.index({ createdAt: -1 });
+reviewSchema.index({ status: 1, packageId: 1, createdAt: -1 });
+// Compound index for review deduplication cooldown (email + packageId within time window)
+reviewSchema.index({ email: 1, packageId: 1, createdAt: -1 });
 
 // Virtual for formatted date
 reviewSchema.virtual("formattedDate").get(function () {

@@ -45,7 +45,14 @@ if (NODE_ENV === "production" && !process.env.VERCEL) {
 // Morgan stream for HTTP request logging
 logger.stream = {
   write: (message) => {
-    logger.http(message.trim());
+    const trimmed = message.trim();
+    try {
+      const parsed = JSON.parse(trimmed);
+      const msg = `HTTP ${parsed.method} ${parsed.url} ${parsed.status} - ${parsed.responseTimeMs}ms`;
+      logger.http(msg, parsed);
+    } catch {
+      logger.http(trimmed);
+    }
   },
 };
 

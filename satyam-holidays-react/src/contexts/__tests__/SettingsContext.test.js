@@ -1,4 +1,9 @@
-import { useSettings, useSetting, SettingsProvider } from "../SettingsContext";
+import {
+  useSettings,
+  useSetting,
+  SettingsProvider,
+  resetInFlightSettingsPromise,
+} from "../SettingsContext";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 
@@ -31,6 +36,7 @@ const renderWithProvider = (settingKey = "company.name") => {
 describe("SettingsContext", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetInFlightSettingsPromise();
   });
 
   it("provides fallback values while loading", () => {

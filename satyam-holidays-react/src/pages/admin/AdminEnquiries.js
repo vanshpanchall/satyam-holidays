@@ -27,7 +27,27 @@ const AdminEnquiries = () => {
 
   useEffect(() => {
     fetchEnquiries();
+
+    // Poll for new enquiries every 30 seconds as a fallback for environments
+    // where Socket.io is unavailable (e.g., Vercel serverless).
+    const pollInterval = setInterval(() => {
+      fetchEnquiries();
+    }, 30000);
+
+    return () => clearInterval(pollInterval);
   }, []);
+
+  // Lock body scroll when enquiry detail modal is open
+  useEffect(() => {
+    if (selectedEnquiry) {
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.classList.remove("modal-open");
+    }
+    return () => {
+      document.body.classList.remove("modal-open");
+    };
+  }, [selectedEnquiry]);
 
   const fetchEnquiries = async () => {
     try {

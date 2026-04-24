@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 
-function Meta({ title, description, image, url, canonical }) {
+const SITE_URL = process.env.REACT_APP_SITE_URL || "https://satyamholidays.vercel.app";
+const DEFAULT_OG_IMAGE = `${SITE_URL}/og-cover.jpg`;
+
+function Meta({ title, description, image, url, canonical, keywords }) {
   useEffect(() => {
     if (title) {
       document.title = title;
@@ -12,22 +15,29 @@ function Meta({ title, description, image, url, canonical }) {
       setMetaTag('meta[property="og:description"]', "property", "og:description", description);
       setMetaTag('meta[name="twitter:description"]', "name", "twitter:description", description);
     }
-    if (image) {
-      setMetaTag('meta[property="og:image"]', "property", "og:image", image);
-      setMetaTag('meta[name="twitter:image"]', "name", "twitter:image", image);
-      setMetaTag('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");
+    if (keywords) {
+      setMetaTag('meta[name="keywords"]', "name", "keywords", keywords);
     }
-    if (url) {
-      setMetaTag('meta[property="og:url"]', "property", "og:url", url);
-    }
+
+    // Image (always set to ensure OG previews work)
+    const ogImage = image || DEFAULT_OG_IMAGE;
+    setMetaTag('meta[property="og:image"]', "property", "og:image", ogImage);
+    setMetaTag('meta[name="twitter:image"]', "name", "twitter:image", ogImage);
+    setMetaTag('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");
+
+    // URL
+    const pageUrl = url || SITE_URL;
+    setMetaTag('meta[property="og:url"]', "property", "og:url", pageUrl);
+
     // Canonical link for SEO
-    const canonicalUrl = canonical || url;
-    if (canonicalUrl) {
-      setLinkTag('link[rel="canonical"]', "canonical", canonicalUrl);
-    }
-    // Always set og:type for better previews
+    const canonicalUrl = canonical || url || SITE_URL;
+    setLinkTag('link[rel="canonical"]', "canonical", canonicalUrl);
+
+    // Always set og:type and og:site_name for better previews
     setMetaTag('meta[property="og:type"]', "property", "og:type", "website");
-  }, [title, description, image, url, canonical]);
+    setMetaTag('meta[property="og:site_name"]', "property", "og:site_name", "Satyam Holidays");
+    setMetaTag('meta[property="og:locale"]', "property", "og:locale", "en_IN");
+  }, [title, description, image, url, canonical, keywords]);
 
   return null;
 }

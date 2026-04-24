@@ -1,6 +1,20 @@
+# Satyam Holidays Robots.txt
+# https://satyamholidays.vercel.app
+
 User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin/
 
-Sitemap: https://satyamholidays.com/sitemap.xml
+# Allow search engine crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Sitemaps
+Sitemap: https://satyamholidays.vercel.app/sitemap.xml
+
+# Host
+Host: https://satyamholidays.vercel.app

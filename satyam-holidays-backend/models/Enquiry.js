@@ -70,6 +70,35 @@ const enquirySchema = new mongoose.Schema(
     userAgent: {
       type: String,
     },
+    leadScore: {
+      type: Number,
+      default: 0,
+    },
+    slaStatus: {
+      type: String,
+      enum: ["within_sla", "sla_warning", "sla_breached"],
+      default: "within_sla",
+    },
+    respondedAt: {
+      type: Date,
+    },
+    followUps: [
+      {
+        sentAt: { type: Date, default: Date.now },
+        type: { type: String },
+      },
+    ],
+    referralCodeUsed: {
+      type: String,
+    },
+    visaRequired: {
+      type: Boolean,
+      default: false,
+    },
+    travelInsurance: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -86,6 +115,8 @@ enquirySchema.index({ source: 1 });
 enquirySchema.index({ ipAddress: 1 });
 enquirySchema.index({ status: 1, destination: 1 });
 enquirySchema.index({ createdAt: -1, status: 1 });
+enquirySchema.index({ leadScore: -1 });
+enquirySchema.index({ slaStatus: 1 });
 
 // Virtual for formatted date
 enquirySchema.virtual("formattedDate").get(function () {
@@ -113,7 +144,7 @@ enquirySchema.methods.getSummary = function () {
   };
 };
 
-// Pre-save middleware to clean data
+// Pre-save middleware to clean data and calculate leadScore and SLA status
 enquirySchema.pre("save", function (next) {
   // Clean phone number
   if (this.phone) {
@@ -123,6 +154,73 @@ enquirySchema.pre("save", function (next) {
   // Clean name
   if (this.name) {
     this.name = this.name.trim().replace(/\s+/g, " ");
+  }
+
+  // Calculate Lead Score
+  let score = 0;
+
+  // 1. Budget Points
+  const budgetScores = {
+    "under-20k": 10,
+    "20k-50k": 25,
+    "50k-1l": 40,
+    "above-1l": 50,
+  };
+  score += budgetScores[this.budget] || 0;
+
+  // 2. Travelers Points
+  const travelerScores = {
+    1: 10,
+    2: 20,
+    3: 30,
+    4: 40,
+    "5+": 50,
+  };
+  score += travelerScores[this.travelers] || 0;
+
+  // 3. Destination Intent (non-custom is higher intent)
+  if (this.destination && this.destination !== "custom") {
+    score += 15;
+  }
+
+  // 4. Message Depth
+  if (this.message && this.message.length > 100) {
+    score += 15;
+  }
+
+  // 5. Travel Urgency (within 30 days)
+  if (this.travelDate) {
+    const diffTime = new Date(this.travelDate) - Date.now();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays > 0 && diffDays <= 30) {
+      score += 20; // Urgent
+    } else if (diffDays > 30 && diffDays <= 90) {
+      score += 10; // Medium urgency
+    }
+  }
+
+  // 6. Optional Add-ons (Visa/Insurance)
+  if (this.visaRequired) score += 10;
+  if (this.travelInsurance) score += 10;
+
+  this.leadScore = score;
+
+  // Manage SLA and Responded At
+  if (this.isModified("status") && this.status !== "pending" && !this.respondedAt) {
+    this.respondedAt = new Date();
+  }
+
+  const createdTime = this.createdAt || new Date();
+  const endTime = this.respondedAt || new Date();
+  const durationMs = endTime - createdTime;
+  const twoHoursMs = 2 * 60 * 60 * 1000;
+
+  if (durationMs > twoHoursMs) {
+    this.slaStatus = "sla_breached";
+  } else if (durationMs > 1.5 * 60 * 60 * 1000) {
+    this.slaStatus = "sla_warning";
+  } else {
+    this.slaStatus = "within_sla";
   }
 
   next();

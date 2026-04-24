@@ -18,6 +18,30 @@ require("dotenv").config();
 const logger = require("./utils/logger");
 const socketManager = require("./utils/socketManager");
 const { setCsrfToken, validateCsrf, getCsrfToken } = require("./middleware/csrf");
+const jwt = require("jsonwebtoken");
+const rateLimiterStore = require("./middleware/rateLimiterStore");
+
+// CSRF middleware that skips validation when a valid admin JWT is present in the Authorization header.
+// Cookie auth sessions must always undergo CSRF checks.
+const csrfUnlessAuthed = (req, res, next) => {
+  const safeMethods = ["GET", "HEAD", "OPTIONS"];
+  if (safeMethods.includes(req.method)) return next();
+
+  // Check for valid admin JWT in Authorization header — if present, skip CSRF
+  const headerToken = req.header("Authorization")?.replace("Bearer ", "");
+
+  if (headerToken && process.env.JWT_SECRET) {
+    try {
+      jwt.verify(headerToken, process.env.JWT_SECRET);
+      return next(); // Valid Authorization header token — skip CSRF
+    } catch {
+      // Token invalid — fall through to CSRF check
+    }
+  }
+
+  // Enforce CSRF for cookie auth or anonymous requests
+  return validateCsrf(req, res, next);
+};
 
 // Sentry error tracking (optional — only if SENTRY_DSN is configured)
 let Sentry = null;
@@ -68,6 +92,7 @@ if (process.env.REDIS_URL && process.env.REDIS_URL.trim() && process.env.NODE_EN
 // Initialize cache service with Redis client (avoids circular dependency)
 const cacheService = require("./utils/cache");
 cacheService.init(redisClient);
+rateLimiterStore.init(redisClient);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -116,6 +141,10 @@ function validateProductionConfig() {
   const corsOrigins = new Set(parseOrigins(process.env.CORS_ORIGIN));
   if (process.env.FRONTEND_ORIGIN) {
     corsOrigins.add(process.env.FRONTEND_ORIGIN.trim());
+  }
+
+  if (corsOrigins.has("*")) {
+    errors.push("CORS allowlist cannot contain '*' when credentials are enabled.");
   }
 
   if (corsOrigins.size === 0) {
@@ -189,6 +218,8 @@ const packageRoutes = require("./routes/packages");
 const reviewRoutes = require("./routes/reviews");
 const authRoutes = require("./routes/auth");
 const settingsRoutes = require("./routes/settings");
+const crmRoutes = require("./routes/crm");
+const aiRoutes = require("./routes/ai");
 
 // Security middleware with production hardening
 app.use(
@@ -210,6 +241,13 @@ app.use((_req, res, next) => {
   next();
 });
 
+// Attach a unique request ID for tracing and include in response headers
+app.use((req, res, next) => {
+  req.id = req.headers["x-request-id"] || randomUUID();
+  res.setHeader("X-Request-ID", req.id);
+  next();
+});
+
 // Trust proxy for rate limiting behind reverse proxy/load balancer
 app.set("trust proxy", IS_PRODUCTION ? 1 : false);
 
@@ -221,7 +259,28 @@ app.use(cookieParser());
 
 // Request logging
 if (NODE_ENV !== "test") {
-  app.use(morgan(NODE_ENV === "production" ? "combined" : "dev", { stream: logger.stream }));
+  if (NODE_ENV === "production") {
+    app.use(
+      morgan(
+        (tokens, req, res) => {
+          return JSON.stringify({
+            requestId: req.id,
+            method: tokens.method(req, res),
+            url: tokens.url(req, res),
+            status: Number(tokens.status(req, res)),
+            responseTimeMs: Number(tokens["response-time"](req, res) || 0),
+            contentLength: Number(tokens.res(req, res, "content-length") || 0),
+            ip: tokens["remote-addr"](req, res),
+            referrer: tokens.referrer(req, res),
+            userAgent: tokens["user-agent"](req, res),
+          });
+        },
+        { stream: logger.stream }
+      )
+    );
+  } else {
+    app.use(morgan("dev", { stream: logger.stream }));
+  }
 }
 
 // Per-route CSP for API (APIs generally set a restrictive CSP)
@@ -233,11 +292,7 @@ const apiCsp = helmet.contentSecurityPolicy({
 });
 app.use("/api", apiCsp);
 
-// Request ID middleware and morgan token
-app.use((req, _res, next) => {
-  req.id = req.headers["x-request-id"] || randomUUID();
-  next();
-});
+// morgan token for request ID (ID is set in the middleware above)
 morgan.token("id", (req) => req.id);
 
 // Redirect HTTP -> HTTPS in production (except local/dev hosts and health checks)
@@ -370,6 +425,7 @@ app.get("/metrics", async (_req, res) => {
 
 // Rate limiting — skip public read-only routes so the homepage always loads
 const limiter = rateLimit({
+  store: new rateLimiterStore.DistributedRateLimitStore("rl:api:"),
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: NODE_ENV === "production" ? 200 : 1000,
   standardHeaders: true,
@@ -390,6 +446,7 @@ const limiter = rateLimit({
 app.use(limiter);
 // Stricter rate limit for enquiry submissions
 const postEnquiryLimiter = rateLimit({
+  store: new rateLimiterStore.DistributedRateLimitStore("rl:enquiry:"),
   windowMs: 15 * 60 * 1000,
   max: 20, // at most 20 submissions per 15 minutes per IP
   standardHeaders: true,
@@ -402,7 +459,10 @@ const allowedOrigins = new Set(
     ...(IS_PRODUCTION ? [] : DEV_CORS_ORIGINS),
     process.env.FRONTEND_ORIGIN,
     ...parseOrigins(process.env.CORS_ORIGIN),
-  ].filter(Boolean)
+  ]
+    .filter(Boolean)
+    .map((origin) => origin.trim())
+    .filter((origin) => origin !== "*") // strictly disallow "*" when credentials: true
 );
 
 app.use(
@@ -474,10 +534,12 @@ app.use("/api/v1/enquiries", (req, res, next) => {
   if (req.method === "POST") return postEnquiryLimiter(req, res, next);
   return next();
 });
-app.use("/api/v1/enquiries", validateCsrf, enquiryRoutes);
-app.use("/api/v1/packages", validateCsrf, packageRoutes);
-app.use("/api/v1/reviews", validateCsrf, reviewRoutes);
-app.use("/api/v1/settings", validateCsrf, settingsRoutes);
+app.use("/api/v1/enquiries", csrfUnlessAuthed, enquiryRoutes);
+app.use("/api/v1/packages", csrfUnlessAuthed, packageRoutes);
+app.use("/api/v1/reviews", csrfUnlessAuthed, reviewRoutes);
+app.use("/api/v1/settings", csrfUnlessAuthed, settingsRoutes);
+app.use("/api/v1/crm", csrfUnlessAuthed, crmRoutes);
+app.use("/api/v1/ai", csrfUnlessAuthed, aiRoutes);
 
 // Legacy /api/* routes (backward compatibility - will be deprecated)
 app.use("/api/auth", authRoutes);
@@ -485,10 +547,12 @@ app.use("/api/enquiries", (req, res, next) => {
   if (req.method === "POST") return postEnquiryLimiter(req, res, next);
   return next();
 });
-app.use("/api/enquiries", validateCsrf, enquiryRoutes);
-app.use("/api/packages", validateCsrf, packageRoutes);
-app.use("/api/reviews", validateCsrf, reviewRoutes);
-app.use("/api/settings", validateCsrf, settingsRoutes);
+app.use("/api/enquiries", csrfUnlessAuthed, enquiryRoutes);
+app.use("/api/packages", csrfUnlessAuthed, packageRoutes);
+app.use("/api/reviews", csrfUnlessAuthed, reviewRoutes);
+app.use("/api/settings", csrfUnlessAuthed, settingsRoutes);
+app.use("/api/crm", csrfUnlessAuthed, crmRoutes);
+app.use("/api/ai", csrfUnlessAuthed, aiRoutes);
 
 // Health check endpoint (both versioned and non-versioned)
 const healthHandler = (req, res) => {
@@ -553,6 +617,7 @@ app.use((err, req, res, next) => {
 
   // Log error details
   const errorLog = {
+    requestId: req.id,
     message: err.message,
     stack: err.stack,
     url: req.url,
@@ -683,6 +748,15 @@ if (NODE_ENV !== "test" && !process.env.VERCEL) {
   connectDatabase()
     .then(async (kind) => {
       logger.info(`🗄️  Database ready: ${kind}`);
+
+      // Start background worker queue processor
+      try {
+        const queueService = require("./utils/queue");
+        queueService.startProcessing();
+      } catch (queueErr) {
+        logger.error("Failed to start queue processor", { error: queueErr.message });
+      }
+
       try {
         const Package = require("./models/Package");
         const packageCount = await Package.countDocuments();
@@ -694,6 +768,31 @@ if (NODE_ENV !== "test" && !process.env.VERCEL) {
         }
       } catch (seedErr) {
         logger.error("Failed to seed packages", { error: seedErr.message });
+      }
+
+      // Seed initial administrator if none exist
+      try {
+        const User = require("./models/User");
+        const userCount = await User.countDocuments();
+        if (userCount === 0) {
+          const email = process.env.ADMIN_EMAIL || "admin@satyamholidays.com";
+          const password = process.env.ADMIN_PASSWORD || "admin12345678";
+          logger.info(`No users found in DB. Seeding initial admin user: ${email}...`);
+
+          const bcrypt = require("bcryptjs");
+          const hashedPassword = await bcrypt.hash(password, 10);
+
+          await User.create({
+            email: email.toLowerCase(),
+            password: hashedPassword,
+            name: "Initial Admin",
+            role: "admin",
+            mfaEnabled: false,
+          });
+          logger.info("Successfully seeded initial admin user!");
+        }
+      } catch (userErr) {
+        logger.error("Failed to seed admin user", { error: userErr.message });
       }
     })
     .catch((err) => logger.error("Database initialization failed", { error: err.message }));

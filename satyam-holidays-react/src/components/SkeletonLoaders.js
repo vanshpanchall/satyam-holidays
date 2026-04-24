@@ -209,3 +209,81 @@ export const FooterSkeleton = () => (
     </div>
   </footer>
 );
+
+/* ─── Detail page layout-matching skeleton ─── */
+export const PackageDetailSkeleton = () => (
+  <div className="min-h-screen bg-white dark:bg-navy-950">
+    {/* Navbar skeleton */}
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
+      <div className="flex items-center justify-between py-3">
+        <div className="flex items-center gap-3">
+          <Shimmer className="w-12 h-12 rounded-2xl" />
+          <div className="space-y-1.5">
+            <Shimmer className="w-24 h-5" />
+            <Shimmer className="w-16 h-3" />
+          </div>
+        </div>
+        <div className="hidden md:flex items-center gap-6">
+          <Shimmer className="w-12 h-4" />
+          <Shimmer className="w-12 h-4" />
+          <Shimmer className="w-12 h-4" />
+          <Shimmer className="w-20 h-10 rounded-xl" />
+        </div>
+      </div>
+    </div>
+
+    {/* Hero Banner skeleton */}
+    <div className="relative h-[60vh] bg-navy-950 flex items-end pb-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-left space-y-4">
+        <Shimmer className="w-32 h-6 rounded-full" />
+        <Shimmer className="w-[50%] h-12" />
+        <div className="flex gap-4">
+          <Shimmer className="w-28 h-5" />
+          <Shimmer className="w-28 h-5" />
+        </div>
+      </div>
+    </div>
+
+    {/* Quick Facts Strip skeleton */}
+    <div className="-mt-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="bg-white dark:bg-navy-900 border border-gray-150 dark:border-navy-850 p-6 rounded-3xl shadow-md grid grid-cols-2 md:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="flex items-center gap-3.5">
+            <Shimmer className="w-12 h-12 rounded-2xl" />
+            <div className="space-y-1.5 flex-1">
+              <Shimmer className="w-12 h-3" />
+              <Shimmer className="w-20 h-4" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Core Grid skeleton */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
+      {/* Left detail side */}
+      <div className="lg:col-span-2 space-y-6">
+        <div className="flex gap-2 max-w-sm">
+          <Shimmer className="flex-1 h-10 rounded-xl" />
+          <Shimmer className="flex-1 h-10 rounded-xl" />
+          <Shimmer className="flex-1 h-10 rounded-xl" />
+        </div>
+        <div className="bg-white dark:bg-navy-900 border border-gray-150 dark:border-navy-850 p-6 rounded-3xl space-y-4 shadow-sm">
+          <Shimmer className="w-40 h-6" />
+          <Shimmer className="w-full h-4" />
+          <Shimmer className="w-full h-4" />
+          <Shimmer className="w-[85%] h-4" />
+        </div>
+      </div>
+      {/* Right sidebar side */}
+      <div className="lg:col-span-1 space-y-6">
+        <div className="bg-white dark:bg-navy-900 border border-gray-150 dark:border-navy-850 p-6 rounded-3xl space-y-4 shadow-md">
+          <Shimmer className="w-36 h-6" />
+          <Shimmer className="w-full h-10 rounded-xl" />
+          <Shimmer className="w-full h-10 rounded-xl" />
+          <Shimmer className="w-full h-8" />
+        </div>
+      </div>
+    </div>
+  </div>
+);

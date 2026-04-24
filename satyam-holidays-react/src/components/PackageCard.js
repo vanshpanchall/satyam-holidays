@@ -1,16 +1,28 @@
 import React, { memo } from "react";
 import PropTypes from "prop-types";
+import { useNavigate } from "react-router-dom";
 import { FaMapMarkerAlt, FaClock, FaStar, FaGlobe } from "react-icons/fa";
 import { resolveImageUrl } from "../config/siteConfig";
+import OptimizedImage from "./OptimizedImage";
 
 /**
  * Memoized Package Card component to prevent unnecessary re-renders
  */
 const PackageCard = memo(function PackageCard({ pkg, onClick, showVisa = false }) {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick(pkg);
+    } else {
+      navigate(`/packages/${pkg.slug || pkg.id || pkg._id}`);
+    }
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      onClick(pkg);
+      handleClick();
     }
   };
 
@@ -18,8 +30,8 @@ const PackageCard = memo(function PackageCard({ pkg, onClick, showVisa = false }
 
   return (
     <div
-      className="glass-card rounded-2xl group cursor-pointer"
-      onClick={() => onClick(pkg)}
+      className="glass-card rounded-2xl group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900"
+      onClick={handleClick}
       role="button"
       tabIndex={0}
       onKeyDown={handleKeyDown}
@@ -27,13 +39,12 @@ const PackageCard = memo(function PackageCard({ pkg, onClick, showVisa = false }
     >
       {/* Package Image */}
       <div className="relative h-48 overflow-hidden rounded-t-xl">
-        <img
+        <OptimizedImage
           src={imageUrl}
           alt={pkg.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-          loading="lazy"
-          decoding="async"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          aspectRatio="4/3"
+          objectFit="cover"
         />
         <div className="absolute top-4 right-4 bg-primary-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
           {pkg.price}
@@ -94,7 +105,7 @@ const PackageCard = memo(function PackageCard({ pkg, onClick, showVisa = false }
           className="w-full btn btn-primary min-h-[44px]"
           onClick={(e) => {
             e.stopPropagation();
-            onClick(pkg);
+            handleClick();
           }}
         >
           View Details
@@ -118,7 +129,7 @@ PackageCard.propTypes = {
     image: PropTypes.string,
     visa: PropTypes.string,
   }).isRequired,
-  onClick: PropTypes.func.isRequired,
+  onClick: PropTypes.func,
   showVisa: PropTypes.bool,
 };
 

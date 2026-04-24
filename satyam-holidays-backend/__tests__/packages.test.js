@@ -14,6 +14,27 @@ describe("Packages API", () => {
   const withCsrf = (req) => req.set("Cookie", csrfCookie).set("x-csrf-token", csrfToken);
 
   beforeAll(async () => {
+    const User = require("../models/User");
+    const bcrypt = require("bcryptjs");
+    const mongoose = require("mongoose");
+
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(process.env.MONGODB_URI);
+    }
+
+    const email = process.env.ADMIN_EMAIL.toLowerCase();
+    let user = await User.findOne({ email });
+    if (!user) {
+      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+      await User.create({
+        name: "Test Admin",
+        email,
+        password: hashedPassword,
+        role: "admin",
+        mfaEnabled: false,
+      });
+    }
+
     const csrfRes = await request(app).get("/api/csrf-token").send();
     csrfToken = csrfRes.body?.csrfToken;
     csrfCookie = `csrf_token=${csrfToken}`;
@@ -121,5 +142,10 @@ describe("Packages API", () => {
     );
     expect(deleteRes.statusCode).toBe(200);
     expect(deleteRes.body.success).toBe(true);
+  });
+
+  afterAll(async () => {
+    const mongoose = require("mongoose");
+    await mongoose.connection.close();
   });
 });

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FaStar, FaUser, FaEnvelope, FaComment } from "react-icons/fa";
 import { toast } from "react-toastify";
-import { apiUrl } from "../config/siteConfig";
+import { apiUrl, fetchWithAuth } from "../config/siteConfig";
 
 const ReviewForm = ({ packageId, packageTitle, onReviewSubmitted }) => {
   const [formData, setFormData] = useState({
@@ -55,7 +55,7 @@ const ReviewForm = ({ packageId, packageTitle, onReviewSubmitted }) => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(apiUrl("/api/reviews"), {
+      const response = await fetchWithAuth(apiUrl("/api/reviews"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

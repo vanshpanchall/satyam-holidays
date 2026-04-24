@@ -1,17 +1,21 @@
 const Package = require("../models/Package");
 const cacheService = require("../utils/cache");
+const logger = require("../utils/logger");
 
 class PackageService {
   async getPackages(options = {}) {
     const { category, subcategory, limit = 20, page = 1 } = options;
+    logger.info("Service: getPackages invoked", { category, subcategory, limit, page });
 
     // Check cache first
     const cacheKey = { category, subcategory, limit, page };
     const cached = await cacheService.getPackages(cacheKey);
     if (cached) {
+      logger.info("Service: getPackages cache HIT", { cacheKey });
       return cached;
     }
 
+    logger.info("Service: getPackages cache MISS. Querying database...", { cacheKey });
     const filter = { isActive: true };
     if (category) filter.category = category;
     if (subcategory) filter.subcategory = subcategory;
@@ -41,19 +45,24 @@ class PackageService {
 
     // Cache the result
     await cacheService.setPackages(cacheKey, result);
+    logger.info("Service: getPackages cached new result", { cacheKey });
 
     return result;
   }
 
   async getPackageById(id) {
+    logger.info("Service: getPackageById invoked", { id });
     const pkg = await Package.findById(id).lean();
     if (pkg) {
       pkg.id = pkg._id;
+    } else {
+      logger.warn("Service: getPackageById not found", { id });
     }
     return pkg;
   }
 
   async getPackageCategories() {
+    logger.info("Service: getPackageCategories invoked");
     return [
       {
         id: "domestic",
@@ -83,6 +92,7 @@ class PackageService {
 
   // Analytics methods
   async getPackageStats() {
+    logger.info("Service: getPackageStats invoked");
     const totalPackages = await Package.countDocuments();
 
     const categoriesAggr = await Package.aggregate([
@@ -106,7 +116,11 @@ class PackageService {
     ]);
     const averageRating = ratingsAggr[0]?.avgRating || 0;
 
-    const topRatedData = await Package.find().sort({ rating: -1 }).limit(5).lean();
+    const topRatedData = await Package.find()
+      .sort({ rating: -1 })
+      .limit(5)
+      .select("name rating")
+      .lean();
     const topRated = topRatedData.map((pkg) => ({
       id: pkg._id,
       name: pkg.name,
@@ -124,6 +138,7 @@ class PackageService {
 
   // Admin mutation methods
   async createPackage(packageData) {
+    logger.info("Service: createPackage invoked", { name: packageData.name });
     const pkg = new Package({
       ...packageData,
       numericPrice: parseInt(packageData.price?.replace(/[^\d]/g, "") || "0", 10),
@@ -132,10 +147,12 @@ class PackageService {
 
     pkg.id = pkg._id;
     await cacheService.invalidatePackages();
+    logger.info("Service: createPackage created and invalidating cache", { id: pkg.id });
     return pkg;
   }
 
   async updatePackage(id, packageData) {
+    logger.info("Service: updatePackage invoked", { id, name: packageData.name });
     if (packageData.price) {
       packageData.numericPrice = parseInt(packageData.price.replace(/[^\d]/g, "") || "0", 10);
     }
@@ -146,14 +163,21 @@ class PackageService {
     if (pkg) {
       pkg.id = pkg._id;
       await cacheService.invalidatePackages();
+      logger.info("Service: updatePackage succeeded and invalidating cache", { id });
+    } else {
+      logger.warn("Service: updatePackage failed, package not found", { id });
     }
     return pkg;
   }
 
   async deletePackage(id) {
+    logger.info("Service: deletePackage invoked", { id });
     const pkg = await Package.findByIdAndDelete(id);
     if (pkg) {
       await cacheService.invalidatePackages();
+      logger.info("Service: deletePackage succeeded and invalidating cache", { id });
+    } else {
+      logger.warn("Service: deletePackage failed, package not found", { id });
     }
     return pkg;
   }

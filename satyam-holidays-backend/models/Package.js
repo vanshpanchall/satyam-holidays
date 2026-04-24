@@ -78,11 +78,62 @@ const packageSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    slug: {
+      type: String,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      sparse: true,
+    },
+    availableDates: [
+      {
+        startDate: { type: Date, required: true },
+        endDate: { type: Date, required: true },
+        capacity: { type: Number, required: true, default: 20 },
+        booked: { type: Number, default: 0 },
+        status: {
+          type: String,
+          enum: ["available", "filling_fast", "sold_out"],
+          default: "available",
+        },
+        priceOverride: { type: Number },
+      },
+    ],
+    itinerary: [
+      {
+        day: { type: Number, required: true },
+        title: { type: String, required: true },
+        description: { type: String, required: true },
+        meals: { type: [String], default: [] },
+      },
+    ],
+    promotions: [
+      {
+        code: { type: String, uppercase: true, trim: true },
+        discountPercent: { type: Number, min: 0, max: 100 },
+        validFrom: { type: Date },
+        validUntil: { type: Date },
+        description: { type: String },
+      },
+    ],
   },
   {
     timestamps: true,
   }
 );
+
+// Pre-save middleware to auto-generate slug
+packageSchema.pre("save", function (next) {
+  if (!this.slug && this.name) {
+    this.slug = this.name
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .trim();
+  }
+  next();
+});
 
 // Optimized indexes for common queries
 packageSchema.index({ category: 1, subcategory: 1 });
@@ -91,5 +142,6 @@ packageSchema.index({ isActive: 1 }); // Frequently filtered
 packageSchema.index({ isActive: 1, category: 1 }); // Combined filter
 packageSchema.index({ rating: -1 }); // For sorting by rating
 packageSchema.index({ createdAt: -1 }); // For recent packages
+packageSchema.index({ slug: 1 }); // Unique slug lookups
 
 module.exports = mongoose.model("Package", packageSchema);

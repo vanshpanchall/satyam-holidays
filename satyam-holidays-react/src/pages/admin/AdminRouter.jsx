@@ -12,6 +12,8 @@ const AdminEnquiries = lazyWithRecovery(() => import("./AdminEnquiries"), "admin
 const AdminPackages = lazyWithRecovery(() => import("./AdminPackages"), "admin-packages");
 const AdminSettings = lazyWithRecovery(() => import("./AdminSettings"), "admin-settings");
 const AdminLogin = lazyWithRecovery(() => import("./AdminLogin"), "admin-login");
+const CrmAnalytics = lazyWithRecovery(() => import("./CrmAnalytics"), "crm-analytics");
+const ReviewModeration = lazyWithRecovery(() => import("./ReviewModeration"), "review-moderation");
 
 const AnimatedAdminRoutes = () => {
   const location = useLocation();
@@ -21,7 +23,7 @@ const AnimatedAdminRoutes = () => {
       <Suspense fallback={<PageSkeleton />}>
         <Routes location={location} key={location.pathname}>
           <Route
-            path="/admin/login"
+            path="login"
             element={
               <PageTransition>
                 <AdminLogin />
@@ -29,7 +31,7 @@ const AnimatedAdminRoutes = () => {
             }
           />
           <Route
-            path="/admin"
+            path=""
             element={
               <PageTransition>
                 <AdminLayout />
@@ -40,6 +42,8 @@ const AnimatedAdminRoutes = () => {
             <Route path="enquiries" element={<AdminEnquiries />} />
             <Route path="packages" element={<AdminPackages />} />
             <Route path="settings" element={<AdminSettings />} />
+            <Route path="crm" element={<CrmAnalytics />} />
+            <Route path="reviews" element={<ReviewModeration />} />
           </Route>
           <Route path="*" element={<Navigate to="/admin/login" replace />} />
         </Routes>
@@ -48,10 +52,6 @@ const AnimatedAdminRoutes = () => {
   );
 };
 
-const AdminRouter = () => (
-  <BrowserRouter>
-    <AnimatedAdminRoutes />
-  </BrowserRouter>
-);
+const AdminRouter = () => <AnimatedAdminRoutes />;
 
 export default AdminRouter;

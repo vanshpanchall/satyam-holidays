@@ -174,17 +174,20 @@ const Contact = ({ sectionId = "contact" }) => {
             ref={mapReveal.ref}
             className={`reveal-right ${mapReveal.isVisible ? "reveal-right--visible" : ""}`}
           >
-            {/* Map Placeholder */}
+            {/* Map Embed */}
             <div className="glass-dark rounded-2xl p-8 mb-8">
               <h3 className="text-2xl font-bold mb-6">Find Us</h3>
-              <div className="bg-navy-800 rounded-xl h-64 flex items-center justify-center">
-                <div className="text-center">
-                  <FaMapMarkerAlt className="text-4xl text-primary-400 mx-auto mb-4" />
-                  <p className="text-navy-200">Interactive Map Coming Soon</p>
-                  <p className="text-sm text-navy-300 mt-2">
-                    {siteConfig.company.address.line1}, {siteConfig.company.address.line2}
-                  </p>
-                </div>
+              <div className="bg-navy-800 rounded-xl h-64 overflow-hidden relative">
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d886.5895044545332!2d72.57116126957521!3d23.07424499869608!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395e839ccc6211df%3A0x1ab649f94d6a92da!2s56%2C%20Uttar%20Gujarat%20Panchal%20Society%2C%20Ranip%2C%20Ahmedabad%2C%20Gujarat%20382480%2C%20India!5e1!3m2!1sen!2sus!4v1780252642950!5m2!1sen!2sus"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen=""
+                  loading="lazy"
+                  title="Satyam Holidays Office Location"
+                  className="absolute inset-0 w-full h-full border-0"
+                ></iframe>
               </div>
             </div>
 

@@ -4,7 +4,8 @@ import { FaTimes, FaMapMarkerAlt, FaClock, FaStar, FaRupeeSign, FaCheck } from "
 import ReviewsSection from "./ReviewsSection";
 import Meta from "./Meta";
 import { motion, AnimatePresence } from "framer-motion";
-import { resolveImageUrl } from "../config/siteConfig";
+import { resolveImageUrl, apiUrl } from "../config/siteConfig";
+import { csrfFetch, refreshCsrfToken } from "../utils/csrf";
 
 const scrollToEnquiry = () => {
   const el = document.getElementById("enquiry");
@@ -48,7 +49,7 @@ const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
       previousActiveElement.current = document.activeElement;
 
       document.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
+      document.body.classList.add("modal-open");
 
       // Focus the close button when modal opens
       requestAnimationFrame(() => {
@@ -57,7 +58,7 @@ const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
 
       return () => {
         document.removeEventListener("keydown", handleKeyDown);
-        document.body.style.overflow = "";
+        document.body.classList.remove("modal-open");
 
         // Restore focus to the previously focused element
         if (
@@ -69,6 +70,77 @@ const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
       };
     }
   }, [isOpen, handleKeyDown]);
+
+  // Inject TouristTrip structured data (JSON-LD) for SEO when modal is open
+  useEffect(() => {
+    if (!isOpen || !pkg) return;
+
+    const siteUrl = process.env.REACT_APP_SITE_URL || "https://satyamholidays.vercel.app";
+    const pkgName = typeof pkg.name === "string" ? pkg.name : "Travel Package";
+    const pkgLocation = typeof pkg.location === "string" ? pkg.location : "";
+    const pkgPrice =
+      pkg.numericPrice || parseInt(String(pkg.price || "0").replace(/[^\d]/g, ""), 10) || 0;
+
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "TouristTrip",
+      name: pkgName,
+      description: pkg.description || `${pkgName} tour package from Satyam Holidays`,
+      touristType: pkg.category === "international" ? "International" : "Domestic",
+      itinerary: {
+        "@type": "ItemList",
+        numberOfItems: pkg.duration || "N/A",
+      },
+      offers: {
+        "@type": "Offer",
+        price: pkgPrice,
+        priceCurrency: "INR",
+        availability: "https://schema.org/InStock",
+        seller: {
+          "@type": "TravelAgency",
+          name: "Satyam Holidays",
+          url: siteUrl,
+        },
+      },
+    };
+
+    if (pkgLocation) {
+      structuredData.location = {
+        "@type": "Place",
+        name: pkgLocation,
+      };
+    }
+
+    if (pkg.image) {
+      structuredData.image = resolveImageUrl(pkg.image);
+    }
+
+    if (pkg.rating) {
+      structuredData.aggregateRating = {
+        "@type": "AggregateRating",
+        ratingValue: String(pkg.rating),
+        reviewCount: String(pkg.reviews || 0),
+        bestRating: "5",
+        worstRating: "1",
+      };
+    }
+
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "tourist-trip-jsonld";
+    script.textContent = JSON.stringify(structuredData);
+
+    // Remove any previous instance
+    const existing = document.getElementById("tourist-trip-jsonld");
+    if (existing) existing.remove();
+
+    document.head.appendChild(script);
+
+    return () => {
+      const el = document.getElementById("tourist-trip-jsonld");
+      if (el) el.remove();
+    };
+  }, [isOpen, pkg]);
 
   if (!isOpen || !pkg) return null;
 
@@ -83,10 +155,11 @@ const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
     { id: "overview", name: "Overview" },
     { id: "itinerary", name: "Itinerary" },
     { id: "reviews", name: "Reviews" },
+    { id: "enquiry", name: "Inquire Now" },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Dynamic Meta for package detail */}
       <Meta
         title={`${packageName} — ${packageLocation} | Satyam Holidays`}
@@ -301,6 +374,7 @@ const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
                     {activeTab === "reviews" && (
                       <ReviewsSection packageId={packageId} packageTitle={packageName} />
                     )}
+                    {activeTab === "enquiry" && <ModalEnquiryForm pkg={pkg} />}
                   </div>
                 </div>
 
@@ -316,26 +390,26 @@ const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
                       </div>
                       <div className="text-sm text-gray-600 dark:text-navy-300">per person</div>
                     </div>
-                    <div className="flex space-x-3">
-                      <button
-                        onClick={() => {
-                          onClose();
-                          setTimeout(scrollToEnquiry, 300);
-                        }}
-                        className="btn btn-secondary"
-                      >
-                        Customize Package
-                      </button>
-                      <button
-                        onClick={() => {
-                          onClose();
-                          setTimeout(scrollToEnquiry, 300);
-                        }}
-                        className="btn btn-primary"
-                      >
-                        Book Now
-                      </button>
-                    </div>
+                    {activeTab !== "enquiry" && (
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => {
+                            setActiveTab("enquiry");
+                          }}
+                          className="btn btn-secondary"
+                        >
+                          Customize Package
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveTab("enquiry");
+                          }}
+                          className="btn btn-primary"
+                        >
+                          Book Now
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -344,6 +418,245 @@ const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
         )}
       </AnimatePresence>
     </div>
+  );
+};
+
+const ModalEnquiryForm = ({ pkg }) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    travelDate: "",
+    travelers: "",
+    budget: "",
+    message: `Interested in package: ${pkg.name} (Duration: ${pkg.duration}, Price: ${pkg.price})`,
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrorMsg("");
+    setSuccess(false);
+
+    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim()) {
+      setErrorMsg("Name, email, and phone number are required.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const destinationMap = {
+        chardham: "chardham",
+        kashmir: "kashmir",
+        andaman: "andaman",
+        dubai: "dubai",
+        singapore: "singapore",
+        thailand: "thailand",
+        vietnam: "vietnam",
+        nepal: "nepal",
+      };
+
+      const sub = (pkg.subcategory || "").toLowerCase();
+      let matchedDest = pkg.category || "custom";
+      for (const key in destinationMap) {
+        if (sub.includes(key)) {
+          matchedDest = destinationMap[key];
+          break;
+        }
+      }
+
+      const payload = Object.fromEntries(
+        Object.entries({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          destination: matchedDest,
+          travelDate: formData.travelDate || undefined,
+          travelers: formData.travelers || undefined,
+          budget: formData.budget || undefined,
+          message: formData.message || undefined,
+        }).filter(([, v]) => v !== undefined && v !== null && v !== "")
+      );
+
+      const apiBase = apiUrl("").replace(/\/$/, "");
+      await refreshCsrfToken(apiBase);
+
+      const sendRequest = () =>
+        csrfFetch(apiUrl("/api/enquiries"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+      let response = await sendRequest();
+      let resJson = await response.json().catch(() => null);
+
+      if (!response.ok && (resJson?.code === "CSRF_MISSING" || resJson?.code === "CSRF_INVALID")) {
+        await refreshCsrfToken(apiBase);
+        response = await sendRequest();
+        resJson = await response.json().catch(() => null);
+      }
+
+      if (response.ok && resJson && resJson.success) {
+        setSuccess(true);
+      } else {
+        setErrorMsg(resJson?.message || "Failed to submit enquiry. Please check fields.");
+      }
+    } catch (err) {
+      setErrorMsg("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="text-center py-10 bg-green-50 dark:bg-green-950/20 rounded-xl border border-green-200 dark:border-green-900 p-6">
+        <h4 className="text-xl font-bold text-green-700 dark:text-green-400 mb-2">Enquiry Sent!</h4>
+        <p className="text-green-600 dark:text-green-300">
+          Thank you for your interest. We will contact you shortly about <strong>{pkg.name}</strong>
+          .
+        </p>
+      </div>
+    );
+  }
+
+  const inputStyle =
+    "w-full px-4 py-2.5 border border-gray-300 dark:border-navy-600 rounded-lg bg-white/80 dark:bg-navy-800/60 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm text-gray-800 dark:text-white";
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-xl mx-auto">
+      {errorMsg && (
+        <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
+          {errorMsg}
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-navy-300 mb-1">
+            Full Name *
+          </label>
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            required
+            className={inputStyle}
+            placeholder="Your Name"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-navy-300 mb-1">
+            Email Address *
+          </label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className={inputStyle}
+            placeholder="name@example.com"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-navy-300 mb-1">
+            Phone Number *
+          </label>
+          <input
+            type="tel"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            required
+            className={inputStyle}
+            placeholder="Phone Number"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-navy-300 mb-1">
+            Preferred Travel Date
+          </label>
+          <input
+            type="date"
+            name="travelDate"
+            value={formData.travelDate}
+            onChange={handleChange}
+            className={inputStyle}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-navy-300 mb-1">
+            Number of Travelers
+          </label>
+          <select
+            name="travelers"
+            value={formData.travelers}
+            onChange={handleChange}
+            className={inputStyle}
+          >
+            <option value="">Select number</option>
+            <option value="1">1 Person</option>
+            <option value="2">2 People</option>
+            <option value="3">3 People</option>
+            <option value="4">4 People</option>
+            <option value="5+">5+ People</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-navy-300 mb-1">
+            Budget Range
+          </label>
+          <select
+            name="budget"
+            value={formData.budget}
+            onChange={handleChange}
+            className={inputStyle}
+          >
+            <option value="">Select budget</option>
+            <option value="under-20k">Under ₹20,000</option>
+            <option value="20k-50k">₹20,000 - ₹50,000</option>
+            <option value="50k-1l">₹50,000 - ₹1,00,000</option>
+            <option value="above-1l">Above ₹1,00,000</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-navy-300 mb-1">
+          Additional Requirements
+        </label>
+        <textarea
+          name="message"
+          value={formData.message}
+          onChange={handleChange}
+          rows="3"
+          className="w-full px-4 py-2.5 border border-gray-300 dark:border-navy-600 rounded-lg bg-white/80 dark:bg-navy-800/60 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm resize-none"
+          placeholder="Travel details..."
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full btn btn-primary py-3 text-sm font-semibold disabled:opacity-50 min-h-[44px]"
+      >
+        {isSubmitting ? "Sending Enquiry..." : "Send Booking Enquiry"}
+      </button>
+    </form>
   );
 };
 

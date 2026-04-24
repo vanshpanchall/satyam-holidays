@@ -113,8 +113,10 @@ class CacheService {
     try {
       const namespace = pattern.replace(":*", "").replace("*", "");
       const keysToDelete = [];
+      let registryHit = false;
 
       if (this.keyRegistry.has(namespace)) {
+        registryHit = true;
         const keys = this.keyRegistry.get(namespace);
         for (const key of keys) {
           keysToDelete.push(key);
@@ -122,8 +124,8 @@ class CacheService {
         this.keyRegistry.delete(namespace);
       }
 
-      // Fallback to SCAN for any missed keys (safer than KEYS for large datasets)
-      if (keysToDelete.length === 0 && pattern.includes("*")) {
+      // Fallback to SCAN only if registry had no entry for this namespace
+      if (!registryHit && keysToDelete.length === 0 && pattern.includes("*")) {
         let cursor = 0;
         do {
           const result = await this.client.scan(cursor, {

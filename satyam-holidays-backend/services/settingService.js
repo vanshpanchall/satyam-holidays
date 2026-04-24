@@ -12,7 +12,7 @@ const DEFAULTS = {
   "company.emergencyPhone": "+91 98247 37137",
   "company.whatsapp": "+91 98247 37137",
   "company.address": {
-    line1: "10-A/28, Rupal Apartment, Radhaswami Road",
+    line1: "56, Uttar Gujarat Panchal Society",
     line2: "Ranip, Ahmedabad, Gujarat",
     country: "India",
   },
@@ -127,12 +127,16 @@ class SettingService {
    * Get all settings as a flat { key: value } object
    */
   async getAll() {
+    logger.info("Service: getAll settings invoked");
     try {
       const docs = await Setting.find({}).lean();
       const settings = { ...DEFAULTS };
       for (const doc of docs) {
         settings[doc.key] = sanitizeSettingValue(doc.key, doc.value);
       }
+      logger.info("Service: getAll settings successfully fetched and sanitized", {
+        count: docs.length,
+      });
       return settings;
     } catch (error) {
       logger.error("Failed to fetch settings:", error);
@@ -144,6 +148,7 @@ class SettingService {
    * Get a single setting by key
    */
   async get(key) {
+    logger.info("Service: get setting invoked", { key });
     const doc = await Setting.findOne({ key }).lean();
     if (!doc) {
       return DEFAULTS[key] ?? null;
@@ -155,18 +160,23 @@ class SettingService {
    * Upsert a single setting
    */
   async upsert(key, value) {
+    logger.info("Service: upsert setting invoked", { key });
     const sanitizedValue = sanitizeSettingValue(key, value);
-    return Setting.findOneAndUpdate(
+    const doc = await Setting.findOneAndUpdate(
       { key },
       { key, value: sanitizedValue },
       { upsert: true, new: true, runValidators: true }
     );
+    logger.info("Service: upsert setting succeeded", { key });
+    return doc;
   }
 
   /**
    * Bulk upsert settings — { key: value, ... }
    */
   async bulkUpsert(settings) {
+    const keys = Object.keys(settings || {});
+    logger.info("Service: bulkUpsert settings invoked", { keys });
     const ops = Object.entries(settings).map(([key, value]) => ({
       updateOne: {
         filter: { key },
@@ -177,6 +187,7 @@ class SettingService {
 
     if (ops.length > 0) {
       await Setting.bulkWrite(ops);
+      logger.info("Service: bulkUpsert settings bulkWrite completed", { count: ops.length });
     }
 
     return this.getAll();

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { apiUrl } from "../config/siteConfig";
 
 const SettingsContext = createContext(null);
@@ -13,7 +13,7 @@ const FALLBACK = {
   "company.emergencyPhone": "+91 98247 37137",
   "company.whatsapp": "+91 98247 37137",
   "company.address": {
-    line1: "10-A/28, Rupal Apartment, Radhaswami Road",
+    line1: "56, Uttar Gujarat Panchal Society",
     line2: "Ranip, Ahmedabad, Gujarat",
     country: "India",
   },
@@ -123,26 +123,52 @@ const sanitizeSettingsPayload = (rawSettings = {}) => {
   return sanitized;
 };
 
+// Shared promise to deduplicate concurrent setting requests across provider mounts
+let inFlightSettingsPromise = null;
+
+export function resetInFlightSettingsPromise() {
+  inFlightSettingsPromise = null;
+}
+
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(FALLBACK);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetchSettings = useCallback(async () => {
+    // If a request is already in-flight, await it instead of firing a new one
+    if (inFlightSettingsPromise) {
+      try {
+        const data = await inFlightSettingsPromise;
+        setSettings(data);
+        setLoading(false);
+        return;
+      } catch (err) {
+        // In-flight request failed, fall through to retry
+      }
+    }
+
     setLoading(true);
     setError(null);
-    try {
+
+    inFlightSettingsPromise = (async () => {
       const res = await fetch(apiUrl("/api/settings"));
       if (!res.ok) {
         throw new Error(`Failed to fetch settings: ${res.status}`);
       }
       const json = await res.json();
       if (json.success && json.data) {
-        setSettings(sanitizeSettingsPayload(json.data));
+        return sanitizeSettingsPayload(json.data);
       }
+      throw new Error("Invalid settings response");
+    })();
+
+    try {
+      const data = await inFlightSettingsPromise;
+      setSettings(data);
     } catch (err) {
       setError(err.message || "Failed to load settings");
-      // Keep using fallback values
+      inFlightSettingsPromise = null; // Clear promise on error so next call can retry
     } finally {
       setLoading(false);
     }
@@ -168,6 +194,7 @@ export function SettingsProvider({ children }) {
   }, [fetchSettings]);
 
   const refetch = useCallback(() => {
+    inFlightSettingsPromise = null; // Reset promise to force a fresh reload
     fetchSettings();
   }, [fetchSettings]);
 
@@ -211,33 +238,36 @@ export function useSettings() {
  */
 export function useSiteConfig() {
   const { settings, loading, error } = useSettings();
-  const getSetting = (key) => sanitizeSettingValue(key, settings[key], FALLBACK[key]);
 
-  return {
-    company: {
-      name: getSetting("company.name"),
-      tagline: getSetting("company.tagline"),
-      logo: getSetting("company.logo"),
-      email: getSetting("company.email"),
-      phones: getSetting("company.phones"),
-      emergencyPhone: getSetting("company.emergencyPhone"),
-      emergencyEmail: "emergency@satyamholidays.com",
-      whatsapp: getSetting("company.whatsapp"),
-      address: getSetting("company.address"),
-      hours: getSetting("company.hours"),
-    },
-    social: {
-      facebook: getSetting("social.facebook"),
-      instagram: getSetting("social.instagram"),
-      twitter: getSetting("social.twitter"),
-    },
-    brand: {
-      primaryColor: getSetting("brand.primaryColor"),
-    },
-    website: getSetting("company.website"),
-    // Expose loading/error states for components that need them
-    _meta: { loading, error },
-  };
+  return useMemo(() => {
+    const getSetting = (key) => sanitizeSettingValue(key, settings[key], FALLBACK[key]);
+
+    return {
+      company: {
+        name: getSetting("company.name"),
+        tagline: getSetting("company.tagline"),
+        logo: getSetting("company.logo"),
+        email: getSetting("company.email"),
+        phones: getSetting("company.phones"),
+        emergencyPhone: getSetting("company.emergencyPhone"),
+        emergencyEmail: "emergency@satyamholidays.com",
+        whatsapp: getSetting("company.whatsapp"),
+        address: getSetting("company.address"),
+        hours: getSetting("company.hours"),
+      },
+      social: {
+        facebook: getSetting("social.facebook"),
+        instagram: getSetting("social.instagram"),
+        twitter: getSetting("social.twitter"),
+      },
+      brand: {
+        primaryColor: getSetting("brand.primaryColor"),
+      },
+      website: getSetting("company.website"),
+      // Expose loading/error states for components that need them
+      _meta: { loading, error },
+    };
+  }, [settings, loading, error]);
 }
 
 export default SettingsContext;

@@ -9,7 +9,7 @@ const siteConfig = {
     tagline: "Journey With Joy!",
     logo: "/satyam-logo.svg", // placed under public/
     address: {
-      line1: "10-A/28, Rupal Apartment, Radhaswami Road",
+      line1: "56, Uttar Gujarat Panchal Society",
       line2: "Ranip, Ahmedabad, Gujarat",
       country: "India",
     },
@@ -73,15 +73,8 @@ export const apiUrl = (path = "") => {
 // Get CSRF token from cookie
 const getCsrfToken = () => Cookies.get("csrf_token");
 
-// Get admin token from localStorage (fallback for browsers that block cross-site cookies)
-const getAdminToken = () => {
-  if (typeof window === "undefined") return "";
-  try {
-    return localStorage.getItem("adminToken") || "";
-  } catch {
-    return "";
-  }
-};
+// Get admin token (rely on HTTPOnly cookies, localStorage fallback removed for security)
+const getAdminToken = () => "";
 
 // Add CSRF token to headers for state-changing requests
 const withCsrfHeaders = (headers = {}, method = "GET") => {
@@ -118,8 +111,6 @@ export const fetchWithAuth = async (url, options = {}) => {
   });
 
   if (response.status === 401) {
-    // Clear any legacy localStorage token
-    localStorage.removeItem("adminToken");
     // Redirect to login if on admin page
     if (
       typeof window !== "undefined" &&
@@ -147,9 +138,20 @@ export const safeJson = async (response) => {
   }
 };
 
-// Resolve image URL — handles both relative /uploads/ paths and absolute URLs
+// Resolve image URL — handles relative /uploads/ paths, Cloudinary URLs, and external URLs.
+// External URLs are proxied through Cloudinary's fetch delivery type for CDN caching,
+// format/quality optimization, and to eliminate direct external image request failures.
+const CLOUDINARY_CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || "dfoznqeww";
+
 export const resolveImageUrl = (imageUrl) => {
   if (!imageUrl) return "";
+  // Relative upload path → resolve against API base
   if (imageUrl.startsWith("/uploads")) return apiUrl(imageUrl);
+  // Already a Cloudinary URL → return as-is
+  if (imageUrl.includes("cloudinary.com")) return imageUrl;
+  // Absolute external URL → proxy through Cloudinary fetch for CDN + optimization
+  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/fetch/w_800,q_auto,f_auto/${imageUrl}`;
+  }
   return imageUrl;
 };

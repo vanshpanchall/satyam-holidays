@@ -1,5 +1,4 @@
 const Enquiry = require("../models/Enquiry");
-const sendEmail = require("../utils/email");
 const { sendEnquiryThankYou, sendAdminEnquiryAlert } = require("../utils/whatsapp");
 const cacheService = require("../utils/cache");
 const socketManager = require("../utils/socketManager");
@@ -8,6 +7,11 @@ const settingService = require("./settingService");
 
 class EnquiryService {
   async createEnquiry(enquiryData, ipAddress, userAgent) {
+    logger.info("Service: createEnquiry invoked", {
+      name: enquiryData.name,
+      email: enquiryData.email,
+    });
+
     // Create enquiry
     const enquiry = new Enquiry({
       ...enquiryData,
@@ -16,12 +20,14 @@ class EnquiryService {
     });
 
     await enquiry.save();
+    logger.info("Service: createEnquiry saved document to database", { id: enquiry._id });
 
     // Invalidate cache
     await cacheService.invalidateEnquiries();
 
     // Emit real-time event to admin dashboard
     socketManager.emitNewEnquiry(enquiry);
+    logger.info("Service: createEnquiry broadcasted Socket.io real-time event");
 
     const settings = await settingService.getAll();
     const emailEnabled = settings["notifications.emailEnabled"] !== false;
@@ -30,15 +36,47 @@ class EnquiryService {
 
     if (emailEnabled) {
       try {
-        await sendEmail.sendAdminNotification(enquiry);
-        await sendEmail.sendCustomerConfirmation(enquiry);
+        logger.info("Service: createEnquiry queueing email notifications");
+        const queueService = require("../utils/queue");
+        const adminTo =
+          process.env.ADMIN_EMAIL || settings["company.email"] || "satyamholidays19@gmail.com";
+
+        // Queue admin notification
+        await queueService.addJob("send-email", {
+          to: adminTo,
+          template: "enquiry-notification",
+          subject: "New enquiry received",
+          data: { enquiry },
+        });
+
+        // Queue customer confirmation
+        if (enquiry.email) {
+          await queueService.addJob("send-email", {
+            to: enquiry.email,
+            template: "enquiry-confirmation",
+            subject: "Thank you for your enquiry",
+            data: { name: enquiry.name, enquiryId: enquiry._id, enquiry },
+          });
+        }
+
+        // Schedule automated follow-up in 24 hours if not closed
+        await queueService.addJob(
+          "send-followup",
+          { enquiryId: enquiry._id },
+          { nextRunAt: new Date(Date.now() + 24 * 60 * 60 * 1000) }
+        );
+        logger.info("Service: createEnquiry email jobs queued successfully");
       } catch (emailError) {
-        logger.error("Email sending failed", { error: emailError.message, enquiryId: enquiry._id });
+        logger.error("Queueing emails failed", {
+          error: emailError.message,
+          enquiryId: enquiry._id,
+        });
       }
     }
 
     if (whatsappEnabled) {
       try {
+        logger.info("Service: createEnquiry triggering customer WhatsApp confirmation");
         await sendEnquiryThankYou(enquiry);
       } catch (whatsappError) {
         logger.error("WhatsApp customer msg failed", {
@@ -47,6 +85,7 @@ class EnquiryService {
         });
       }
       try {
+        logger.info("Service: createEnquiry triggering admin WhatsApp alert");
         await sendAdminEnquiryAlert(enquiry);
       } catch (whatsappError) {
         logger.error("WhatsApp admin alert failed", {
@@ -61,14 +100,17 @@ class EnquiryService {
 
   async getEnquiries(filter = {}, options = {}) {
     const { cursor, limit = 10, sortBy = "createdAt", sortOrder = "desc" } = options;
+    logger.info("Service: getEnquiries invoked", { filter, cursor, limit, sortBy, sortOrder });
 
     // Check cache first
     const cacheKey = { filter, cursor, limit, sortBy, sortOrder };
     const cached = await cacheService.getEnquiries(cacheKey);
     if (cached) {
+      logger.info("Service: getEnquiries cache HIT", { cacheKey });
       return cached;
     }
 
+    logger.info("Service: getEnquiries cache MISS. Querying database...", { cacheKey });
     const sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
 
     // Add cursor condition for pagination
@@ -106,6 +148,7 @@ class EnquiryService {
 
     // Cache the result
     await cacheService.setEnquiries(cacheKey, result);
+    logger.info("Service: getEnquiries cached new result", { cacheKey });
 
     return result;
   }
@@ -115,6 +158,7 @@ class EnquiryService {
   }
 
   async updateEnquiryStatus(id, status) {
+    logger.info("Service: updateEnquiryStatus invoked", { id, status });
     const enquiry = await Enquiry.findByIdAndUpdate(id, { status }, { new: true });
 
     if (enquiry) {
@@ -122,6 +166,12 @@ class EnquiryService {
       await cacheService.invalidateEnquiries();
       // Emit real-time update
       socketManager.emitEnquiryUpdate(enquiry);
+      logger.info(
+        "Service: updateEnquiryStatus succeeded and broadcasted Socket.io real-time update",
+        { id, status }
+      );
+    } else {
+      logger.warn("Service: updateEnquiryStatus failed, enquiry not found", { id });
     }
 
     return enquiry;

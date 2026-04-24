@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { FaStar, FaThumbsUp, FaUser, FaCalendarAlt, FaCheckCircle } from "react-icons/fa";
 import { toast } from "react-toastify";
-import { apiUrl } from "../config/siteConfig";
+import { apiUrl, fetchWithAuth } from "../config/siteConfig";
 
 const ReviewCard = ({ review, onHelpfulClick }) => {
   const [isHelpfulLoading, setIsHelpfulLoading] = useState(false);
@@ -141,59 +141,11 @@ const ReviewList = ({ packageId }) => {
     };
   };
 
-  const fetchReviews = useCallback(
-    async (page = 1) => {
-      try {
-        setLoading(true);
-        const response = await fetch(
-          apiUrl(
-            `/api/reviews/package/${packageId}?page=${page}&limit=5&sortBy=${sortBy}&sortOrder=${sortOrder}`
-          )
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch reviews");
-        }
-
-        const data = await response.json();
-
-        if (data.success) {
-          const parsed = parseReviewsPayload(data);
-          setReviews(parsed.reviews);
-          setPagination(parsed.pagination);
-        } else {
-          throw new Error(data.message || "Failed to fetch reviews");
-        }
-      } catch (error) {
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [packageId, sortBy, sortOrder]
-  );
-
-  const fetchSummary = useCallback(async () => {
-    try {
-      const response = await fetch(apiUrl(`/api/reviews/package/${packageId}/summary`));
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch review summary");
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setSummary(parseSummaryPayload(data));
-      }
-    } catch {
-      // Summary fetch error handled silently
-    }
-  }, [packageId]);
+  const [page, setPage] = useState(1);
 
   const handleHelpfulClick = async (reviewId) => {
     try {
-      const response = await fetch(apiUrl(`/api/reviews/${reviewId}/helpful`), {
+      const response = await fetchWithAuth(apiUrl(`/api/reviews/${reviewId}/helpful`), {
         method: "PATCH",
       });
 
@@ -210,7 +162,7 @@ const ReviewList = ({ packageId }) => {
       } else {
         throw new Error(data.message || "Failed to mark as helpful");
       }
-    } catch {
+    } catch (error) {
       toast.error("Failed to mark review as helpful");
     }
   };
@@ -219,18 +171,78 @@ const ReviewList = ({ packageId }) => {
     const newSortOrder = sortBy === newSortBy && sortOrder === "desc" ? "asc" : "desc";
     setSortBy(newSortBy);
     setSortOrder(newSortOrder);
+    setPage(1); // Reset page on sort change
   };
 
-  const handlePageChange = (page) => {
-    fetchReviews(page);
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
   };
 
   useEffect(() => {
-    if (packageId) {
-      fetchSummary();
-      fetchReviews();
-    }
-  }, [packageId, sortBy, sortOrder, fetchReviews, fetchSummary]);
+    if (!packageId) return;
+    const controller = new AbortController();
+
+    const fetchReviews = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          apiUrl(
+            `/api/reviews/package/${packageId}?page=${page}&limit=5&sortBy=${sortBy}&sortOrder=${sortOrder}`
+          ),
+          { signal: controller.signal }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch reviews");
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          const parsed = parseReviewsPayload(data);
+          setReviews(parsed.reviews);
+          setPagination(parsed.pagination);
+        } else {
+          throw new Error(data.message || "Failed to fetch reviews");
+        }
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setError(error.message);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    const fetchSummary = async () => {
+      try {
+        const response = await fetch(apiUrl(`/api/reviews/package/${packageId}/summary`), {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch review summary");
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          setSummary(parseSummaryPayload(data));
+        }
+      } catch (error) {
+        // Summary fetch error handled silently
+      }
+    };
+
+    fetchSummary();
+    fetchReviews();
+
+    return () => {
+      controller.abort();
+    };
+  }, [packageId, sortBy, sortOrder, page]);
 
   const renderStars = (rating) => {
     return [...Array(5)].map((_, i) => (
