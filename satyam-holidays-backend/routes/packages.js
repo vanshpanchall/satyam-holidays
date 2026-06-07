@@ -81,16 +81,14 @@ const validate = (schema) => (req, res, next) => {
 
 // ─── Multer config (memory storage for Cloudinary) ───
 const fileFilter = (_req, file, cb) => {
-  const allowed = /jpeg|jpg|png|webp|gif/;
-  const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
+  const allowed = /jpeg|jpg|png|webp|gif/i;
+  const extOk = allowed.test(path.extname(file.originalname));
   const mimeOk = allowed.test(file.mimetype);
   if (extOk && mimeOk) return cb(null, true);
-  cb(
-    new multer.MulterError(
-      "LIMIT_UNEXPECTED_FILE",
-      "Only image files (JPEG, PNG, WebP, GIF) are allowed"
-    )
-  );
+
+  const err = new Error("Only image files (JPEG, PNG, WebP, GIF) are allowed");
+  err.statusCode = 400;
+  cb(err);
 };
 
 const upload = multer({
@@ -119,7 +117,18 @@ router.use((err, _req, res, next) => {
     if (err.code === "LIMIT_FILE_SIZE") {
       return res.status(400).json({ success: false, message: "Image must be less than 5MB" });
     }
+    if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Unexpected field name in upload. Expected field name is 'image'.",
+        });
+    }
     return res.status(400).json({ success: false, message: err.message || "Invalid file" });
+  }
+  if (err.message && err.message.includes("Only image files")) {
+    return res.status(err.statusCode || 400).json({ success: false, message: err.message });
   }
   next(err);
 });
