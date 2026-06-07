@@ -21,6 +21,29 @@ const { setCsrfToken, validateCsrf, getCsrfToken } = require("./middleware/csrf"
 const jwt = require("jsonwebtoken");
 const rateLimiterStore = require("./middleware/rateLimiterStore");
 
+const isPublicStateChangingRoute = (req) => {
+  const path = req.path;
+  const method = req.method;
+
+  if (method === "POST") {
+    // 1. AI generate
+    if (/\/api\/(v1\/)?ai\/generate\/?$/i.test(path)) return true;
+    // 2. Package calculate price
+    if (/\/api\/(v1\/)?packages\/[a-f\d]{24}\/calculate-price\/?$/i.test(path)) return true;
+    // 3. Submit enquiry
+    if (/\/api\/(v1\/)?enquiries\/?$/i.test(path)) return true;
+    // 4. Create review
+    if (/\/api\/(v1\/)?reviews\/?$/i.test(path)) return true;
+  }
+
+  if (method === "PATCH") {
+    // 5. Helpful review vote
+    if (/\/api\/(v1\/)?reviews\/[a-f\d]{24}\/helpful\/?$/i.test(path)) return true;
+  }
+
+  return false;
+};
+
 // CSRF middleware that skips validation when a valid admin JWT is present in the Authorization header.
 // Cookie auth sessions must always undergo CSRF checks.
 const csrfUnlessAuthed = (req, res, next) => {
@@ -39,7 +62,12 @@ const csrfUnlessAuthed = (req, res, next) => {
     }
   }
 
-  // Enforce CSRF for cookie auth or anonymous requests
+  // Bypass CSRF checks for public/anonymous endpoints to support cross-domain third-party cookie restrictions
+  if (isPublicStateChangingRoute(req)) {
+    return next();
+  }
+
+  // Enforce CSRF for cookie auth or admin requests
   return validateCsrf(req, res, next);
 };
 
