@@ -27,6 +27,25 @@ class QueueService {
       });
       await job.save();
       logger.debug(`[queue] Job added: ${type} (ID: ${job._id})`);
+
+      // If the job is scheduled to run immediately (or in the past)
+      if (nextRunAt <= new Date()) {
+        if (process.env.VERCEL) {
+          // In serverless environments, we must await the job synchronously
+          // because background workers cannot run after the request finishes.
+          logger.info(
+            `[queue] Vercel serverless environment detected. Running job ${job._id} inline.`
+          );
+          await this.runJob(job);
+        } else {
+          // In persistent environments, run the job immediately in the background (asynchronously)
+          // so the user does not have to wait for the 5-second polling interval.
+          this.runJob(job).catch((err) => {
+            logger.error(`[queue] Inline job execution failed for ${job._id}: ${err.message}`);
+          });
+        }
+      }
+
       return job;
     } catch (error) {
       logger.error(`[queue] Failed to add job: ${error.message}`);
