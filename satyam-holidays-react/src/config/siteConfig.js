@@ -1,4 +1,4 @@
-import Cookies from "js-cookie";
+import { getCsrfToken, refreshCsrfToken } from "../utils/csrf";
 
 // Central site configuration for easy customization
 // Update values here and the UI will reflect across the site.
@@ -70,9 +70,6 @@ export const apiUrl = (path = "") => {
   return `${base}${p}`;
 };
 
-// Get CSRF token from cookie
-const getCsrfToken = () => Cookies.get("csrf_token");
-
 // Get admin token (rely on HTTPOnly cookies, localStorage fallback removed for security)
 const getAdminToken = () => "";
 
@@ -100,6 +97,16 @@ const withAuthHeaders = (headers = {}) => {
 
 export const fetchWithAuth = async (url, options = {}) => {
   const method = options.method || "GET";
+
+  // Ensure CSRF token is fetched/refreshed for state-changing requests if not present
+  const stateChangingMethods = ["POST", "PUT", "PATCH", "DELETE"];
+  if (stateChangingMethods.includes(method.toUpperCase())) {
+    const token = getCsrfToken();
+    if (!token) {
+      await refreshCsrfToken();
+    }
+  }
+
   const csrfHeaders = withCsrfHeaders(options.headers || {}, method);
   const headers = withAuthHeaders(csrfHeaders);
 

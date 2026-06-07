@@ -20,9 +20,15 @@ const AiPlannerPage = lazyWithRecovery(() => import("./pages/AiPlannerPage"), "a
 
 import ScrollToTop from "./components/ScrollToTop";
 import PageTransition from "./components/PageTransition";
+import { refreshCsrfToken } from "./utils/csrf";
 
 function App() {
   const [ToastContainerComponent, setToastContainerComponent] = useState(null);
+
+  // Initialize CSRF token on page load
+  useEffect(() => {
+    refreshCsrfToken();
+  }, []);
 
   useEffect(() => {
     const dsn = process.env.REACT_APP_SENTRY_DSN;

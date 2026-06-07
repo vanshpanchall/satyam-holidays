@@ -67,10 +67,10 @@ Create backend env file from example:
 
 ```bash
 # Linux/macOS
-cp satyam-holidays-backend/env.example satyam-holidays-backend/.env
+cp satyam-holidays-backend/.env.example satyam-holidays-backend/.env
 
 # Windows PowerShell
-Copy-Item satyam-holidays-backend/env.example satyam-holidays-backend/.env
+Copy-Item satyam-holidays-backend/.env.example satyam-holidays-backend/.env
 ```
 
 Minimum values to review in .env:
@@ -129,7 +129,7 @@ docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 
 Notes:
 - docker-compose.yml reads backend environment from BACKEND_ENV_FILE.
-- If BACKEND_ENV_FILE is not set, it defaults to satyam-holidays-backend/env.example.
+- If BACKEND_ENV_FILE is not set, it defaults to satyam-holidays-backend/.env.example.
 
 ## CI and Deployment
 
@@ -169,10 +169,8 @@ For complete operational guidance, use:
 
 ## Related Documentation
 
-- setup.md
 - OPERATIONS_RUNBOOK.md
 - PRODUCTION_CHECKLIST.md
-- satyam-holidays-backend/QUICK_START.md
 - satyam-holidays-backend/MONGODB_SETUP.md
 
 ## License

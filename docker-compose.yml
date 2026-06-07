@@ -22,7 +22,7 @@ services:
       - mongo
       - redis
     env_file:
-      - ${BACKEND_ENV_FILE:-./satyam-holidays-backend/env.example}
+      - ${BACKEND_ENV_FILE:-./satyam-holidays-backend/.env.example}
     environment:
       NODE_ENV: production
       PORT: "5000"
