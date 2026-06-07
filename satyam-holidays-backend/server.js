@@ -482,9 +482,14 @@ const postEnquiryLimiter = rateLimit({
 });
 
 // CORS configuration
+const PRODUCTION_CORS_ORIGINS = [
+  "https://satyamholidays.vercel.app",
+  "https://www.satyamholidays.com",
+];
+
 const allowedOrigins = new Set(
   [
-    ...(IS_PRODUCTION ? [] : DEV_CORS_ORIGINS),
+    ...(IS_PRODUCTION ? PRODUCTION_CORS_ORIGINS : DEV_CORS_ORIGINS),
     process.env.FRONTEND_ORIGIN,
     ...parseOrigins(process.env.CORS_ORIGIN),
   ]
