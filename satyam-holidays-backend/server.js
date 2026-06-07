@@ -22,7 +22,7 @@ const jwt = require("jsonwebtoken");
 const rateLimiterStore = require("./middleware/rateLimiterStore");
 
 const isPublicStateChangingRoute = (req) => {
-  const path = req.path;
+  const path = req.originalUrl.split("?")[0];
   const method = req.method;
 
   if (method === "POST") {

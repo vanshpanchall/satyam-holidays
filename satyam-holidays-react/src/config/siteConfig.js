@@ -70,8 +70,14 @@ export const apiUrl = (path = "") => {
   return `${base}${p}`;
 };
 
-// Get admin token (rely on HTTPOnly cookies, localStorage fallback removed for security)
-const getAdminToken = () => "";
+// Get admin token from localStorage (fallback for cross-domain cookie blocking in production)
+const getAdminToken = () => {
+  try {
+    return localStorage.getItem("adminToken") || "";
+  } catch (e) {
+    return "";
+  }
+};
 
 // Add CSRF token to headers for state-changing requests
 const withCsrfHeaders = (headers = {}, method = "GET") => {
