@@ -43,7 +43,13 @@ const siteConfig = {
   api: {
     // Frontend will talk to this API base. In production, set REACT_APP_API_BASE.
     baseUrl:
-      process.env.REACT_APP_API_BASE || process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5000",
+      typeof window !== "undefined" &&
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1"
+        ? "" // Relative URL in production (proxied via Vercel rewrites)
+        : process.env.REACT_APP_API_BASE ||
+          process.env.NEXT_PUBLIC_API_BASE ||
+          "http://localhost:5000",
   },
 };
 
