@@ -18,7 +18,7 @@ import {
   FaKey,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
-import { apiUrl, fetchWithAuth } from "../../config/siteConfig";
+import { apiUrl, fetchWithAuth, safeJson, toastApiError } from "../../config/siteConfig";
 
 const TABS = [
   { id: "company", label: "Company", icon: <FaBuilding /> },
@@ -40,12 +40,12 @@ const AdminSettings = () => {
   const fetchSettings = useCallback(async () => {
     try {
       const res = await fetch(apiUrl("/api/settings"));
-      const json = await res.json();
+      const json = await safeJson(res);
       if (json.success && json.data) {
         setSettings(json.data);
       }
-    } catch {
-      toast.error("Failed to load settings");
+    } catch (err) {
+      toastApiError(err, "Failed to load settings");
     } finally {
       setLoading(false);
     }
@@ -68,16 +68,16 @@ const AdminSettings = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         toast.success("Settings saved successfully");
         setDirty(false);
         setSettings(json.data);
       } else {
-        toast.error(json.message || "Failed to save settings");
+        toastApiError(json, "Failed to save settings");
       }
-    } catch {
-      toast.error("An error occurred while saving");
+    } catch (err) {
+      toastApiError(err, "An error occurred while saving");
     } finally {
       setSaving(false);
     }
@@ -600,16 +600,16 @@ const AdminsTab = ({ inputClass }) => {
       ]);
 
       if (usersRes.ok) {
-        const usersJson = await usersRes.json();
+        const usersJson = await safeJson(usersRes);
         if (usersJson.success) setUsers(usersJson.data);
       }
 
       if (verifyRes.ok) {
-        const verifyJson = await verifyRes.json();
+        const verifyJson = await safeJson(verifyRes);
         if (verifyJson.success) setCurrentUser(verifyJson.user);
       }
     } catch (err) {
-      toast.error("Failed to load administrators");
+      toastApiError(err, "Failed to load administrators");
     } finally {
       setLoading(false);
     }
@@ -622,11 +622,11 @@ const AdminsTab = ({ inputClass }) => {
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!name || !email || !password) {
-      toast.error("All fields are required");
+      toastApiError("All fields are required");
       return;
     }
     if (password.length < 8) {
-      toast.error("Password must be at least 8 characters long");
+      toastApiError("Password must be at least 8 characters long");
       return;
     }
     setCreating(true);
@@ -636,7 +636,7 @@ const AdminsTab = ({ inputClass }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         toast.success("Administrator account created");
         setName("");
@@ -645,10 +645,10 @@ const AdminsTab = ({ inputClass }) => {
         setShowCreate(false);
         fetchData();
       } else {
-        toast.error(json.message || "Failed to create administrator");
+        toastApiError(json, "Failed to create administrator");
       }
-    } catch {
-      toast.error("An error occurred");
+    } catch (err) {
+      toastApiError(err, "An error occurred");
     } finally {
       setCreating(false);
     }
@@ -656,7 +656,7 @@ const AdminsTab = ({ inputClass }) => {
 
   const handleDelete = async (id, userEmail) => {
     if (currentUser && (currentUser.id === id || currentUser.email === userEmail)) {
-      toast.error("You cannot delete your own account");
+      toastApiError("You cannot delete your own account");
       return;
     }
     if (!window.confirm(`Are you sure you want to delete administrator "${userEmail}"?`)) {
@@ -666,22 +666,22 @@ const AdminsTab = ({ inputClass }) => {
       const res = await fetchWithAuth(apiUrl(`/api/auth/users/${id}`), {
         method: "DELETE",
       });
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         toast.success("Administrator deleted successfully");
         fetchData();
       } else {
-        toast.error(json.message || "Failed to delete administrator");
+        toastApiError(json, "Failed to delete administrator");
       }
-    } catch {
-      toast.error("An error occurred");
+    } catch (err) {
+      toastApiError(err, "An error occurred");
     }
   };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters long");
+      toastApiError("Password must be at least 8 characters long");
       return;
     }
     setResetting(true);
@@ -691,16 +691,16 @@ const AdminsTab = ({ inputClass }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newPassword }),
       });
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         toast.success("Password updated successfully");
         setResetId(null);
         setNewPassword("");
       } else {
-        toast.error(json.message || "Failed to update password");
+        toastApiError(json, "Failed to update password");
       }
-    } catch {
-      toast.error("An error occurred");
+    } catch (err) {
+      toastApiError(err, "An error occurred");
     } finally {
       setResetting(false);
     }
@@ -912,12 +912,12 @@ const MfaTab = ({ inputClass }) => {
     try {
       const res = await fetchWithAuth(apiUrl("/api/auth/verify"));
       if (res.ok) {
-        const json = await res.json();
+        const json = await safeJson(res);
         if (json.success && json.user) {
           // Fetch current user from /users to see full MFA status
           const usersRes = await fetchWithAuth(apiUrl("/api/auth/users"));
           if (usersRes.ok) {
-            const usersJson = await usersRes.json();
+            const usersJson = await safeJson(usersRes);
             if (usersJson.success) {
               const fullUser = usersJson.data.find(
                 (u) => u.email === json.user.email || u._id === json.user.id
@@ -933,8 +933,8 @@ const MfaTab = ({ inputClass }) => {
           }
         }
       }
-    } catch {
-      toast.error("Failed to load profile security details");
+    } catch (err) {
+      toastApiError(err, "Failed to load profile security details");
     } finally {
       setLoading(false);
     }
@@ -948,15 +948,15 @@ const MfaTab = ({ inputClass }) => {
     setLoading(true);
     try {
       const res = await fetchWithAuth(apiUrl("/api/auth/mfa/setup"), { method: "POST" });
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         setSetupData(json);
         setStep("setup");
       } else {
-        toast.error(json.message || "Failed to start MFA setup");
+        toastApiError(json, "Failed to start MFA setup");
       }
-    } catch {
-      toast.error("MFA initialization error");
+    } catch (err) {
+      toastApiError(err, "MFA initialization error");
     } finally {
       setLoading(false);
     }
@@ -965,7 +965,7 @@ const MfaTab = ({ inputClass }) => {
   const handleVerify = async (e) => {
     e.preventDefault();
     if (code.length < 6) {
-      toast.error("Please enter a valid 6-digit code");
+      toastApiError("Please enter a valid 6-digit code");
       return;
     }
     setVerifying(true);
@@ -978,7 +978,7 @@ const MfaTab = ({ inputClass }) => {
           backupCodes: setupData.backupCodes,
         }),
       });
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         toast.success("MFA enabled successfully!");
         setStep("status");
@@ -986,10 +986,10 @@ const MfaTab = ({ inputClass }) => {
         setCode("");
         fetchUserStatus();
       } else {
-        toast.error(json.message || "Incorrect verification code. Please try again.");
+        toastApiError(json, "Incorrect verification code. Please try again.");
       }
-    } catch {
-      toast.error("Failed to verify code");
+    } catch (err) {
+      toastApiError(err, "Failed to verify code");
     } finally {
       setVerifying(false);
     }
@@ -998,7 +998,7 @@ const MfaTab = ({ inputClass }) => {
   const handleDisable = async (e) => {
     e.preventDefault();
     if (!password) {
-      toast.error("Password is required");
+      toastApiError("Password is required");
       return;
     }
     setDisabling(true);
@@ -1008,17 +1008,17 @@ const MfaTab = ({ inputClass }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         toast.success("MFA disabled successfully");
         setStep("status");
         setPassword("");
         fetchUserStatus();
       } else {
-        toast.error(json.message || "Incorrect password");
+        toastApiError(json, "Incorrect password");
       }
-    } catch {
-      toast.error("Failed to disable MFA");
+    } catch (err) {
+      toastApiError(err, "Failed to disable MFA");
     } finally {
       setDisabling(false);
     }

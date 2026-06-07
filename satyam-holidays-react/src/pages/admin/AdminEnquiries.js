@@ -15,7 +15,7 @@ import {
   FaSearch,
   FaTimes,
 } from "react-icons/fa";
-import { apiUrl, fetchWithAuth, safeJson } from "../../config/siteConfig";
+import { apiUrl, fetchWithAuth, safeJson, toastApiError } from "../../config/siteConfig";
 
 const AdminEnquiries = () => {
   const [enquiries, setEnquiries] = useState([]);
@@ -63,7 +63,7 @@ const AdminEnquiries = () => {
       }
     } catch (err) {
       console.error("Failed to load enquiries", err);
-      toast.error("Failed to load enquiries");
+      toastApiError(err, "Failed to load enquiries");
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,8 @@ const AdminEnquiries = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) {
+      const json = await safeJson(res);
+      if (res.ok && json.success) {
         toast.success(`Status updated to ${newStatus}`);
         setEnquiries((prev) =>
           prev.map((enq) => (enq._id === id || enq.id === id ? { ...enq, status: newStatus } : enq))
@@ -85,17 +86,20 @@ const AdminEnquiries = () => {
           setSelectedEnquiry({ ...selectedEnquiry, status: newStatus });
         }
       } else {
-        toast.error("Failed to update status");
+        toastApiError(json, "Failed to update status");
       }
     } catch (err) {
-      toast.error("Failed to update status");
+      toastApiError(err, "Failed to update status");
     }
   };
 
   const handleExport = async () => {
     try {
       const res = await fetchWithAuth(apiUrl("/api/enquiries/export/excel"));
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) {
+        const json = await safeJson(res);
+        throw json || new Error("Export failed");
+      }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -107,7 +111,7 @@ const AdminEnquiries = () => {
       document.body.removeChild(a);
       toast.success("Downloaded successfully");
     } catch (err) {
-      toast.error("Export failed");
+      toastApiError(err, "Export failed");
     }
   };
 
@@ -159,6 +163,42 @@ const AdminEnquiries = () => {
       </div>
     );
   }
+
+  // Parse structured information out of enquiry messages
+  const parseMessage = (msg = "") => {
+    if (!msg) return { comment: "", metadata: null };
+    const metaIndex = msg.indexOf("[Inquired via");
+    if (metaIndex === -1) return { comment: msg, metadata: null };
+
+    const comment = msg.substring(0, metaIndex).trim();
+    const metaRaw = msg.substring(metaIndex);
+
+    // Parse metadata lines
+    const lines = metaRaw
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const metaObj = {};
+
+    lines.forEach((line) => {
+      if (line.startsWith("[Inquired via")) {
+        metaObj.page = line.replace("[Inquired via Page:", "").replace("]", "").trim();
+      } else if (line.startsWith("- ")) {
+        const parts = line.replace("- ", "").split(":");
+        if (parts.length >= 2) {
+          const key = parts[0].trim();
+          const val = parts.slice(1).join(":").trim();
+          metaObj[key] = val;
+        }
+      }
+    });
+
+    return { comment, metadata: metaObj };
+  };
+
+  const parsedMsg = selectedEnquiry
+    ? parseMessage(selectedEnquiry.message)
+    : { comment: "", metadata: null };
 
   return (
     <div className="space-y-6">
@@ -303,7 +343,7 @@ const AdminEnquiries = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={() => setSelectedEnquiry(null)}
           >
             <motion.div
@@ -311,92 +351,184 @@ const AdminEnquiries = () => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-xl shadow-2xl overflow-hidden"
+              className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-700"
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
-                  Enquiry Details
-                </h2>
+              <div className="flex items-center justify-between px-6 py-5 border-b border-slate-150 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Enquiry Specification
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    ID: {selectedEnquiry._id || selectedEnquiry.id} &nbsp;•&nbsp; Submitted:{" "}
+                    {new Date(selectedEnquiry.createdAt).toLocaleString()}
+                  </p>
+                </div>
                 <button
                   onClick={() => setSelectedEnquiry(null)}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                  className="p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-colors text-slate-500 dark:text-slate-400"
                 >
-                  <FaTimes className="text-slate-500" />
+                  <FaTimes className="text-lg" />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="p-6 space-y-6">
-                {/* Customer Info */}
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-xl">
+              <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+                {/* Customer Header card */}
+                <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-2xl shadow-sm">
                     {selectedEnquiry.name?.charAt(0)?.toUpperCase()}
                   </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-slate-800 dark:text-white">
+                  <div className="min-w-0">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white truncate">
                       {selectedEnquiry.name}
                     </h3>
-                    <p className="text-slate-500 dark:text-slate-400">{selectedEnquiry.email}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1 text-sm text-slate-600 dark:text-slate-400">
+                      <span className="flex items-center gap-1.5 truncate">
+                        <FaEnvelope className="text-amber-500" /> {selectedEnquiry.email}
+                      </span>
+                      {selectedEnquiry.phone && (
+                        <span className="flex items-center gap-1.5">
+                          <FaPhoneAlt className="text-amber-500" /> {selectedEnquiry.phone}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Details Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs uppercase mb-1">
-                      <FaPhoneAlt /> Phone
+                {/* Grid details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Phone */}
+                  <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-100 dark:border-slate-800/80 shadow-sm">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 text-lg flex-shrink-0">
+                      <FaPhoneAlt />
                     </div>
-                    <p className="font-medium text-slate-800 dark:text-white">
-                      {selectedEnquiry.phone || "—"}
-                    </p>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
+                        Phone Number
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-white text-sm block">
+                        {selectedEnquiry.phone || "—"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs uppercase mb-1">
-                      <FaMapMarkerAlt /> Destination
+
+                  {/* Destination */}
+                  <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-100 dark:border-slate-800/80 shadow-sm">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 text-lg flex-shrink-0">
+                      <FaMapMarkerAlt />
                     </div>
-                    <p className="font-medium text-slate-800 dark:text-white capitalize">
-                      {selectedEnquiry.destination || "—"}
-                    </p>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
+                        Destination
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-white capitalize text-sm block">
+                        {selectedEnquiry.destination || "—"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs uppercase mb-1">
-                      <FaCalendarAlt /> Travel Date
+
+                  {/* Travel Date */}
+                  <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-100 dark:border-slate-800/80 shadow-sm">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 text-lg flex-shrink-0">
+                      <FaCalendarAlt />
                     </div>
-                    <p className="font-medium text-slate-800 dark:text-white">
-                      {selectedEnquiry.travelDate
-                        ? new Date(selectedEnquiry.travelDate).toLocaleDateString()
-                        : "Flexible"}
-                    </p>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
+                        Travel Date
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-white text-sm block">
+                        {selectedEnquiry.travelDate
+                          ? new Date(selectedEnquiry.travelDate).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            })
+                          : "Flexible / Anytime"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs uppercase mb-1">
-                      <FaUsers /> Travelers
+
+                  {/* Travelers */}
+                  <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-100 dark:border-slate-800/80 shadow-sm">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 text-lg flex-shrink-0">
+                      <FaUsers />
                     </div>
-                    <p className="font-medium text-slate-800 dark:text-white">
-                      {selectedEnquiry.travelers || "—"}
-                    </p>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
+                        Travelers Count
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-white text-sm block">
+                        {selectedEnquiry.travelers ? `${selectedEnquiry.travelers} Person(s)` : "—"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Expected Budget */}
+                  <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-100 dark:border-slate-800/80 shadow-sm sm:col-span-2">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 text-lg flex-shrink-0">
+                      <FaClock />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
+                        Expected Budget
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-white text-sm block">
+                        {selectedEnquiry.budget || "Flexible"}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Message */}
-                {selectedEnquiry.message && (
-                  <div className="p-4 bg-amber-50 dark:bg-amber-500/10 rounded-lg border-l-4 border-amber-500">
-                    <p className="text-xs text-amber-700 dark:text-amber-400 uppercase font-medium mb-2">
-                      Message
-                    </p>
-                    <p className="text-slate-700 dark:text-slate-300 whitespace-pre-line">
-                      {selectedEnquiry.message}
+                {/* Structured Metadata (if inquired via package page) */}
+                {parsedMsg.metadata && (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                      Context Info (Inquired via Page)
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-slate-500 dark:text-slate-400 block text-xs">
+                          Package Source
+                        </span>
+                        <strong className="text-slate-800 dark:text-slate-200">
+                          {parsedMsg.metadata.page}
+                        </strong>
+                      </div>
+                      {Object.keys(parsedMsg.metadata)
+                        .filter((k) => k !== "page")
+                        .map((key) => (
+                          <div key={key}>
+                            <span className="text-slate-500 dark:text-slate-400 block text-xs capitalize">
+                              {key}
+                            </span>
+                            <strong className="text-slate-800 dark:text-slate-200">
+                              {parsedMsg.metadata[key]}
+                            </strong>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Client Comments / Message */}
+                {parsedMsg.comment && (
+                  <div className="p-5 bg-amber-50/50 dark:bg-amber-500/5 rounded-xl border-l-4 border-amber-500">
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider block mb-2">
+                      Customer Personal Message
+                    </span>
+                    <p className="text-slate-800 dark:text-slate-300 leading-relaxed whitespace-pre-line text-sm font-medium">
+                      "{parsedMsg.comment}"
                     </p>
                   </div>
                 )}
 
-                {/* Status Update */}
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-medium mb-3">
-                    Update Status
-                  </p>
-                  <div className="flex flex-wrap gap-2">
+                {/* Status Update section */}
+                <div className="space-y-3">
+                  <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                    Update Enquiry Status
+                  </span>
+                  <div className="flex flex-wrap gap-2.5">
                     {["pending", "contacted", "confirmed", "cancelled"].map((status) => {
                       const config = statusConfig[status];
                       const isActive = selectedEnquiry.status === status;
@@ -406,10 +538,10 @@ const AdminEnquiries = () => {
                           onClick={() =>
                             updateStatus(selectedEnquiry._id || selectedEnquiry.id, status)
                           }
-                          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all ${
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold capitalize transition-all duration-200 ${
                             isActive
-                              ? "bg-amber-500 text-white shadow-md"
-                              : `${config.color} hover:opacity-80`
+                              ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
+                              : `${config.color} hover:bg-opacity-80`
                           }`}
                         >
                           {config.icon} {status}
@@ -419,19 +551,19 @@ const AdminEnquiries = () => {
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                {/* Email / Call Buttons */}
+                <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
                   <a
                     href={`mailto:${selectedEnquiry.email}`}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-sm shadow-sm transition-colors"
                   >
-                    <FaEnvelope /> Email
+                    <FaEnvelope /> Send Email Reply
                   </a>
                   <a
                     href={`tel:${selectedEnquiry.phone}`}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                   >
-                    <FaPhoneAlt /> Call
+                    <FaPhoneAlt /> Call Client
                   </a>
                 </div>
               </div>

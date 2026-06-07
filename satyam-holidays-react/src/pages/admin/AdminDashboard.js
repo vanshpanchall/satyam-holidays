@@ -14,7 +14,7 @@ import {
 } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
-import { apiUrl, fetchWithAuth, safeJson } from "../../config/siteConfig";
+import { apiUrl, fetchWithAuth, safeJson, toastApiError } from "../../config/siteConfig";
 import { io } from "socket.io-client";
 import siteConfig from "../../config/siteConfig";
 
@@ -137,7 +137,10 @@ const AdminDashboard = () => {
   const handleExport = async () => {
     try {
       const res = await fetchWithAuth(apiUrl("/api/enquiries/export/excel"));
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) {
+        const json = await safeJson(res);
+        throw json || new Error("Export failed");
+      }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -148,8 +151,8 @@ const AdminDashboard = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       toast.success("Report downloaded!");
-    } catch {
-      toast.error("Export failed");
+    } catch (err) {
+      toastApiError(err, "Export failed");
     }
   };
 

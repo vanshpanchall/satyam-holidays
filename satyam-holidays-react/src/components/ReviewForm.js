@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FaStar, FaUser, FaEnvelope, FaComment } from "react-icons/fa";
 import { toast } from "react-toastify";
-import { apiUrl, fetchWithAuth } from "../config/siteConfig";
+import { apiUrl, fetchWithAuth, toastApiError } from "../config/siteConfig";
 
 const ReviewForm = ({ packageId, packageTitle, onReviewSubmitted }) => {
   const [formData, setFormData] = useState({
@@ -83,10 +83,10 @@ const ReviewForm = ({ packageId, packageTitle, onReviewSubmitted }) => {
           onReviewSubmitted();
         }
       } else {
-        toast.error(data.message || "Failed to submit review");
+        toastApiError(data, "Failed to submit review");
       }
-    } catch {
-      toast.error("Failed to submit review. Please try again.");
+    } catch (err) {
+      toastApiError(err, "Failed to submit review. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

@@ -5,7 +5,14 @@ import Footer from "../components/Footer";
 import ReviewList from "../components/ReviewList";
 import ReviewForm from "../components/ReviewForm";
 import OptimizedImage from "../components/OptimizedImage";
-import { apiUrl, resolveImageUrl, fetchWithAuth } from "../config/siteConfig";
+import { toast } from "react-toastify";
+import {
+  apiUrl,
+  resolveImageUrl,
+  fetchWithAuth,
+  toastApiError,
+  safeJson,
+} from "../config/siteConfig";
 import { PackageDetailSkeleton } from "../components/SkeletonLoaders";
 import {
   FaMapMarkerAlt,
@@ -232,7 +239,7 @@ const PackageLandingPage = () => {
   const handleEnquirySubmit = async (e) => {
     e.preventDefault();
     if (!enquiryName || !enquiryPhone || !enquiryEmail) {
-      alert("Name, email, and phone number are required.");
+      toast.error("Name, email, and phone number are required.");
       return;
     }
 
@@ -279,7 +286,7 @@ const PackageLandingPage = () => {
         body: JSON.stringify(payload),
       });
 
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         setEnquirySuccess(true);
         setEnquiryName("");
@@ -287,12 +294,13 @@ const PackageLandingPage = () => {
         setEnquiryPhone("");
         setEnquiryMsg("");
         setCaptchaToken("");
+        toast.success("Enquiry submitted successfully!");
       } else {
-        throw new Error(json.message || "Failed to submit booking enquiry");
+        toastApiError(json, "Failed to submit booking enquiry");
       }
     } catch (err) {
       console.error(err);
-      alert(err.message);
+      toastApiError(err, "Failed to submit booking enquiry");
     } finally {
       setEnquirySubmitting(false);
     }
@@ -385,7 +393,7 @@ const PackageLandingPage = () => {
             <button
               onClick={() => {
                 navigator.clipboard.writeText(window.location.href);
-                alert("Link copied to clipboard!");
+                toast.success("Link copied to clipboard!");
               }}
               className="p-3.5 rounded-2xl bg-black/45 border border-white/20 text-white hover:bg-black/60 hover:scale-105 backdrop-blur-md flex items-center justify-center transition-all duration-300 shadow-lg"
               title="Share Package"

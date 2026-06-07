@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { getCsrfToken, refreshCsrfToken } from "../utils/csrf";
 
 // Central site configuration for easy customization
@@ -167,4 +168,32 @@ export const resolveImageUrl = (imageUrl) => {
     return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/fetch/w_800,q_auto,f_auto/${imageUrl}`;
   }
   return imageUrl;
+};
+
+// Unified professional toast error messaging helper
+export const toastApiError = (errorObj, fallback = "An error occurred") => {
+  let msg = fallback;
+  if (errorObj) {
+    if (typeof errorObj === "string") {
+      msg = errorObj;
+    } else if (errorObj.message) {
+      msg = errorObj.message;
+      if (errorObj.errors && Array.isArray(errorObj.errors)) {
+        const details = errorObj.errors.map((e) => e.message || e).join(", ");
+        if (details) msg = `${msg}: ${details}`;
+      }
+    } else if (errorObj.error) {
+      msg = errorObj.error;
+    } else if (errorObj.err) {
+      msg = errorObj.err.message || errorObj.err;
+    }
+  }
+  toast.error(msg, {
+    position: "top-right",
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+  });
 };

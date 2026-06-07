@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { apiUrl, fetchWithAuth } from "../config/siteConfig";
+import { apiUrl, fetchWithAuth, toastApiError } from "../config/siteConfig";
 import {
   FaPaperPlane,
   FaSpinner,
@@ -79,6 +79,7 @@ const AiPlannerPage = () => {
     } catch (err) {
       console.error(err);
       setError(err.message);
+      toastApiError(err, "Failed to generate itinerary. Please try again.");
     } finally {
       setLoading(false);
     }

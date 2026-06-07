@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import { FaCheck, FaTimes, FaSkull, FaStar, FaFilter, FaRegStar, FaTrashAlt } from "react-icons/fa";
-import { apiUrl, fetchWithAuth, safeJson } from "../../config/siteConfig";
+import { apiUrl, fetchWithAuth, safeJson, toastApiError } from "../../config/siteConfig";
 
 const ReviewModeration = () => {
   const [reviews, setReviews] = useState([]);
@@ -32,7 +32,7 @@ const ReviewModeration = () => {
       }
     } catch (err) {
       console.error("Failed to fetch reviews", err);
-      toast.error("Failed to load reviews list");
+      toastApiError(err, "Failed to load reviews list");
     } finally {
       setLoading(false);
     }
@@ -66,10 +66,10 @@ const ReviewModeration = () => {
         toast.success(`Review successfully marked as ${newStatus}`);
         setReviews((prev) => prev.filter((rev) => rev._id !== reviewId && rev.id !== reviewId));
       } else {
-        toast.error(json.message || "Failed to update review status");
+        toastApiError(json, "Failed to update review status");
       }
     } catch (err) {
-      toast.error("Failed to update review status");
+      toastApiError(err, "Failed to update review status");
     }
   };
 
@@ -79,14 +79,15 @@ const ReviewModeration = () => {
       const res = await fetchWithAuth(apiUrl(`/api/v1/reviews/${reviewId}`), {
         method: "DELETE",
       });
-      if (res.ok) {
+      const json = await safeJson(res);
+      if (res.ok && json.success) {
         toast.success("Review deleted permanently");
         setReviews((prev) => prev.filter((rev) => rev._id !== reviewId && rev.id !== reviewId));
       } else {
-        toast.error("Failed to delete review");
+        toastApiError(json, "Failed to delete review");
       }
     } catch (err) {
-      toast.error("Error deleting review");
+      toastApiError(err, "Error deleting review");
     }
   };
 

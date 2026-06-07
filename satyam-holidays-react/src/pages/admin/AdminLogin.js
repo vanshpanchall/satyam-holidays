@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FaLock, FaEnvelope, FaEye, FaEyeSlash, FaArrowLeft, FaShieldAlt } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
-import { apiUrl } from "../../config/siteConfig";
+import { apiUrl, safeJson, toastApiError } from "../../config/siteConfig";
 import { useSiteConfig } from "../../contexts/SettingsContext";
 
 const AdminLogin = () => {
@@ -30,7 +30,7 @@ const AdminLogin = () => {
         credentials: "include",
       });
 
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         if (json.mfaRequired) {
           setMfaToken(json.mfaToken);
@@ -44,10 +44,10 @@ const AdminLogin = () => {
           navigate("/admin");
         }
       } else {
-        toast.error(json.message || "Invalid credentials provided");
+        toastApiError(json, "Invalid credentials provided");
       }
     } catch (err) {
-      toast.error("Unable to establish connection to server");
+      toastApiError(err, "Unable to establish connection to server");
     } finally {
       setLoading(false);
     }
@@ -56,7 +56,7 @@ const AdminLogin = () => {
   const handleMfaVerify = async (e) => {
     e.preventDefault();
     if (mfaCode.length < 6) {
-      toast.error("Please enter a valid 6-digit verification code");
+      toastApiError("Please enter a valid 6-digit verification code");
       return;
     }
     setVerifying(true);
@@ -69,7 +69,7 @@ const AdminLogin = () => {
         credentials: "include",
       });
 
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         if (json.token) {
           localStorage.setItem("adminToken", json.token);
@@ -77,10 +77,10 @@ const AdminLogin = () => {
         toast.success("MFA verified. Welcome back!");
         navigate("/admin");
       } else {
-        toast.error(json.message || "Invalid or expired verification code");
+        toastApiError(json, "Invalid or expired verification code");
       }
     } catch (err) {
-      toast.error("Unable to establish connection to server");
+      toastApiError(err, "Unable to establish connection to server");
     } finally {
       setVerifying(false);
     }

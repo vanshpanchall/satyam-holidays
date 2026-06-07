@@ -12,7 +12,7 @@ import {
   FaFileImage,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
-import { apiUrl, fetchWithAuth } from "../../config/siteConfig";
+import { apiUrl, fetchWithAuth, safeJson, toastApiError } from "../../config/siteConfig";
 import PackageFlyer from "../../components/PackageFlyer";
 
 const AdminPackages = () => {
@@ -33,7 +33,7 @@ const AdminPackages = () => {
         setPackages(json.data || []);
       }
     } catch (err) {
-      toast.error("Failed to load packages");
+      toastApiError(err, "Failed to load packages");
     } finally {
       setLoading(false);
     }
@@ -47,14 +47,15 @@ const AdminPackages = () => {
     if (!window.confirm("Delete this package?")) return;
     try {
       const res = await fetchWithAuth(apiUrl(`/api/packages/${id}`), { method: "DELETE" });
-      if (res.ok) {
+      const json = await safeJson(res);
+      if (res.ok && json.success) {
         toast.success("Package deleted");
         fetchPackages();
       } else {
-        toast.error("Delete failed");
+        toastApiError(json, "Delete failed");
       }
     } catch (err) {
-      toast.error("An error occurred");
+      toastApiError(err, "An error occurred");
     }
   };
 
@@ -302,16 +303,16 @@ const PackageModal = ({ pkg, onClose, onSaved }) => {
         body: formDataUpload,
       });
 
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         setFormData((prev) => ({ ...prev, image: json.imageUrl }));
         toast.success("Image uploaded successfully");
       } else {
-        toast.error(json.message || "Image upload failed");
+        toastApiError(json, "Image upload failed");
         setImagePreview(pkg?.image || "");
       }
     } catch (err) {
-      toast.error("Failed to upload image");
+      toastApiError(err, "Failed to upload image");
       setImagePreview(pkg?.image || "");
     } finally {
       setIsUploading(false);
@@ -360,15 +361,15 @@ const PackageModal = ({ pkg, onClose, onSaved }) => {
         body: JSON.stringify(formData),
       });
 
-      const json = await res.json();
+      const json = await safeJson(res);
       if (res.ok && json.success) {
         toast.success(`Package ${pkg ? "updated" : "created"}`);
         onSaved();
       } else {
-        toast.error(json.message || "Failed to save");
+        toastApiError(json, "Failed to save");
       }
     } catch (err) {
-      toast.error("An error occurred");
+      toastApiError(err, "An error occurred");
     } finally {
       setIsSubmitting(false);
     }
