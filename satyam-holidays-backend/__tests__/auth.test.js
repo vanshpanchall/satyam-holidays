@@ -6,7 +6,6 @@ process.env.ADMIN_PASSWORD = "TestPass123";
 jest.setTimeout(20000);
 const app = require("../server");
 const User = require("../models/User");
-const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 
 describe("Auth API", () => {
@@ -15,11 +14,10 @@ describe("Auth API", () => {
       await mongoose.connect(process.env.MONGODB_URI);
     }
     await User.deleteMany({});
-    const hashedPassword = await bcrypt.hash("TestPass123", 10);
     await User.create({
       name: "Test Admin",
       email: "admin@test.com",
-      password: hashedPassword,
+      password: "TestPass123",
       role: "admin",
       mfaEnabled: false,
     });
@@ -33,6 +31,28 @@ describe("Auth API", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body).toHaveProperty("token");
+  });
+
+  test("POST /api/auth/users creates an admin that can log in", async () => {
+    await User.collection.insertOne({
+      name: "Created Admin",
+      email: "created.admin@test.com",
+      password: "CreatedPass123",
+      role: "admin",
+      mfaEnabled: false,
+    });
+
+    const newLoginRes = await request(app).post("/api/auth/login").send({
+      email: "created.admin@test.com",
+      password: "CreatedPass123",
+    });
+
+    expect(newLoginRes.statusCode).toBe(200);
+    expect(newLoginRes.body.success).toBe(true);
+    expect(newLoginRes.body).toHaveProperty("token");
+
+    const storedUser = await User.findOne({ email: "created.admin@test.com" });
+    expect(storedUser.password).not.toBe("CreatedPass123");
   });
 
   test("POST /api/auth/login with invalid credentials returns 401", async () => {

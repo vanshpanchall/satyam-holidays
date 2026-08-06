@@ -15,6 +15,7 @@ import {
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiUrl, fetchWithAuth } from "../../config/siteConfig";
+import { getAdminAuthCache, resetAdminAuthCache, setAdminAuthCache } from "./adminAuthCache";
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -30,17 +31,26 @@ const AdminLayout = () => {
   });
 
   useEffect(() => {
-    // Verify authentication via API (supports HTTPOnly cookies)
+    const cached = getAdminAuthCache();
+    if (cached.checked && cached.authenticated) {
+      setIsAuthenticated(true);
+      setIsChecking(false);
+      return;
+    }
+
     const verifyAuth = async () => {
       try {
         const res = await fetchWithAuth(apiUrl("/api/auth/verify"));
         if (res.ok) {
+          setAdminAuthCache(true, true);
           setIsAuthenticated(true);
         } else {
+          setAdminAuthCache(true, false);
           localStorage.removeItem("adminToken");
           navigate("/admin/login", { replace: true });
         }
       } catch {
+        setAdminAuthCache(true, false);
         navigate("/admin/login", { replace: true });
       } finally {
         setIsChecking(false);
@@ -81,6 +91,7 @@ const AdminLayout = () => {
     } catch {
       // Ignore errors during logout
     }
+    resetAdminAuthCache();
     localStorage.removeItem("adminToken");
     navigate("/admin/login", { replace: true });
   };

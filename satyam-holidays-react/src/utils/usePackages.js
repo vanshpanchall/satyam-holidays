@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { apiUrl } from "../config/siteConfig";
 
 const PAGE_SIZE = 12;
+const clientPackageCache = new Map();
 
 /**
  * Custom hook for fetching and filtering packages with pagination
@@ -9,21 +10,22 @@ const PAGE_SIZE = 12;
  * @returns {object} - packages state and handlers
  */
 export function usePackages(category) {
-  const [packages, setPackages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cached = clientPackageCache.get(category);
+  const [packages, setPackages] = useState(cached ? cached.data : []);
+  const [loading, setLoading] = useState(!cached);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [totalItems, setTotalItems] = useState(0);
+  const [hasMore, setHasMore] = useState(cached ? cached.hasMore : false);
+  const [totalItems, setTotalItems] = useState(cached ? cached.totalItems : 0);
 
   const fetchPackages = useCallback(
     async (pageNum = 1, append = false) => {
       try {
         if (append) {
           setLoadingMore(true);
-        } else {
+        } else if (!clientPackageCache.has(category)) {
           setLoading(true);
         }
         setError(null);
@@ -36,21 +38,38 @@ export function usePackages(category) {
 
         if (json.success) {
           if (Array.isArray(json.data)) {
+            let nextPackages = json.data;
             if (append) {
-              setPackages((prev) => [...prev, ...json.data]);
+              setPackages((prev) => {
+                nextPackages = [...prev, ...json.data];
+                return nextPackages;
+              });
             } else {
               setPackages(json.data);
             }
 
-            // Track pagination state from API response
+            const nextHasMore = json.pagination ? Boolean(json.pagination.hasNextPage) : false;
+            const nextTotal = json.pagination
+              ? json.pagination.total || json.data.length
+              : json.data.length;
+
             if (json.pagination) {
-              setHasMore(json.pagination.hasNextPage || false);
-              setTotalItems(json.pagination.total || json.data.length);
+              setHasMore(nextHasMore);
+              setTotalItems(nextTotal);
             } else {
               setHasMore(false);
               setTotalItems(json.data.length);
             }
             setPage(pageNum);
+
+            // Cache page 1 results
+            if (pageNum === 1) {
+              clientPackageCache.set(category, {
+                data: json.data,
+                hasMore: nextHasMore,
+                totalItems: nextTotal,
+              });
+            }
           } else {
             setPackages([]);
             setError("Received unexpected package data. Please try again.");
@@ -59,7 +78,9 @@ export function usePackages(category) {
           setError(json.message || "Failed to load packages");
         }
       } catch (err) {
-        setError("Failed to fetch packages. Please try again.");
+        if (!clientPackageCache.has(category)) {
+          setError("Failed to fetch packages. Please try again.");
+        }
       } finally {
         setLoading(false);
         setLoadingMore(false);

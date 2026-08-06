@@ -33,30 +33,21 @@ const Home = () => {
       <main id="main-content">
         <Hero />
         <div id="services" className="scroll-mt-24 md:scroll-mt-28">
-          <DeferredMount
-            fallback={<SectionPlaceholder height="70vh" />}
-            rootMargin="0px 0px -25% 0px"
-          >
+          <DeferredMount fallback={<SectionPlaceholder height="70vh" />} rootMargin="600px 0px">
             <Suspense fallback={<SectionPlaceholder height="70vh" />}>
               <Services sectionId={null} />
             </Suspense>
           </DeferredMount>
         </div>
         <div id="about" className="scroll-mt-24 md:scroll-mt-28">
-          <DeferredMount
-            fallback={<SectionPlaceholder height="80vh" />}
-            rootMargin="0px 0px -25% 0px"
-          >
+          <DeferredMount fallback={<SectionPlaceholder height="80vh" />} rootMargin="600px 0px">
             <Suspense fallback={<SectionPlaceholder height="80vh" />}>
               <About sectionId={null} />
             </Suspense>
           </DeferredMount>
         </div>
         <div id="packages" className="scroll-mt-24 md:scroll-mt-28">
-          <DeferredMount
-            fallback={<SectionPlaceholder height="120vh" />}
-            rootMargin="0px 0px -25% 0px"
-          >
+          <DeferredMount fallback={<SectionPlaceholder height="120vh" />} rootMargin="600px 0px">
             <Suspense fallback={<SectionPlaceholder height="120vh" />}>
               <DomesticPackages sectionId={null} />
               <InternationalPackages />
@@ -64,27 +55,21 @@ const Home = () => {
           </DeferredMount>
         </div>
         <div id="enquiry" className="scroll-mt-24 md:scroll-mt-28">
-          <DeferredMount
-            fallback={<SectionPlaceholder height="85vh" />}
-            rootMargin="0px 0px -25% 0px"
-          >
+          <DeferredMount fallback={<SectionPlaceholder height="85vh" />} rootMargin="600px 0px">
             <Suspense fallback={<SectionPlaceholder height="85vh" />}>
               <Enquiry sectionId={null} />
             </Suspense>
           </DeferredMount>
         </div>
         <div id="contact" className="scroll-mt-24 md:scroll-mt-28">
-          <DeferredMount
-            fallback={<SectionPlaceholder height="95vh" />}
-            rootMargin="0px 0px -25% 0px"
-          >
+          <DeferredMount fallback={<SectionPlaceholder height="95vh" />} rootMargin="600px 0px">
             <Suspense fallback={<SectionPlaceholder height="95vh" />}>
               <Contact sectionId={null} />
             </Suspense>
           </DeferredMount>
         </div>
       </main>
-      <DeferredMount fallback={<SectionPlaceholder height="24vh" />} rootMargin="0px 0px -20% 0px">
+      <DeferredMount fallback={<SectionPlaceholder height="24vh" />} rootMargin="400px 0px">
         <Suspense fallback={<SectionPlaceholder height="24vh" />}>
           <Footer />
         </Suspense>

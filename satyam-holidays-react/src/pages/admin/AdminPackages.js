@@ -411,7 +411,7 @@ const PackageModal = ({ pkg, onClose, onSaved }) => {
         className="w-full max-w-2xl max-h-[90vh] bg-white dark:bg-slate-800 rounded-xl shadow-2xl flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between px-6 py-4">
           <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
             {pkg ? "Edit Package" : "New Package"}
           </h2>

@@ -139,7 +139,8 @@ packageSchema.pre("save", function (next) {
 packageSchema.index({ category: 1, subcategory: 1 });
 packageSchema.index({ numericPrice: 1 });
 packageSchema.index({ isActive: 1 }); // Frequently filtered
-packageSchema.index({ isActive: 1, category: 1 }); // Combined filter
+packageSchema.index({ isActive: 1, category: 1, numericPrice: 1 }); // Combined active category filter with price sort
+packageSchema.index({ isActive: 1, subcategory: 1, numericPrice: 1 }); // Combined active subcategory filter with price sort
 packageSchema.index({ rating: -1 }); // For sorting by rating
 packageSchema.index({ createdAt: -1 }); // For recent packages
 packageSchema.index({ slug: 1 }); // Unique slug lookups

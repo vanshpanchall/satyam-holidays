@@ -20,6 +20,8 @@ class CacheService {
     this.isConnected = false;
     // Track cached keys for smarter invalidation
     this.keyRegistry = new Map();
+    // Fast in-memory cache fallback when Redis is not connected
+    this.memoryCache = new Map();
   }
 
   /**
@@ -59,7 +61,16 @@ class CacheService {
   }
 
   async get(key) {
-    if (!this.isConnected) return null;
+    if (!this.isConnected) {
+      const cached = this.memoryCache.get(key);
+      if (cached) {
+        if (Date.now() < cached.expiresAt) {
+          return cached.value;
+        }
+        this.memoryCache.delete(key);
+      }
+      return null;
+    }
 
     try {
       const data = await this.client.get(key);
@@ -71,33 +82,41 @@ class CacheService {
   }
 
   async set(key, value, ttl = this.defaultTTL) {
-    if (!this.isConnected) return;
+    // Always track key in registry for smart invalidation
+    const [namespace] = key.split(":");
+    if (namespace) {
+      if (!this.keyRegistry.has(namespace)) {
+        this.keyRegistry.set(namespace, new Set());
+      }
+      this.keyRegistry.get(namespace).add(key);
+    }
+
+    if (!this.isConnected) {
+      this.memoryCache.set(key, {
+        value,
+        expiresAt: Date.now() + ttl * 1000,
+      });
+      return;
+    }
 
     try {
       await this.client.setEx(key, ttl, JSON.stringify(value));
-      // Track key in registry for smarter invalidation
-      const [namespace] = key.split(":");
-      if (namespace) {
-        if (!this.keyRegistry.has(namespace)) {
-          this.keyRegistry.set(namespace, new Set());
-        }
-        this.keyRegistry.get(namespace).add(key);
-      }
     } catch (error) {
       logger.error("Cache set error:", error);
     }
   }
 
   async del(key) {
+    this.memoryCache.delete(key);
+    const [namespace] = key.split(":");
+    if (namespace && this.keyRegistry.has(namespace)) {
+      this.keyRegistry.get(namespace).delete(key);
+    }
+
     if (!this.isConnected) return;
 
     try {
       await this.client.del(key);
-      // Remove from registry
-      const [namespace] = key.split(":");
-      if (namespace && this.keyRegistry.has(namespace)) {
-        this.keyRegistry.get(namespace).delete(key);
-      }
     } catch (error) {
       logger.error("Cache delete error:", error);
     }
@@ -108,22 +127,29 @@ class CacheService {
    * Avoids expensive KEYS command on Redis
    */
   async invalidatePattern(pattern) {
+    const namespace = pattern.replace(":*", "").replace("*", "");
+    const keysToDelete = [];
+    let registryHit = false;
+
+    if (this.keyRegistry.has(namespace)) {
+      registryHit = true;
+      const keys = this.keyRegistry.get(namespace);
+      for (const key of keys) {
+        keysToDelete.push(key);
+      }
+      this.keyRegistry.delete(namespace);
+    }
+
+    // Always clear memoryCache matching prefix
+    for (const k of this.memoryCache.keys()) {
+      if (k.startsWith(namespace)) {
+        this.memoryCache.delete(k);
+      }
+    }
+
     if (!this.isConnected) return;
 
     try {
-      const namespace = pattern.replace(":*", "").replace("*", "");
-      const keysToDelete = [];
-      let registryHit = false;
-
-      if (this.keyRegistry.has(namespace)) {
-        registryHit = true;
-        const keys = this.keyRegistry.get(namespace);
-        for (const key of keys) {
-          keysToDelete.push(key);
-        }
-        this.keyRegistry.delete(namespace);
-      }
-
       // Fallback to SCAN only if registry had no entry for this namespace
       if (!registryHit && keysToDelete.length === 0 && pattern.includes("*")) {
         let cursor = 0;

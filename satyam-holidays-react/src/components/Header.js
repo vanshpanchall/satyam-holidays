@@ -213,7 +213,7 @@ const Header = () => {
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-1 w-80 rounded-2xl border bg-white/98 dark:bg-navy-900/98 backdrop-blur-xl border-gray-150 dark:border-navy-800 p-2 shadow-2xl z-50 transform origin-top-right dropdown-animate">
+                <div className="absolute right-0 mt-1 w-80 rounded-2xl border border-gray-200 dark:border-navy-700 bg-white dark:bg-navy-900 p-2 shadow-2xl z-50 transform origin-top-right dropdown-animate">
                   <Link
                     to="/ai-planner"
                     onClick={() => setIsDropdownOpen(false)}

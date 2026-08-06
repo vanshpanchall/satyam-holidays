@@ -16,6 +16,8 @@ import {
   FaUserPlus,
   FaLock,
   FaKey,
+  FaEye,
+  FaEyeSlash,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { apiUrl, fetchWithAuth, safeJson, toastApiError } from "../../config/siteConfig";
@@ -585,11 +587,13 @@ const AdminsTab = ({ inputClass }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [creating, setCreating] = useState(false);
 
   // Reset Password State
   const [resetId, setResetId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [resetting, setResetting] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -642,6 +646,7 @@ const AdminsTab = ({ inputClass }) => {
         setName("");
         setEmail("");
         setPassword("");
+        setShowPassword(false);
         setShowCreate(false);
         fetchData();
       } else {
@@ -696,6 +701,7 @@ const AdminsTab = ({ inputClass }) => {
         toast.success("Password updated successfully");
         setResetId(null);
         setNewPassword("");
+        setShowNewPassword(false);
       } else {
         toastApiError(json, "Failed to update password");
       }
@@ -772,14 +778,28 @@ const AdminsTab = ({ inputClass }) => {
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                 Password
               </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={inputClass}
-                placeholder="Min 8 characters"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`${inputClass} pr-10`}
+                  placeholder="Min 8 characters"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <FaEyeSlash className="text-sm" />
+                  ) : (
+                    <FaEye className="text-sm" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
           <div className="flex justify-end">
@@ -806,7 +826,7 @@ const AdminsTab = ({ inputClass }) => {
                 className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-bold text-sm font-semibold">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white text-sm">
                     {u.name?.charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -866,14 +886,28 @@ const AdminsTab = ({ inputClass }) => {
                 {resetId === u._id && (
                   <div className="w-full md:w-auto mt-3 md:mt-0 flex-basis-full md:flex-basis-0 border-t border-slate-100 dark:border-slate-700 pt-3 md:pt-0 md:border-t-0">
                     <form onSubmit={handleResetPassword} className="flex gap-2 items-center">
-                      <input
-                        type="password"
-                        required
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="New Password (min 8 chars)"
-                        className={`${inputClass} !py-1.5 !px-3 max-w-[200px]`}
-                      />
+                      <div className="relative">
+                        <input
+                          type={showNewPassword ? "text" : "password"}
+                          required
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="New Password (min 8 chars)"
+                          className={`${inputClass} !py-1.5 !px-3 pr-10 max-w-[200px]`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword((prev) => !prev)}
+                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                          aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                        >
+                          {showNewPassword ? (
+                            <FaEyeSlash className="text-xs" />
+                          ) : (
+                            <FaEye className="text-xs" />
+                          )}
+                        </button>
+                      </div>
                       <button
                         type="submit"
                         disabled={resetting}

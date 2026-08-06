@@ -51,7 +51,34 @@ const userSchema = new mongoose.Schema(
 
 // Method to compare password
 userSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
+  const storedPassword = this.password || "";
+  const passwordMatch = await bcrypt.compare(candidatePassword, storedPassword);
+  if (passwordMatch) {
+    return true;
+  }
+
+  if (storedPassword === candidatePassword) {
+    const upgradedPassword = await bcrypt.hash(candidatePassword, 10);
+    await this.constructor.updateOne({ _id: this._id }, { $set: { password: upgradedPassword } });
+    this.password = upgradedPassword;
+    return true;
+  }
+
+  return false;
 };
+
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    return next();
+  }
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = mongoose.model("User", userSchema);

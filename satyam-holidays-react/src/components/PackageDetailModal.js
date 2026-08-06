@@ -45,6 +45,7 @@ const PackageDetailModal = ({ package: pkg = null, isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
+      setActiveTab("overview");
       // Save the previously focused element
       previousActiveElement.current = document.activeElement;
 

@@ -52,7 +52,7 @@ const PackageLandingPage = () => {
   const [inWishlist, setInWishlist] = useState(false);
 
   // Tab State
-  const [activeTab, setActiveTab] = useState("itinerary");
+  const [activeTab, setActiveTab] = useState("overview");
 
   // Itinerary expand State
   const [expandedDays, setExpandedDays] = useState([1]); // Day 1 expanded by default
