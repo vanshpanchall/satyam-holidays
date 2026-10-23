@@ -180,12 +180,14 @@ queueService.registerHandler("send-email", async (data) => {
 queueService.registerHandler("send-followup", async (data) => {
   const Enquiry = require("../models/Enquiry");
   const enquiry = await Enquiry.findById(data.enquiryId);
-  if (!enquiry || enquiry.status !== "pending") return;
+  if (!enquiry || enquiry.status !== "pending" || !enquiry.email) return;
+  // Only one reminder per enquiry
+  if (enquiry.followUps?.some((f) => f.type === "email_nudge")) return;
 
   await emailUtils.send({
     to: enquiry.email,
     template: "enquiry-nudge",
-    subject: `Still planning your trip to ${enquiry.destination.toUpperCase()}?`,
+    subject: "Still planning your trip?",
     data: { name: enquiry.name, destination: enquiry.destination },
   });
 
