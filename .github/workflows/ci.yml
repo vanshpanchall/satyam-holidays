@@ -30,6 +30,8 @@ jobs:
         run: |
           node -e "JSON.parse(require('node:fs').readFileSync('satyam-holidays-backend/vercel.json', 'utf8'))"
           node -e "JSON.parse(require('node:fs').readFileSync('satyam-holidays-react/vercel.json', 'utf8'))"
+          # cleanUrls makes Vercel serve x.html at /x and redirect /x.html, so a rewrite to a .html path 404s
+          node -e "const v=JSON.parse(require('node:fs').readFileSync('satyam-holidays-react/vercel.json','utf8')); const bad=(v.rewrites||[]).filter(r=>v.cleanUrls&&/\.html$/.test(r.destination)); if(bad.length){console.error('Rewrite targets .html with cleanUrls on:',bad);process.exit(1)}"
 
       - name: Lint
         run: npm run lint
