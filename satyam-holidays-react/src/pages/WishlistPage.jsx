@@ -1,129 +1,109 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import { PiArrowsLeftRight, PiHeart, PiWhatsappLogo } from "react-icons/pi";
+import SiteLayout from "../components/SiteLayout";
+import Meta from "../components/Meta";
 import PackageCard from "../components/PackageCard";
-import { apiUrl } from "../config/siteConfig";
-import { PackagesSkeleton } from "../components/SkeletonLoaders";
+import { PackageGridSkeleton } from "../components/PackageCardSkeleton";
+import usePackageCatalog from "../utils/usePackageCatalog";
+import { useRecentlyViewed, useWishlist } from "../utils/savedTrips";
+import { pkgHref, pkgId, toWhatsApp } from "../utils/format";
+import { useSiteConfig } from "../contexts/SettingsContext";
+
+const SITE_URL = process.env.REACT_APP_SITE_URL || "https://satyamholidays.vercel.app";
 
 const WishlistPage = () => {
-  const [wishlistIds, setWishlistIds] = useState([]);
-  const [packages, setPackages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { packages, loading } = usePackageCatalog();
+  const { ids } = useWishlist();
+  const recentIds = useRecentlyViewed();
+  const { company } = useSiteConfig();
 
-  useEffect(() => {
-    // Load wishlist IDs from localStorage
-    const saved = localStorage.getItem("wishlist");
-    if (saved) {
-      try {
-        setWishlistIds(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse wishlist from localStorage", e);
-      }
-    }
-  }, []);
+  const byId = useMemo(() => new Map(packages.map((p) => [pkgId(p), p])), [packages]);
+  const saved = ids.map((id) => byId.get(id)).filter(Boolean);
+  const recent = recentIds
+    .filter((id) => !ids.includes(id))
+    .map((id) => byId.get(id))
+    .filter(Boolean)
+    .slice(0, 4);
 
-  useEffect(() => {
-    const fetchWishlistPackages = async () => {
-      if (wishlistIds.length === 0) {
-        setPackages([]);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        // Fetch all packages and filter locally (robust and fast)
-        const res = await fetch(apiUrl("/api/v1/packages?limit=100"));
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            const filtered = json.data.filter((pkg) => wishlistIds.includes(pkg._id || pkg.id));
-            setPackages(filtered);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch wishlist packages", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchWishlistPackages();
-  }, [wishlistIds]);
-
-  const handleRemove = (pkgId) => {
-    const updatedIds = wishlistIds.filter((id) => id !== pkgId);
-    setWishlistIds(updatedIds);
-    localStorage.setItem("wishlist", JSON.stringify(updatedIds));
-    setPackages(packages.filter((pkg) => (pkg._id || pkg.id) !== pkgId));
-  };
+  const shareMessage = `Hi ${company.name}, I'm interested in these trips:\n${saved
+    .map((p) => `• ${p.name} — ${SITE_URL}${pkgHref(p)}`)
+    .join("\n")}`;
 
   return (
-    <>
-      <Header />
-      <main className="min-h-screen pt-28 pb-16 px-4 md:px-8 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-4 border-b border-gray-200 dark:border-navy-800">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
-              My Wishlist
-            </h1>
-            <p className="text-gray-500 dark:text-navy-300 mt-2">
-              Browse your saved holiday destinations and plan your next journey.
-            </p>
-          </div>
-          <div className="mt-4 md:mt-0 flex gap-4">
-            <Link to="/" className="btn btn-secondary border border-gray-300 dark:border-navy-700">
-              Back to Home
-            </Link>
-            <Link
-              to="/compare"
-              className="btn btn-primary text-white bg-amber-500 hover:bg-amber-600 px-6 py-2 rounded-xl font-medium shadow-md"
-            >
-              Compare Packages
-            </Link>
-          </div>
-        </div>
+    <SiteLayout>
+      <Meta
+        title={`Saved trips | ${company.name}`}
+        description="Your shortlisted holiday packages."
+      />
 
-        {loading ? (
-          <PackagesSkeleton />
-        ) : packages.length === 0 ? (
-          <div className="text-center py-20 bg-gray-50 dark:bg-navy-800/30 rounded-3xl border border-dashed border-gray-300 dark:border-navy-700">
-            <div className="text-6xl mb-4">✈️</div>
-            <h2 className="text-2xl font-semibold mb-2 text-navy-900 dark:text-white">
-              Your wishlist is empty
-            </h2>
-            <p className="text-gray-500 dark:text-navy-300 mb-6 max-w-md mx-auto">
-              Explore our amazing domestic and international packages to start adding your favorite
-              travel plans!
+      <header className="border-b border-line">
+        <div className="container-site flex flex-col gap-6 py-12 md:flex-row md:items-end md:justify-between md:py-16">
+          <div>
+            <p className="eyebrow mb-4">Your shortlist</p>
+            <h1 className="font-display text-display-lg font-light text-fg">Saved trips</h1>
+            <p className="mt-3 text-muted">
+              {saved.length > 0
+                ? `${saved.length} trip${saved.length > 1 ? "s" : ""} saved on this device.`
+                : "Tap the heart on any trip to keep it here."}
             </p>
-            <Link
-              to="/"
-              className="btn btn-primary bg-amber-500 hover:bg-amber-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg transition-transform hover:-translate-y-0.5"
-            >
-              Explore Packages
+          </div>
+          {saved.length > 0 && (
+            <div className="flex flex-wrap gap-3">
+              {saved.length > 1 && (
+                <Link to="/compare" className="btn btn-ghost">
+                  <PiArrowsLeftRight className="h-4 w-4" /> Compare
+                </Link>
+              )}
+              <a
+                href={toWhatsApp(company.whatsapp, shareMessage)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-accent"
+              >
+                <PiWhatsappLogo className="h-4 w-4" /> Send shortlist to a planner
+              </a>
+            </div>
+          )}
+        </div>
+      </header>
+
+      <div className="container-site py-12 md:py-16">
+        {loading ? (
+          <PackageGridSkeleton count={3} />
+        ) : saved.length === 0 ? (
+          <div className="flex flex-col items-center rounded-4xl border border-dashed border-line px-6 py-20 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-raised">
+              <PiHeart className="h-6 w-6 text-accent" />
+            </span>
+            <p className="mt-6 font-display text-3xl text-fg">Nothing saved yet</p>
+            <p className="mt-3 max-w-sm text-muted">
+              Browse trips and save the ones you like — you can compare them side by side later.
+            </p>
+            <Link to="/packages" className="btn btn-ink mt-8">
+              Browse trips
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {packages.map((pkg) => (
-              <div key={pkg._id || pkg.id} className="relative group">
-                <PackageCard pkg={pkg} />
-                <button
-                  onClick={() => handleRemove(pkg._id || pkg.id)}
-                  className="absolute top-4 left-4 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md transition-colors z-10"
-                  title="Remove from wishlist"
-                  aria-label="Remove from wishlist"
-                >
-                  ✕
-                </button>
-              </div>
+          <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+            {saved.map((pkg) => (
+              <PackageCard key={pkgId(pkg)} pkg={pkg} />
             ))}
           </div>
         )}
-      </main>
-      <Footer />
-    </>
+
+        {recent.length > 0 && (
+          <section className="mt-24 border-t border-line pt-14">
+            <h2 className="mb-10 font-display text-3xl text-fg">Recently viewed</h2>
+            <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+              {recent.map((pkg) => (
+                <PackageCard key={pkgId(pkg)} pkg={pkg} size="wide" />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    </SiteLayout>
   );
 };
 

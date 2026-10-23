@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
 import {
@@ -13,8 +13,13 @@ import {
   FaUsers,
   FaSearch,
   FaTimes,
+  FaWhatsapp,
+  FaStickyNote,
 } from "react-icons/fa";
 import { apiUrl, fetchWithAuth, safeJson, toastApiError } from "../../config/siteConfig";
+import AddLeadModal from "./AddLeadModal";
+import { sourceLabel } from "./adminUi";
+import { ScrollArea } from "../../components/ui/Scrollbar";
 
 const AdminEnquiries = () => {
   const [enquiries, setEnquiries] = useState([]);
@@ -22,13 +27,43 @@ const AdminEnquiries = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [savingCrm, setSavingCrm] = useState(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showAddLead, setShowAddLead] = useState(false);
 
   useEffect(() => {
     fetchEnquiries();
     const pollInterval = setInterval(fetchEnquiries, 30000);
     return () => clearInterval(pollInterval);
   }, []);
+
+  const deepLinkId = searchParams.get("id");
+  useEffect(() => {
+    if (!deepLinkId || loading) return;
+    const found = enquiries.find((e) => (e._id || e.id) === deepLinkId);
+    if (found) {
+      setSelectedEnquiry(found);
+      return;
+    }
+    fetchWithAuth(apiUrl(`/api/enquiries/${deepLinkId}`))
+      .then(safeJson)
+      .then((json) => json.success && json.data && setSelectedEnquiry(json.data))
+      .catch(() => {});
+  }, [deepLinkId, loading, enquiries]);
+
+  const closeEnquiry = () => {
+    setSelectedEnquiry(null);
+    if (deepLinkId) {
+      searchParams.delete("id");
+      setSearchParams(searchParams, { replace: true });
+    }
+  };
+
+  useEffect(() => {
+    setNoteDraft("");
+  }, [selectedEnquiry?._id, selectedEnquiry?.id]);
 
   useEffect(() => {
     if (selectedEnquiry) {
@@ -79,6 +114,32 @@ const AdminEnquiries = () => {
       }
     } catch (err) {
       toastApiError(err, "Failed to update status");
+    }
+  };
+
+  const saveCrm = async (payload) => {
+    if (!selectedEnquiry) return;
+    const id = selectedEnquiry._id || selectedEnquiry.id;
+    setSavingCrm(true);
+    try {
+      const res = await fetchWithAuth(apiUrl(`/api/enquiries/${id}/crm`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await safeJson(res);
+      if (res.ok && json.success) {
+        toast.success(payload.note ? "Note added" : "Follow-up saved");
+        setNoteDraft("");
+        setSelectedEnquiry(json.data);
+        setEnquiries((prev) => prev.map((enq) => ((enq._id || enq.id) === id ? json.data : enq)));
+      } else {
+        toastApiError(json, "Failed to save");
+      }
+    } catch (err) {
+      toastApiError(err, "Failed to save");
+    } finally {
+      setSavingCrm(false);
     }
   };
 
@@ -181,7 +242,7 @@ const AdminEnquiries = () => {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-        onClick={() => setSelectedEnquiry(null)}
+        onClick={closeEnquiry}
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
@@ -196,21 +257,22 @@ const AdminEnquiries = () => {
                 Enquiry Specification
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                ID: {selectedEnquiry._id || selectedEnquiry.id} &nbsp;•&nbsp; Submitted:{" "}
+                {sourceLabel(selectedEnquiry.source)} &nbsp;•&nbsp; Lead score{" "}
+                {selectedEnquiry.leadScore ?? 0} &nbsp;•&nbsp; Submitted:{" "}
                 {selectedEnquiry.createdAt
                   ? new Date(selectedEnquiry.createdAt).toLocaleString()
                   : "—"}
               </p>
             </div>
             <button
-              onClick={() => setSelectedEnquiry(null)}
+              onClick={closeEnquiry}
               className="p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-colors text-slate-500 dark:text-slate-400"
             >
               <FaTimes className="text-lg" />
             </button>
           </div>
 
-          <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+          <ScrollArea className="max-h-[75vh]" contentClassName="p-6 space-y-6">
             <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-100 dark:border-slate-800">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-2xl shadow-sm">
                 {selectedEnquiry.name?.charAt(0)?.toUpperCase()}
@@ -349,6 +411,62 @@ const AdminEnquiries = () => {
 
             <div className="space-y-3">
               <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                Follow-up reminder
+              </span>
+              <input
+                type="date"
+                value={
+                  selectedEnquiry.followUpDate ? selectedEnquiry.followUpDate.slice(0, 10) : ""
+                }
+                onChange={(e) => saveCrm({ followUpDate: e.target.value || null })}
+                disabled={savingCrm}
+                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-sm text-slate-800 dark:text-white"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <FaStickyNote /> Internal notes
+              </span>
+              {(selectedEnquiry.adminNotes || []).length > 0 && (
+                <ul className="space-y-2">
+                  {selectedEnquiry.adminNotes.map((n, i) => (
+                    <li
+                      key={n._id || i}
+                      className="p-3 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300"
+                    >
+                      <p className="whitespace-pre-line">{n.text}</p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        {n.author || "admin"} · {new Date(n.createdAt).toLocaleString()}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex gap-2">
+                <input
+                  value={noteDraft}
+                  onChange={(e) => setNoteDraft(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && noteDraft.trim() && saveCrm({ note: noteDraft.trim() })
+                  }
+                  maxLength={1000}
+                  placeholder="e.g. Called, wants Kedarnath in May"
+                  className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-sm text-slate-800 dark:text-white"
+                />
+                <button
+                  type="button"
+                  disabled={savingCrm || !noteDraft.trim()}
+                  onClick={() => saveCrm({ note: noteDraft.trim() })}
+                  className="px-4 py-2 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 rounded-lg text-sm font-medium disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
                 Update Enquiry Status
               </span>
               <div className="flex flex-wrap gap-2.5">
@@ -378,13 +496,21 @@ const AdminEnquiries = () => {
                 <FaEnvelope /> Send Email Reply
               </a>
               <a
+                href={`https://wa.me/${String(selectedEnquiry.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${selectedEnquiry.name}, this is Satyam Holidays regarding your travel enquiry.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-sm transition-colors"
+              >
+                <FaWhatsapp /> WhatsApp
+              </a>
+              <a
                 href={`tel:${selectedEnquiry.phone}`}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 <FaPhoneAlt /> Call Client
               </a>
             </div>
-          </div>
+          </ScrollArea>
         </motion.div>
       </motion.div>
     </AnimatePresence>
@@ -399,12 +525,21 @@ const AdminEnquiries = () => {
             Manage customer enquiries
           </p>
         </div>
-        <button
-          onClick={handleExport}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm shadow-sm transition-colors"
-        >
-          <FaDownload /> Export
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAddLead(true)}
+            className="btn btn-accent h-10"
+          >
+            + Add lead
+          </button>
+          <button
+            onClick={handleExport}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm shadow-sm transition-colors"
+          >
+            <FaDownload /> Export
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
@@ -493,6 +628,14 @@ const AdminEnquiries = () => {
                         >
                           {status.icon} {enquiry.status}
                         </span>
+                        {enquiry.followUpDate &&
+                          new Date(enquiry.followUpDate) <= new Date() &&
+                          enquiry.status !== "confirmed" &&
+                          enquiry.status !== "cancelled" && (
+                            <span className="ml-2 text-xs font-medium text-red-600 dark:text-red-400">
+                              Follow-up due
+                            </span>
+                          )}
                       </td>
                       <td className="px-5 py-4 text-right">
                         <button
@@ -518,6 +661,12 @@ const AdminEnquiries = () => {
       </div>
 
       {typeof document !== "undefined" ? createPortal(modalContent, document.body) : modalContent}
+      {showAddLead && (
+        <AddLeadModal
+          onClose={() => setShowAddLead(false)}
+          onCreated={(lead) => setEnquiries((prev) => [lead, ...prev])}
+        />
+      )}
     </div>
   );
 };

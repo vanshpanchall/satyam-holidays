@@ -1,136 +1,130 @@
 import React, { memo } from "react";
 import PropTypes from "prop-types";
-import { useNavigate } from "react-router-dom";
-import { FaMapMarkerAlt, FaClock, FaStar, FaGlobe } from "react-icons/fa";
-import { resolveImageUrl } from "../config/siteConfig";
-import OptimizedImage from "./OptimizedImage";
+import { Link } from "react-router-dom";
+import { PiArrowUpRight, PiHeart, PiHeartFill, PiStarFill } from "react-icons/pi";
+import Img from "./ui/Img";
+import { formatINR, parseNights, pkgHref, pkgId, startingPrice } from "../utils/format";
+import { useWishlist } from "../utils/savedTrips";
 
-/**
- * Memoized Package Card component to prevent unnecessary re-renders
- */
-const PackageCard = memo(function PackageCard({ pkg, onClick, showVisa = false }) {
-  const navigate = useNavigate();
+const departureBadge = (pkg) => {
+  const upcoming = (pkg.availableDates || []).filter(
+    (d) => new Date(d.startDate) > new Date() && d.status !== "sold_out"
+  );
+  if (upcoming.some((d) => d.status === "filling_fast")) return "Filling fast";
+  if (upcoming.length) return `${upcoming.length} departure${upcoming.length > 1 ? "s" : ""}`;
+  return null;
+};
 
-  const handleClick = () => {
-    if (onClick) {
-      onClick(pkg);
-    } else {
-      navigate(`/packages/${pkg.slug || pkg.id || pkg._id}`);
-    }
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      handleClick();
-    }
-  };
-
-  const imageUrl = resolveImageUrl(pkg.image);
+const PackageCard = memo(function PackageCard({ pkg, size = "default", priority = false }) {
+  const { has, toggle } = useWishlist();
+  const id = pkgId(pkg);
+  const saved = has(id);
+  const nights = parseNights(pkg.duration);
+  const price = startingPrice(pkg);
+  const badge = departureBadge(pkg);
 
   return (
-    <div
-      className="glass-card rounded-2xl group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-900"
-      onClick={handleClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-      aria-label={`View details for ${pkg.name} package at ${pkg.location}`}
-    >
-      {/* Package Image */}
-      <div className="relative h-48 overflow-hidden rounded-t-xl">
-        <OptimizedImage
-          src={imageUrl}
-          alt={pkg.name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-          aspectRatio="4/3"
-          objectFit="cover"
-        />
-        <div className="absolute top-4 right-4 bg-primary-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
-          {pkg.price}
-        </div>
-        {showVisa && pkg.visa && (
-          <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium text-white shadow-lg border border-white/20">
-            <FaGlobe className="inline mr-1 text-secondary-400" aria-hidden="true" />
-            {pkg.visa}
-          </div>
-        )}
-        <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium text-white shadow-lg border border-white/20">
-          <FaMapMarkerAlt className="inline mr-1 text-primary-400" aria-hidden="true" />
-          {pkg.location}
-        </div>
-      </div>
+    <article className="group relative">
+      <Link
+        to={pkgHref(pkg)}
+        className="block focus:outline-none"
+        aria-label={`${pkg.name}, ${pkg.location}`}
+      >
+        <div
+          className={`relative overflow-hidden rounded-3xl ${
+            size === "wide" ? "aspect-[4/3]" : "aspect-[4/5]"
+          }`}
+        >
+          <Img
+            src={pkg.image}
+            alt={pkg.name}
+            width={720}
+            priority={priority}
+            sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw"
+            className="transition-transform duration-[1.2s] ease-out-expo group-hover:scale-[1.06]"
+          />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink-950/70 to-transparent" />
 
-      {/* Package Content */}
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xl font-bold text-navy-900 dark:text-white group-hover:text-primary-500 transition-colors duration-300">
+          <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+            <span className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium capitalize text-ink-900 backdrop-blur">
+              {pkg.subcategory || pkg.category}
+            </span>
+            {badge && (
+              <span className="rounded-full bg-saffron-500 px-3 py-1 text-[11px] font-medium text-white">
+                {badge}
+              </span>
+            )}
+          </div>
+
+          <div className="absolute inset-x-4 bottom-4 flex items-end justify-between gap-3 text-white">
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-white/75">
+                {nights > 0 ? `${nights}N / ${nights + 1}D` : pkg.duration}
+              </p>
+              <p className="mt-1 truncate text-sm text-white/90">{pkg.location}</p>
+            </div>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-ink-900 transition-transform duration-500 ease-out-expo group-hover:rotate-45">
+              <PiArrowUpRight className="h-4 w-4" />
+            </span>
+          </div>
+        </div>
+
+        <div className="px-1 pt-4">
+          <h3 className="font-display text-xl leading-snug text-fg [font-variation-settings:'opsz'_48]">
             {pkg.name}
           </h3>
-          <div className="flex items-center">
-            <FaStar className="text-yellow-400 mr-1" aria-hidden="true" />
-            <span className="text-sm font-medium text-navy-700 dark:text-navy-200">
-              {pkg.rating}
-            </span>
-            <span className="text-xs text-navy-500 dark:text-navy-400 ml-1">({pkg.reviews})</span>
+          <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+            <p className="text-muted">
+              {price > 0 ? (
+                <>
+                  from <span className="font-medium text-fg">{formatINR(price)}</span>
+                  <span className="text-xs"> / person</span>
+                </>
+              ) : (
+                <span className="font-medium text-fg">{pkg.price}</span>
+              )}
+            </p>
+            {pkg.rating > 0 && (
+              <p className="flex items-center gap-1 text-muted">
+                <PiStarFill className="h-3.5 w-3.5 text-saffron-500" aria-hidden="true" />
+                <span className="font-medium text-fg">{Number(pkg.rating).toFixed(1)}</span>
+                {pkg.reviews > 0 && <span className="text-xs">({pkg.reviews})</span>}
+              </p>
+            )}
           </div>
         </div>
+      </Link>
 
-        <p className="text-navy-700 dark:text-navy-200 mb-4 leading-relaxed line-clamp-2">
-          {pkg.description}
-        </p>
-
-        <div className="flex items-center text-sm text-navy-600 dark:text-navy-300 mb-4">
-          <FaClock className="mr-2" aria-hidden="true" />
-          {pkg.duration}
-        </div>
-
-        {/* Highlights */}
-        <div className="mb-6">
-          <h4 className="text-sm font-semibold text-navy-900 dark:text-white mb-2">Highlights:</h4>
-          <div className="flex flex-wrap gap-2">
-            {pkg.highlights?.slice(0, 4).map((highlight, idx) => (
-              <span
-                key={idx}
-                className="px-2 py-1 glass-badge text-primary-700 dark:text-primary-300 text-xs rounded-full"
-              >
-                {highlight}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Action Button */}
-        <button
-          className="w-full btn btn-primary min-h-[44px]"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleClick();
-          }}
-        >
-          View Details
-        </button>
-      </div>
-    </div>
+      <button
+        type="button"
+        onClick={() => toggle(id)}
+        aria-pressed={saved}
+        aria-label={saved ? `Remove ${pkg.name} from wishlist` : `Save ${pkg.name} to wishlist`}
+        className={`absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full backdrop-blur transition ${
+          saved ? "bg-saffron-500 text-white" : "bg-white/90 text-ink-900 hover:bg-white"
+        }`}
+      >
+        {saved ? <PiHeartFill className="h-4 w-4" /> : <PiHeart className="h-4 w-4" />}
+      </button>
+    </article>
   );
 });
 
 PackageCard.propTypes = {
   pkg: PropTypes.shape({
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).isRequired,
     name: PropTypes.string.isRequired,
-    location: PropTypes.string.isRequired,
-    price: PropTypes.string.isRequired,
+    location: PropTypes.string,
+    price: PropTypes.string,
+    numericPrice: PropTypes.number,
     rating: PropTypes.number,
     reviews: PropTypes.number,
     duration: PropTypes.string,
-    description: PropTypes.string,
-    highlights: PropTypes.arrayOf(PropTypes.string),
     image: PropTypes.string,
-    visa: PropTypes.string,
+    category: PropTypes.string,
+    subcategory: PropTypes.string,
   }).isRequired,
-  onClick: PropTypes.func,
-  showVisa: PropTypes.bool,
+  size: PropTypes.oneOf(["default", "wide"]),
+  priority: PropTypes.bool,
 };
 
 export default PackageCard;

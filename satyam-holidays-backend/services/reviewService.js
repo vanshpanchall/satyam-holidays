@@ -136,7 +136,11 @@ class ReviewService {
         id: review._id,
         name: review.name,
         rating: review.rating,
+        title: review.title,
         comment: review.comment,
+        adminReply: review.adminReply?.text
+          ? { text: review.adminReply.text, repliedAt: review.adminReply.repliedAt }
+          : null,
         verified: review.verified,
         helpful: review.helpful,
         createdAt: review.createdAt,
@@ -167,6 +171,29 @@ class ReviewService {
   }
 
   // Get review summary for a package (approved reviews only)
+  async getFeaturedReviews(limit = 6) {
+    const reviews = await Review.find({ status: "approved", rating: { $gte: 4 } })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate("packageId", "name slug location")
+      .select("name rating title comment verified createdAt packageId")
+      .lean();
+
+    // Never expose reviewer emails/IPs publicly; flatten package info for the client
+    return reviews.map((r) => ({
+      id: r._id,
+      name: r.name,
+      rating: r.rating,
+      title: r.title,
+      comment: r.comment,
+      verified: r.verified,
+      createdAt: r.createdAt,
+      package: r.packageId
+        ? { name: r.packageId.name, slug: r.packageId.slug, location: r.packageId.location }
+        : null,
+    }));
+  }
+
   async getReviewSummary(packageId) {
     try {
       logger.info("Service: getReviewSummary invoked", { packageId });
@@ -264,10 +291,10 @@ class ReviewService {
   }
 
   // Verify a review (admin function)
-  async verifyReview(reviewId) {
+  async verifyReview(reviewId, verified = true) {
     try {
-      logger.info("Service: verifyReview invoked", { reviewId });
-      const review = await Review.findByIdAndUpdate(reviewId, { verified: true }, { new: true });
+      logger.info("Service: verifyReview invoked", { reviewId, verified });
+      const review = await Review.findByIdAndUpdate(reviewId, { verified }, { new: true });
 
       if (!review) {
         logger.warn("Service: verifyReview review not found", { reviewId });
@@ -303,9 +330,8 @@ class ReviewService {
         throw new Error("Review not found");
       }
 
-      // Clear cache for this package
-      await cache.del(`reviews:${review.packageId}`);
-      await cache.del(`reviews:summary:${review.packageId}`);
+      await this.clearPackageCaches(review.packageId);
+      await this.syncPackageRating(review.packageId);
       logger.info("Service: deleteReview succeeded and cleared caches", {
         reviewId,
         packageId: review.packageId,
@@ -328,12 +354,19 @@ class ReviewService {
       if (filter.verified !== undefined) query.verified = filter.verified;
       if (filter.rating) query.rating = filter.rating;
       if (filter.status) query.status = filter.status;
+      if (filter.q) {
+        const safe = String(filter.q)
+          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+          .slice(0, 100);
+        const rx = new RegExp(safe, "i");
+        query.$or = [{ name: rx }, { email: rx }, { title: rx }, { comment: rx }];
+      }
 
       const reviews = await Review.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate("packageId", "name");
+        .populate("packageId", "name slug");
 
       const total = await Review.countDocuments(query);
       const totalPages = Math.ceil(total / limit);
@@ -353,6 +386,91 @@ class ReviewService {
     }
   }
 
+  /**
+   * Keep a package's public rating / review count in line with its approved reviews.
+   * Packages with no approved reviews keep whatever the admin entered.
+   */
+  async syncPackageRating(packageId) {
+    if (!packageId) return;
+    const mongoose = require("mongoose");
+    const Package = require("../models/Package");
+    const [agg] = await Review.aggregate([
+      { $match: { packageId: new mongoose.Types.ObjectId(String(packageId)), status: "approved" } },
+      { $group: { _id: null, avg: { $avg: "$rating" }, count: { $sum: 1 } } },
+    ]);
+    if (!agg || !agg.count) return;
+    await Package.updateOne(
+      { _id: packageId },
+      { $set: { rating: Math.round(agg.avg * 10) / 10, reviews: agg.count } }
+    );
+    await cache.invalidatePackages?.();
+  }
+
+  async clearPackageCaches(packageId) {
+    if (cache.invalidatePattern) await cache.invalidatePattern(`reviews:${packageId}:*`);
+    await cache.del(`reviews:${packageId}`);
+    await cache.del(`reviews:summary:${packageId}`);
+  }
+
+  // Moderation queue counts and rating spread for the admin screen
+  async getAdminStats() {
+    const [byStatus, ratings] = await Promise.all([
+      Review.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+      Review.aggregate([
+        { $match: { status: "approved" } },
+        { $group: { _id: "$rating", count: { $sum: 1 } } },
+      ]),
+    ]);
+    const counts = { pending: 0, approved: 0, rejected: 0, spam: 0 };
+    byStatus.forEach((r) => (counts[r._id] = r.count));
+    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let sum = 0;
+    let n = 0;
+    ratings.forEach((r) => {
+      distribution[r._id] = r.count;
+      sum += r._id * r.count;
+      n += r.count;
+    });
+    const unanswered = await Review.countDocuments({
+      status: "approved",
+      $or: [{ "adminReply.text": { $exists: false } }, { "adminReply.text": "" }],
+    });
+    return {
+      counts,
+      total: counts.pending + counts.approved + counts.rejected + counts.spam,
+      averageRating: n ? Math.round((sum / n) * 10) / 10 : 0,
+      distribution,
+      unanswered,
+    };
+  }
+
+  async bulkUpdateStatus(ids, status) {
+    const reviews = await Review.find({ _id: { $in: ids } })
+      .select("packageId")
+      .lean();
+    await Review.updateMany({ _id: { $in: ids } }, { $set: { status } });
+    const packageIds = [...new Set(reviews.map((r) => String(r.packageId)))];
+    for (const pid of packageIds) {
+      await this.clearPackageCaches(pid);
+      await this.syncPackageRating(pid);
+    }
+    logger.info("Service: bulkUpdateStatus", { count: reviews.length, status });
+    return reviews.length;
+  }
+
+  async setReply(reviewId, text, author) {
+    const update = text
+      ? { $set: { adminReply: { text, repliedAt: new Date(), author } } }
+      : { $unset: { adminReply: 1 } };
+    const review = await Review.findByIdAndUpdate(reviewId, update, { new: true }).populate(
+      "packageId",
+      "name slug"
+    );
+    if (!review) throw new Error("Review not found");
+    await this.clearPackageCaches(review.packageId?._id || review.packageId);
+    return review;
+  }
+
   // Update a review's moderation status (admin function)
   async updateStatus(reviewId, status) {
     try {
@@ -363,13 +481,8 @@ class ReviewService {
         throw new Error("Review not found");
       }
 
-      // Clear cache for this package
-      if (cache.invalidatePattern) {
-        await cache.invalidatePattern(`reviews:${review.packageId}:*`);
-      } else {
-        await cache.del(`reviews:${review.packageId}`);
-      }
-      await cache.del(`reviews:summary:${review.packageId}`);
+      await this.clearPackageCaches(review.packageId);
+      await this.syncPackageRating(review.packageId);
       logger.info("Service: updateStatus succeeded and cleared caches", {
         reviewId,
         packageId: review.packageId,

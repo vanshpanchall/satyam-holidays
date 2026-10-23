@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const multer = require("multer");
 const path = require("path");
 const Joi = require("joi");
+const jwt = require("jsonwebtoken");
 const router = express.Router();
 const packageService = require("../services/packageService");
 const cacheService = require("../utils/cache");
@@ -11,6 +12,34 @@ const logger = require("../utils/logger");
 const { uploadImage } = require("../utils/cloudinary");
 const { ApiErrors, successResponse, errorResponse } = require("../utils/apiResponse");
 const { logAudit } = require("../utils/auditLogger");
+const { triggerFrontendRebuild } = require("../utils/deployHook");
+
+// Admin screens read the same endpoints as the public site. Admins get drafts and promo
+// codes (never CDN-cached); everyone else gets active packages with promo codes removed.
+const isAdminRequest = (req) => {
+  const token = req.cookies?.adminToken || req.header("Authorization")?.replace("Bearer ", "");
+  if (!token || !process.env.JWT_SECRET) return false;
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const isPromoLive = (promo, now = new Date()) =>
+  (!promo.validFrom || new Date(promo.validFrom) <= now) &&
+  (!promo.validUntil || new Date(promo.validUntil) >= now);
+
+const toPublicPackage = (pkg) => {
+  if (!pkg) return pkg;
+  const { promotions, ...rest } = pkg.toObject ? pkg.toObject() : pkg;
+  return {
+    ...rest,
+    id: rest.id || rest._id,
+    hasOffers: Array.isArray(promotions) && promotions.some((p) => isPromoLive(p)),
+  };
+};
 
 // ─── Joi validation schemas ───
 const packageSchema = Joi.object({
@@ -58,6 +87,46 @@ const packageSchema = Joi.object({
   }),
   visa: Joi.string().max(100).default("Not Required"),
   isActive: Joi.boolean().default(true),
+  isFeatured: Joi.boolean().default(false),
+  gallery: Joi.array().items(Joi.string().trim().max(500)).max(12).default([]),
+  inclusions: Joi.array().items(Joi.string().trim().max(200)).max(30).default([]),
+  exclusions: Joi.array().items(Joi.string().trim().max(200)).max(30).default([]),
+  itinerary: Joi.array()
+    .items(
+      Joi.object({
+        day: Joi.number().integer().min(1).max(60).required(),
+        title: Joi.string().trim().max(200).required(),
+        description: Joi.string().trim().max(2000).required(),
+        meals: Joi.array().items(Joi.string().trim().max(30)).max(5).default([]),
+      })
+    )
+    .max(60)
+    .default([]),
+  availableDates: Joi.array()
+    .items(
+      Joi.object({
+        startDate: Joi.date().required(),
+        endDate: Joi.date().min(Joi.ref("startDate")).required(),
+        capacity: Joi.number().integer().min(1).max(1000).default(20),
+        booked: Joi.number().integer().min(0).default(0),
+        status: Joi.string().valid("available", "filling_fast", "sold_out").default("available"),
+        priceOverride: Joi.number().min(0).allow(null).optional(),
+      })
+    )
+    .max(100)
+    .default([]),
+  promotions: Joi.array()
+    .items(
+      Joi.object({
+        code: Joi.string().trim().uppercase().max(30).required(),
+        discountPercent: Joi.number().min(0).max(100).required(),
+        validFrom: Joi.date().allow(null).optional(),
+        validUntil: Joi.date().allow(null).optional(),
+        description: Joi.string().trim().max(200).allow("").optional(),
+      })
+    )
+    .max(20)
+    .default([]),
 });
 
 const updatePackageSchema = packageSchema.fork(
@@ -66,18 +135,25 @@ const updatePackageSchema = packageSchema.fork(
 );
 
 // Validation middleware
-const validate = (schema) => (req, res, next) => {
-  const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
-  if (error) {
-    const errors = error.details.map((d) => ({
-      field: d.path.join("."),
-      message: d.message,
-    }));
-    return errorResponse(res, ApiErrors.validationError(errors), req.id);
-  }
-  req.body = value;
-  next();
-};
+// Updates skip schema defaults so a partial PUT never resets fields it didn't send.
+const validate =
+  (schema, { noDefaults = false } = {}) =>
+  (req, res, next) => {
+    const { error, value } = schema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+      noDefaults,
+    });
+    if (error) {
+      const errors = error.details.map((d) => ({
+        field: d.path.join("."),
+        message: d.message,
+      }));
+      return errorResponse(res, ApiErrors.validationError(errors), req.id);
+    }
+    req.body = value;
+    next();
+  };
 
 // ─── Multer config (memory storage for Cloudinary) ───
 const fileFilter = (_req, file, cb) => {
@@ -118,12 +194,10 @@ router.use((err, _req, res, next) => {
       return res.status(400).json({ success: false, message: "Image must be less than 5MB" });
     }
     if (err.code === "LIMIT_UNEXPECTED_FILE") {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Unexpected field name in upload. Expected field name is 'image'.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Unexpected field name in upload. Expected field name is 'image'.",
+      });
     }
     return res.status(400).json({ success: false, message: err.message || "Invalid file" });
   }
@@ -142,13 +216,17 @@ router.get("/", async (req, res) => {
     const { category, subcategory } = req.query;
     const { page, limit } = parsePaginationParams(req.query);
 
-    const options = { category, subcategory, limit, page };
+    const admin = isAdminRequest(req);
+    const options = { category, subcategory, limit, page, includeInactive: admin };
     const result = await packageService.getPackages(options);
 
-    res.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=60");
+    res.set(
+      "Cache-Control",
+      admin ? "private, no-store" : "public, s-maxage=300, stale-while-revalidate=60"
+    );
     res.json({
       success: true,
-      data: result.data,
+      data: admin ? result.data : result.data.map(toPublicPackage),
       pagination: buildPaginationMeta(page, limit, result.pagination.totalItems),
     });
   } catch (error) {
@@ -199,8 +277,12 @@ router.get("/:id", async (req, res) => {
       return errorResponse(res, ApiErrors.notFound("Package"), req.id);
     }
 
+    if (isAdminRequest(req)) {
+      res.set("Cache-Control", "private, no-store");
+      return successResponse(res, pkg);
+    }
     res.set("Cache-Control", "public, s-maxage=600, stale-while-revalidate=120");
-    return successResponse(res, pkg);
+    return successResponse(res, toPublicPackage(pkg));
   } catch (error) {
     logger.error("Get package error:", error);
     return errorResponse(res, ApiErrors.internal("Failed to fetch package"), req.id);
@@ -213,6 +295,7 @@ router.post("/", auth, validate(packageSchema), async (req, res) => {
     const pkg = await packageService.createPackage(req.body);
     await cacheService.invalidatePackages();
     logAudit(req, "CREATE", "package", pkg._id || pkg.id, { name: pkg.name });
+    triggerFrontendRebuild("package create");
     return successResponse(res, pkg, 201);
   } catch (error) {
     logger.error("Create package error:", error);
@@ -221,7 +304,7 @@ router.post("/", auth, validate(packageSchema), async (req, res) => {
 });
 
 // Update package
-router.put("/:id", auth, validate(updatePackageSchema), async (req, res) => {
+router.put("/:id", auth, validate(updatePackageSchema, { noDefaults: true }), async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return errorResponse(res, ApiErrors.badRequest("Invalid ID format"), req.id);
   }
@@ -232,6 +315,7 @@ router.put("/:id", auth, validate(updatePackageSchema), async (req, res) => {
     }
     await cacheService.invalidatePackages();
     logAudit(req, "UPDATE", "package", req.params.id, req.body);
+    triggerFrontendRebuild("package update");
     return successResponse(res, pkg);
   } catch (error) {
     logger.error("Update package error:", error);
@@ -251,6 +335,7 @@ router.delete("/:id", auth, async (req, res) => {
     }
     await cacheService.invalidatePackages();
     logAudit(req, "DELETE", "package", req.params.id, { name: pkg.name });
+    triggerFrontendRebuild("package delete");
     return successResponse(res, null, 200, { message: "Package deleted successfully" });
   } catch (error) {
     logger.error("Delete package error:", error);
@@ -272,7 +357,7 @@ router.get("/slug/:slug", async (req, res) => {
     }
     pkg.id = pkg._id;
     res.set("Cache-Control", "public, s-maxage=600, stale-while-revalidate=120");
-    return successResponse(res, pkg);
+    return successResponse(res, toPublicPackage(pkg));
   } catch (error) {
     logger.error("Get package by slug error:", error);
     return errorResponse(res, ApiErrors.internal("Failed to fetch package"), req.id);

@@ -1,97 +1,113 @@
 /** @type {import('tailwindcss').Config} */
+
+// Brand scales. `saffron` is the accent, `ink` the deep navy used for text and dark surfaces.
+const saffron = {
+  50: "#fff6ed",
+  100: "#ffead4",
+  200: "#ffd1a8",
+  300: "#ffb46a",
+  400: "#ff9335",
+  500: "#f57c20",
+  600: "#e06614",
+  700: "#b94e10",
+  800: "#933f14",
+  900: "#773514",
+  950: "#401907",
+};
+
+const ink = {
+  50: "#f4f7f9",
+  100: "#e9eef2",
+  200: "#d5dde4",
+  300: "#b3c0cc",
+  400: "#8597a9",
+  500: "#5b6f84",
+  600: "#3a5068",
+  700: "#22384f",
+  800: "#17293d",
+  900: "#0f1e2e",
+  950: "#070e17",
+};
+
+// Semantic tokens resolve to CSS variables (see index.css) so dark mode needs no `dark:` duplicates.
+const token = (name) => `rgb(var(--${name}) / <alpha-value>)`;
+
 module.exports = {
   darkMode: "class",
-  content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  // scripts/ holds the pre-render templates, whose classes must exist in the built CSS
+  content: ["./src/**/*.{js,jsx,ts,tsx}", "./scripts/**/*.js"],
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: "#fff7ed",
-          100: "#ffedd5",
-          200: "#fed7aa",
-          300: "#fdba74",
-          400: "#fb923c",
-          500: "#f59e0b",
-          600: "#ea580c",
-          700: "#c2410c",
-          800: "#9a3412",
-          900: "#7c2d12",
+        saffron,
+        ink,
+        // Legacy names still used by admin screens and shared components
+        primary: saffron,
+        amber: saffron,
+        orange: saffron,
+        navy: ink,
+        sand: {
+          50: "#fbf8f3",
+          100: "#f6f1ea",
+          200: "#ece3d6",
+          300: "#ddcfbb",
         },
-        navy: {
-          50: "#f8fafc",
-          100: "#f1f5f9",
-          200: "#e2e8f0",
-          300: "#cbd5e1",
-          400: "#94a3b8",
-          500: "#64748b",
-          600: "#475569",
-          700: "#334155",
-          800: "#1e293b",
-          900: "#0f172a",
-          950: "#020617",
-        },
-        cream: "#fff7ed",
+        page: token("page"),
+        surface: token("surface"),
+        raised: token("raised"),
+        fg: token("fg"),
+        muted: token("muted"),
+        line: token("line"),
+        accent: token("accent"),
+        "series-1": token("series-1"),
+        "series-2": token("series-2"),
+        "series-3": token("series-3"),
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui"],
-        display: ["Poppins", "ui-sans-serif", "system-ui"],
+        sans: ["Geist", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+        display: ["Fraunces", "ui-serif", "Georgia", "serif"],
       },
-      animation: {
-        "fade-in": "fadeIn 0.6s ease-in-out",
-        "slide-up": "slideUp 0.6s ease-out",
-        "slide-down": "slideDown 0.6s ease-out",
-        "scale-in": "scaleIn 0.4s ease-out",
-        "bounce-slow": "bounce 2s infinite",
-        "pulse-slow": "pulse 3s infinite",
-        float: "float 3s ease-in-out infinite",
-        shimmer: "shimmer 2s linear infinite",
-        glow: "glow 2s ease-in-out infinite alternate",
+      fontSize: {
+        "display-xl": [
+          "clamp(2.75rem, 7vw, 6.25rem)",
+          { lineHeight: "1", letterSpacing: "-0.02em" },
+        ],
+        "display-lg": [
+          "clamp(2.25rem, 4.8vw, 4.25rem)",
+          { lineHeight: "1.02", letterSpacing: "-0.025em" },
+        ],
+        "display-md": [
+          "clamp(1.75rem, 3.2vw, 2.75rem)",
+          { lineHeight: "1.08", letterSpacing: "-0.02em" },
+        ],
+      },
+      borderRadius: {
+        "4xl": "2rem",
+      },
+      maxWidth: {
+        site: "84rem",
+      },
+      transitionTimingFunction: {
+        "out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
       },
       keyframes: {
-        fadeIn: {
-          "0%": { opacity: "0" },
-          "100%": { opacity: "1" },
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
         },
-        slideUp: {
-          "0%": { transform: "translateY(30px)", opacity: "0" },
-          "100%": { transform: "translateY(0)", opacity: "1" },
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(16px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
         },
-        slideDown: {
-          "0%": { transform: "translateY(-30px)", opacity: "0" },
-          "100%": { transform: "translateY(0)", opacity: "1" },
-        },
-        scaleIn: {
-          "0%": { transform: "scale(0.9)", opacity: "0" },
-          "100%": { transform: "scale(1)", opacity: "1" },
-        },
-        float: {
-          "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-10px)" },
-        },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
-        glow: {
-          "0%": { boxShadow: "0 0 5px rgba(245,158,11,0.2), 0 0 20px rgba(245,158,11,0.1)" },
-          "100%": { boxShadow: "0 0 10px rgba(245,158,11,0.4), 0 0 40px rgba(245,158,11,0.2)" },
+        "ken-burns": {
+          from: { transform: "scale(1.04)" },
+          to: { transform: "scale(1.14)" },
         },
       },
-      backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic": "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
-        "hero-pattern":
-          'url(\'data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23f59e0b" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\')',
-      },
-      backdropBlur: {
-        xs: "2px",
-      },
-      boxShadow: {
-        glass: "0 8px 32px 0 rgba(31, 38, 135, 0.15)",
-        "glass-lg": "0 8px 32px 0 rgba(31, 38, 135, 0.25)",
-        "glass-inset": "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
-        "glow-primary": "0 0 15px rgba(245, 158, 11, 0.3), 0 0 45px rgba(245, 158, 11, 0.1)",
-        "glow-primary-lg": "0 0 20px rgba(245, 158, 11, 0.4), 0 0 60px rgba(245, 158, 11, 0.15)",
+      animation: {
+        marquee: "marquee 40s linear infinite",
+        "fade-up": "fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "ken-burns": "ken-burns 9s ease-out both",
       },
     },
   },

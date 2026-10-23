@@ -34,7 +34,6 @@ describe("POST /api/packages/upload-image", () => {
 
   beforeAll(async () => {
     const User = require("../models/User");
-    const bcrypt = require("bcryptjs");
     const mongoose = require("mongoose");
 
     if (mongoose.connection.readyState !== 1) {
@@ -44,11 +43,11 @@ describe("POST /api/packages/upload-image", () => {
     const email = process.env.ADMIN_EMAIL.toLowerCase();
     let user = await User.findOne({ email });
     if (!user) {
-      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+      // The User model hashes on save — pass the plain password
       await User.create({
         name: "Test Admin",
         email,
-        password: hashedPassword,
+        password: process.env.ADMIN_PASSWORD,
         role: "admin",
         mfaEnabled: false,
       });
@@ -82,7 +81,7 @@ describe("POST /api/packages/upload-image", () => {
   });
 
   test("returns 400 without file when authenticated", async () => {
-    if (!token) return;
+    expect(token).toBeTruthy();
     const res = await withCsrf(request(app).post("/api/packages/upload-image")).set(
       "Authorization",
       `Bearer ${token}`
@@ -92,7 +91,7 @@ describe("POST /api/packages/upload-image", () => {
   });
 
   test("returns 400 for non-image file when authenticated", async () => {
-    if (!token) return;
+    expect(token).toBeTruthy();
     const res = await withCsrf(request(app).post("/api/packages/upload-image"))
       .set("Authorization", `Bearer ${token}`)
       .attach("image", Buffer.from("hello"), "notes.txt");
@@ -101,7 +100,7 @@ describe("POST /api/packages/upload-image", () => {
   });
 
   test("returns 200 and imageUrl for valid image when authenticated", async () => {
-    if (!token) return;
+    expect(token).toBeTruthy();
     const res = await withCsrf(request(app).post("/api/packages/upload-image"))
       .set("Authorization", `Bearer ${token}`)
       .attach("image", TINY_JPEG, "photo.jpg");

@@ -27,6 +27,7 @@
     "start": "react-scripts start",
     "start:3001": "cross-env PORT=3001 react-scripts start",
     "build": "react-scripts build",
+    "postbuild": "node scripts/prerender.js",
     "test": "react-scripts test",
     "perf:lighthouse": "npm run build && npx --yes start-server-and-test \"npx --yes serve -s build -l 4173\" http://127.0.0.1:4173 \"node scripts/lighthouse-gate.js\"",
     "perf:lighthouse:lhci": "npm run build && npx --yes @lhci/cli@0.14.0 autorun --config=./lighthouserc.json",

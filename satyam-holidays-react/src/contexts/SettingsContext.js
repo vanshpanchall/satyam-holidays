@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { apiUrl } from "../config/siteConfig";
+import CONTENT_DEFAULTS from "../config/contentDefaults";
 
 const SettingsContext = createContext(null);
 
@@ -25,16 +26,17 @@ const FALLBACK = {
   "social.facebook": "https://facebook.com/satyamholidays",
   "social.instagram": "https://instagram.com/satyamholidays",
   "social.twitter": "https://twitter.com/satyamholidays",
-  "hero.heading": "Discover Amazing Adventures With Us!",
+  "hero.heading": "Every yatra, every holiday — *planned like family.*",
   "hero.subheading":
-    "Experience the world's most beautiful destinations with our carefully crafted travel packages. From spiritual journeys to exotic beaches, we make your dream vacation a reality.",
+    "Chardham to Kashmir, Kerala to Dubai. Tell us where you want to go — we sort the hotels, transport, permits and every small detail in between.",
   "hero.stats": [
     { value: 500, suffix: "+", label: "Happy Travelers" },
     { value: 50, suffix: "+", label: "Destinations" },
     { value: 10, suffix: "+", label: "Years Experience" },
   ],
-  "brand.primaryColor": "#f59e0b",
+  "brand.primaryColor": "#f57c20",
   "company.website": "https://satyamholidays.com",
+  ...CONTENT_DEFAULTS,
 };
 
 const isPlainObject = (value) =>
@@ -175,22 +177,7 @@ export function SettingsProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    const isAdminPath =
-      typeof window !== "undefined" && window.location.pathname.startsWith("/admin");
-    const shouldDeferPublicFetch = process.env.NODE_ENV === "production" && !isAdminPath;
-
-    if (!shouldDeferPublicFetch) {
-      fetchSettings();
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      fetchSettings();
-    }, 3500);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
+    fetchSettings();
   }, [fetchSettings]);
 
   const refetch = useCallback(() => {
@@ -250,7 +237,8 @@ export function useSiteConfig() {
         email: getSetting("company.email"),
         phones: getSetting("company.phones"),
         emergencyPhone: getSetting("company.emergencyPhone"),
-        emergencyEmail: "emergency@satyamholidays.com",
+        emergencyEmail: getSetting("company.emergencyEmail"),
+        mapEmbed: getSetting("company.mapEmbed"),
         whatsapp: getSetting("company.whatsapp"),
         address: getSetting("company.address"),
         hours: getSetting("company.hours"),
@@ -259,6 +247,7 @@ export function useSiteConfig() {
         facebook: getSetting("social.facebook"),
         instagram: getSetting("social.instagram"),
         twitter: getSetting("social.twitter"),
+        youtube: getSetting("social.youtube"),
       },
       brand: {
         primaryColor: getSetting("brand.primaryColor"),

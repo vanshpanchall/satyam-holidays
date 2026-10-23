@@ -1,271 +1,181 @@
 import React from "react";
-import { FaFacebook, FaInstagram, FaTwitter, FaWhatsapp, FaArrowUp } from "react-icons/fa";
-import { toWhatsAppLink } from "../config/siteConfig";
+import { Link } from "react-router-dom";
+import {
+  PiArrowUpRight,
+  PiFacebookLogo,
+  PiInstagramLogo,
+  PiTwitterLogo,
+  PiWhatsappLogo,
+  PiYoutubeLogo,
+} from "react-icons/pi";
 import { useSiteConfig } from "../contexts/SettingsContext";
+import { toTel, toWhatsApp } from "../utils/format";
+
+const COLUMNS = [
+  {
+    title: "Explore",
+    links: [
+      { label: "All packages", to: "/packages" },
+      { label: "India holidays", to: "/packages?category=domestic" },
+      { label: "International", to: "/packages?category=international" },
+      { label: "Chardham Yatra", to: "/packages?q=chardham" },
+      { label: "Kashmir", to: "/packages?q=kashmir" },
+    ],
+  },
+  {
+    title: "Plan",
+    links: [
+      { label: "Trip planner", to: "/ai-planner" },
+      { label: "Compare packages", to: "/compare" },
+      { label: "Saved trips", to: "/wishlist" },
+      { label: "Send an enquiry", to: "/#enquiry" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "About us", to: "/#about" },
+      { label: "Contact", to: "/#contact" },
+      { label: "Privacy policy", to: "/privacy-policy" },
+      { label: "Terms & conditions", to: "/terms" },
+      { label: "Cancellation & refunds", to: "/refund-policy" },
+    ],
+  },
+];
 
 const Footer = () => {
   const siteConfig = useSiteConfig();
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const { company, social } = siteConfig;
+  const year = new Date().getFullYear();
 
-  const currentYear = new Date().getFullYear();
+  const socials = [
+    { label: "Instagram", href: social.instagram, Icon: PiInstagramLogo },
+    { label: "Facebook", href: social.facebook, Icon: PiFacebookLogo },
+    { label: "YouTube", href: social.youtube, Icon: PiYoutubeLogo },
+    { label: "X (Twitter)", href: social.twitter, Icon: PiTwitterLogo },
+    { label: "WhatsApp", href: toWhatsApp(company.whatsapp), Icon: PiWhatsappLogo },
+  ].filter((s) => s.href);
 
   return (
-    <footer className="relative overflow-hidden text-white">
-      <div
-        className="absolute inset-0 bg-navy-950"
-        style={{ background: "linear-gradient(180deg, #0f172a 0%, #020617 100%)" }}
-      ></div>
-      <div className="absolute inset-0 mesh-gradient"></div>
-      <div className="container-custom relative z-10">
-        {/* Main Footer Content */}
-        <div className="py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Company Info */}
-            <div className="lg:col-span-1">
-              <div className="flex items-center space-x-3 mb-6">
-                <img
-                  src={siteConfig.company.logo}
-                  alt={`${siteConfig.company.name} logo`}
-                  className="w-12 h-12 md:w-14 md:h-14 rounded-lg object-contain"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <div>
-                  <h3 className="text-xl font-bold">{siteConfig.company.name}</h3>
-                  <p className="text-sm text-primary-400">{siteConfig.company.tagline}</p>
-                </div>
-              </div>
-              <p className="text-navy-200 mb-6 leading-relaxed">
-                Your trusted travel partner for unforgettable journeys. We specialize in creating
-                personalized travel experiences that exceed expectations.
-              </p>
-              <div className="flex space-x-3">
-                <a
-                  href={siteConfig.social.facebook}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative w-10 h-10 rounded-full border border-white/20 bg-white/5 backdrop-blur-md flex items-center justify-center transition-all duration-300 hover:bg-white/10 hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
-                  aria-label="Facebook"
-                >
-                  <span className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  <FaFacebook className="text-lg text-white group-hover:scale-110 transition-transform" />
-                </a>
-                <a
-                  href={siteConfig.social.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative w-10 h-10 rounded-full border border-white/20 bg-white/5 backdrop-blur-md flex items-center justify-center transition-all duration-300 hover:bg-white/10 hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
-                  aria-label="Instagram"
-                >
-                  <span className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  <FaInstagram className="text-lg text-white group-hover:scale-110 transition-transform" />
-                </a>
-                <a
-                  href={siteConfig.social.twitter}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative w-10 h-10 rounded-full border border-white/20 bg-white/5 backdrop-blur-md flex items-center justify-center transition-all duration-300 hover:bg-white/10 hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
-                  aria-label="Twitter"
-                >
-                  <span className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  <FaTwitter className="text-lg text-white group-hover:scale-110 transition-transform" />
-                </a>
-                <a
-                  href={toWhatsAppLink(siteConfig.company.whatsapp)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative w-10 h-10 rounded-full border border-white/20 bg-white/5 backdrop-blur-md flex items-center justify-center transition-all duration-300 hover:bg-white/10 hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
-                  aria-label="WhatsApp"
-                >
-                  <span className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                  <FaWhatsapp className="text-lg text-white group-hover:scale-110 transition-transform" />
-                </a>
-              </div>
-            </div>
-
-            {/* Quick Links */}
-            <div>
-              <h4 className="text-lg font-bold mb-6">Quick Links</h4>
-              <ul className="space-y-3">
-                <li>
-                  <a
-                    href="#home"
-                    className="text-navy-200 hover:text-primary-400 transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById("home").scrollIntoView({ behavior: "smooth" });
-                    }}
-                  >
-                    Home
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#about"
-                    className="text-navy-200 hover:text-primary-400 transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById("about").scrollIntoView({ behavior: "smooth" });
-                    }}
-                  >
-                    About Us
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#services"
-                    className="text-navy-200 hover:text-primary-400 transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById("services").scrollIntoView({ behavior: "smooth" });
-                    }}
-                  >
-                    Services
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#packages"
-                    className="text-navy-200 hover:text-primary-400 transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById("packages").scrollIntoView({ behavior: "smooth" });
-                    }}
-                  >
-                    Packages
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#contact"
-                    className="text-navy-200 hover:text-primary-400 transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById("contact").scrollIntoView({ behavior: "smooth" });
-                    }}
-                  >
-                    Contact Us
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            {/* Destinations */}
-            <div>
-              <h4 className="text-lg font-bold mb-6">Destinations</h4>
-              <ul className="space-y-3">
-                {[
-                  { label: "Domestic Packages", id: "packages" },
-                  { label: "International Packages", id: "packages" },
-                  { label: "Chardham Yatra", id: "packages" },
-                  { label: "Kashmir Tours", id: "packages" },
-                  { label: "Dubai Packages", id: "packages" },
-                  { label: "Singapore Tours", id: "packages" },
-                ].map((item) => (
-                  <li key={item.label}>
-                    <button
-                      type="button"
-                      className="text-navy-200 hover:text-primary-400 transition-colors"
-                      onClick={() => {
-                        const el = document.getElementById(item.id);
-                        if (el) el.scrollIntoView({ behavior: "smooth" });
-                      }}
-                    >
-                      {item.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Contact Info */}
-            <div>
-              <h4 className="text-lg font-bold mb-6">Contact Info</h4>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-navy-200 text-sm">Address:</p>
-                  <p className="text-white">
-                    {siteConfig.company.address.line1}
-                    <br />
-                    {siteConfig.company.address.line2}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-navy-200 text-sm">Phone:</p>
-                  {siteConfig.company.phones.map((p) => (
-                    <div key={p}>
-                      <a
-                        href={`tel:${p.replace(/\s/g, "")}`}
-                        className="text-white hover:text-primary-400 transition-colors"
-                      >
-                        {p}
-                      </a>
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <p className="text-navy-200 text-sm">Email:</p>
-                  <a
-                    href={`mailto:${siteConfig.company.email}`}
-                    className="text-white hover:text-primary-400 transition-colors"
-                  >
-                    {siteConfig.company.email}
-                  </a>
-                </div>
-                <div>
-                  <p className="text-navy-200 text-sm">Business Hours:</p>
-                  <p className="text-white text-sm">
-                    {siteConfig.company.hours.weekdays}
-                    <br />
-                    {siteConfig.company.hours.saturday}
-                    <br />
-                    {siteConfig.company.hours.sunday}
-                  </p>
-                </div>
-              </div>
-            </div>
+    <footer className="relative overflow-hidden bg-ink-950 text-white">
+      <div className="container-site pt-20 md:pt-28">
+        {/* Closing call to action */}
+        <div className="grid gap-10 border-b border-white/10 pb-16 md:grid-cols-12 md:items-end">
+          <h2 className="font-display text-display-lg font-light md:col-span-8">
+            Where to <em className="accent-italic !text-saffron-400">next?</em>
+          </h2>
+          <div className="flex flex-wrap gap-3 md:col-span-4 md:justify-end">
+            <Link to="/#enquiry" className="btn btn-accent btn-lg">
+              Start planning
+            </Link>
+            <a
+              href={toWhatsApp(
+                company.whatsapp,
+                "Hi Satyam Holidays, I'd like help planning a trip."
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-glass btn-lg"
+            >
+              <PiWhatsappLogo className="h-5 w-5" /> WhatsApp us
+            </a>
           </div>
         </div>
 
-        {/* Bottom Footer */}
-        <div className="border-t border-white/10 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-center md:text-left">
-              <p className="text-navy-200">
-                © {currentYear} {siteConfig.company.name}. All rights reserved.
-              </p>
+        <div className="grid gap-12 py-16 md:grid-cols-12">
+          <div className="md:col-span-4">
+            <div className="flex items-center gap-3">
+              <img
+                src={company.logo}
+                alt=""
+                className="h-11 w-11 rounded-full bg-white object-contain p-1"
+                loading="lazy"
+              />
+              <div>
+                <p className="font-display text-xl">{company.name}</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-white/50">
+                  {company.tagline}
+                </p>
+              </div>
             </div>
-
-            <div className="flex items-center space-x-6 text-sm">
-              {["Privacy Policy", "Terms of Service", "Refund Policy"].map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  className="text-navy-200 hover:text-primary-400 transition-colors"
-                  onClick={() => {
-                    const section = document.getElementById("contact");
-                    if (section) section.scrollIntoView({ behavior: "smooth" });
-                  }}
-                >
-                  {label}
-                </button>
+            <address className="mt-8 space-y-1 text-sm not-italic leading-relaxed text-white/60">
+              <p>{company.address.line1}</p>
+              <p>{company.address.line2}</p>
+              <p>{company.address.country}</p>
+            </address>
+            <div className="mt-6 space-y-1 text-sm">
+              {company.phones.map((p) => (
+                <a key={p} href={toTel(p)} className="link-underline block w-fit text-white/80">
+                  {p}
+                </a>
               ))}
+              <a
+                href={`mailto:${company.email}`}
+                className="link-underline block w-fit text-white/80"
+              >
+                {company.email}
+              </a>
             </div>
-
-            {/* Scroll to Top Button */}
-            <button
-              onClick={scrollToTop}
-              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-glow-primary hover:shadow-glow-primary-lg"
-              style={{ background: "linear-gradient(135deg, #f59e0b, #ea580c)" }}
-              aria-label="Scroll to top"
-            >
-              <FaArrowUp className="text-white" />
-            </button>
           </div>
+
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 md:col-span-8">
+            {COLUMNS.map((col) => (
+              <nav key={col.title} aria-label={col.title}>
+                <p className="mb-5 text-[11px] uppercase tracking-[0.2em] text-white/40">
+                  {col.title}
+                </p>
+                <ul className="space-y-3 text-[15px]">
+                  {col.links.map((link) => (
+                    <li key={link.label}>
+                      <Link to={link.to} className="link-underline text-white/75 hover:text-white">
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6 border-t border-white/10 py-8 text-sm text-white/45 md:flex-row md:items-center md:justify-between">
+          <p>
+            © {year} {company.name}. All rights reserved.
+          </p>
+          <div className="flex items-center gap-2">
+            {socials.map(({ label, href, Icon }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/70 transition hover:border-white/40 hover:text-white"
+              >
+                <Icon className="h-[18px] w-[18px]" />
+              </a>
+            ))}
+          </div>
+          <a
+            href="#top"
+            onClick={(e) => {
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="flex items-center gap-2 text-white/60 hover:text-white"
+          >
+            Back to top <PiArrowUpRight className="h-4 w-4 -rotate-45" />
+          </a>
         </div>
       </div>
+
+      {/* Oversized wordmark — decorative */}
+      <p
+        aria-hidden="true"
+        className="pointer-events-none select-none whitespace-nowrap px-4 pb-4 text-center font-display text-[18vw] leading-[0.8] tracking-tight text-white/[0.04]"
+      >
+        {company.name}
+      </p>
     </footer>
   );
 };

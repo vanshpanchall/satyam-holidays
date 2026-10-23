@@ -18,15 +18,20 @@ import {
   FaKey,
   FaEye,
   FaEyeSlash,
+  FaHome,
+  FaFileAlt,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { apiUrl, fetchWithAuth, safeJson, toastApiError } from "../../config/siteConfig";
+import { HomepageTab, LegalTab } from "./AdminContentTabs";
 
 const TABS = [
   { id: "company", label: "Company", icon: <FaBuilding /> },
   { id: "contact", label: "Contact", icon: <FaPhone /> },
   { id: "social", label: "Social Links", icon: <FaShareAlt /> },
+  { id: "homepage", label: "Homepage", icon: <FaHome /> },
   { id: "hero", label: "Hero Section", icon: <FaChartBar /> },
+  { id: "legal", label: "Legal pages", icon: <FaFileAlt /> },
   { id: "notifications", label: "Notifications", icon: <FaBell /> },
   { id: "admins", label: "Admin Accounts", icon: <FaUsers /> },
   { id: "mfa", label: "MFA Security", icon: <FaShieldAlt /> },
@@ -106,7 +111,9 @@ const AdminSettings = () => {
             Manage your website content & configuration
           </p>
         </div>
-        {["company", "contact", "social", "hero", "notifications"].includes(activeTab) && (
+        {["company", "contact", "social", "hero", "homepage", "legal", "notifications"].includes(
+          activeTab
+        ) && (
           <button
             onClick={handleSave}
             disabled={saving || !dirty}
@@ -148,6 +155,10 @@ const AdminSettings = () => {
           {activeTab === "social" && (
             <SocialTab settings={settings} updateSetting={updateSetting} inputClass={inputClass} />
           )}
+          {activeTab === "homepage" && (
+            <HomepageTab settings={settings} updateSetting={updateSetting} />
+          )}
+          {activeTab === "legal" && <LegalTab settings={settings} updateSetting={updateSetting} />}
           {activeTab === "hero" && (
             <HeroTab settings={settings} updateSetting={updateSetting} inputClass={inputClass} />
           )}
@@ -199,7 +210,7 @@ const CompanyTab = ({ settings, updateSetting, inputClass }) => (
       />
       <Field
         label="Primary Brand Color"
-        value={settings["brand.primaryColor"] || "#f59e0b"}
+        value={settings["brand.primaryColor"] || "#f57c20"}
         onChange={(v) => updateSetting("brand.primaryColor", v)}
         inputClass={inputClass}
         type="color"
@@ -244,6 +255,20 @@ const ContactTab = ({ settings, updateSetting, inputClass }) => {
           value={settings["company.emergencyPhone"] || ""}
           onChange={(v) => updateSetting("company.emergencyPhone", v)}
           inputClass={inputClass}
+        />
+        <Field
+          label="Emergency Email"
+          value={settings["company.emergencyEmail"] || ""}
+          onChange={(v) => updateSetting("company.emergencyEmail", v)}
+          inputClass={inputClass}
+          type="email"
+        />
+        <Field
+          label="Google Maps embed URL"
+          value={settings["company.mapEmbed"] || ""}
+          onChange={(v) => updateSetting("company.mapEmbed", v)}
+          inputClass={inputClass}
+          placeholder="https://www.google.com/maps/embed?pb=..."
         />
         <Field
           label="WhatsApp Number"
@@ -368,6 +393,13 @@ const SocialTab = ({ settings, updateSetting, inputClass }) => (
         onChange={(v) => updateSetting("social.twitter", v)}
         inputClass={inputClass}
         placeholder="https://twitter.com/..."
+      />
+      <Field
+        label="YouTube"
+        value={settings["social.youtube"] || ""}
+        onChange={(v) => updateSetting("social.youtube", v)}
+        inputClass={inputClass}
+        placeholder="https://youtube.com/@..."
       />
     </div>
   </div>

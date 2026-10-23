@@ -1,5 +1,6 @@
 const Setting = require("../models/Setting");
 const logger = require("../utils/logger");
+const CONTENT_DEFAULTS = require("./contentDefaults");
 
 // Default settings — used as fallback when DB has no value
 const DEFAULTS = {
@@ -29,9 +30,10 @@ const DEFAULTS = {
   "social.twitter": "https://twitter.com/satyamholidays",
 
   // Hero
-  "hero.heading": "Discover Amazing Adventures With Us!",
+  // Wrap words in *asterisks* to render them in the italic accent face
+  "hero.heading": "Every yatra, every holiday — *planned like family.*",
   "hero.subheading":
-    "Experience the world's most beautiful destinations with our carefully crafted travel packages. From spiritual journeys to exotic beaches, we make your dream vacation a reality.",
+    "Chardham to Kashmir, Kerala to Dubai. Tell us where you want to go — we sort the hotels, transport, permits and every small detail in between.",
   "hero.stats": [
     { value: 500, suffix: "+", label: "Happy Travelers" },
     { value: 50, suffix: "+", label: "Destinations" },
@@ -49,7 +51,9 @@ const DEFAULTS = {
   "notifications.adminWhatsapp": "",
 
   // Brand
-  "brand.primaryColor": "#f59e0b",
+  "brand.primaryColor": "#f57c20",
+
+  ...CONTENT_DEFAULTS,
 };
 
 const isPlainObject = (value) =>

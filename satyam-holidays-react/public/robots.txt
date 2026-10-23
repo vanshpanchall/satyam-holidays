@@ -1,20 +1,7 @@
-# Satyam Holidays Robots.txt
-# https://satyamholidays.vercel.app
-
+# Generated at build time by scripts/prerender.js — this copy is only used by the dev server
 User-agent: *
 Allow: /
 Disallow: /admin
-Disallow: /admin/
+Disallow: /wishlist
 
-# Allow search engine crawlers
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-# Sitemaps
 Sitemap: https://satyamholidays.vercel.app/sitemap.xml
-
-# Host
-Host: https://satyamholidays.vercel.app

@@ -177,7 +177,9 @@ class CacheService {
    * More efficient than pattern-based invalidation
    */
   async invalidateKeys(keys) {
-    if (!this.isConnected || !keys || keys.length === 0) return;
+    if (!keys || keys.length === 0) return;
+    keys.forEach((key) => this.memoryCache.delete(key));
+    if (!this.isConnected) return;
 
     try {
       await this.client.del(keys);
@@ -225,7 +227,8 @@ class CacheService {
    * @param {string} category - If provided, only invalidate entries for this category
    */
   async invalidatePackages(packageId = null, category = null) {
-    if (!this.isConnected) return;
+    // Without Redis, entries live in memoryCache; clear them or edits stay hidden until TTL expiry
+    if (!this.isConnected) return this.invalidatePattern("packages:*");
 
     // If specific criteria, try to be smart
     if ((packageId || category) && this.keyRegistry.has("packages")) {

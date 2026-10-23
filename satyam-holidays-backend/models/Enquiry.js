@@ -8,9 +8,9 @@ const enquirySchema = new mongoose.Schema(
       trim: true,
       maxlength: [100, "Name cannot exceed 100 characters"],
     },
+    // Required for website enquiries (enforced by the route schema); optional for staff-entered leads
     email: {
       type: String,
-      required: [true, "Email is required"],
       trim: true,
       lowercase: true,
       match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Please enter a valid email"],
@@ -99,6 +99,16 @@ const enquirySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    adminNotes: [
+      {
+        text: { type: String, trim: true, maxlength: 1000 },
+        author: { type: String },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    followUpDate: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
@@ -117,6 +127,7 @@ enquirySchema.index({ status: 1, destination: 1 });
 enquirySchema.index({ createdAt: -1, status: 1 });
 enquirySchema.index({ leadScore: -1 });
 enquirySchema.index({ slaStatus: 1 });
+enquirySchema.index({ followUpDate: 1 });
 
 // Virtual for formatted date
 enquirySchema.virtual("formattedDate").get(function () {

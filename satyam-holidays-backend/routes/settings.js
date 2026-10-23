@@ -3,6 +3,7 @@ const router = express.Router();
 const settingService = require("../services/settingService");
 const auth = require("../middleware/auth");
 const logger = require("../utils/logger");
+const { triggerFrontendRebuild } = require("../utils/deployHook");
 
 // GET /api/settings — public (frontend reads on load)
 router.get("/", async (_req, res) => {
@@ -24,6 +25,7 @@ router.put("/", auth, async (req, res) => {
     }
 
     const updated = await settingService.bulkUpsert(settings);
+    triggerFrontendRebuild("settings updated"); // homepage copy is pre-rendered
     res.json({ success: true, data: updated });
   } catch (error) {
     logger.error("Update settings error:", error);

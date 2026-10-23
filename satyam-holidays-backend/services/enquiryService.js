@@ -6,7 +6,7 @@ const logger = require("../utils/logger");
 const settingService = require("./settingService");
 
 class EnquiryService {
-  async createEnquiry(enquiryData, ipAddress, userAgent) {
+  async createEnquiry(enquiryData, ipAddress, userAgent, { notify = true } = {}) {
     logger.info("Service: createEnquiry invoked", {
       name: enquiryData.name,
       email: enquiryData.email,
@@ -28,6 +28,9 @@ class EnquiryService {
     // Emit real-time event to admin dashboard
     socketManager.emitNewEnquiry(enquiry);
     logger.info("Service: createEnquiry broadcasted Socket.io real-time event");
+
+    // Leads typed in by staff (phone / walk-in) shouldn't email or WhatsApp anyone
+    if (!notify) return enquiry;
 
     const settings = await settingService.getAll();
     const emailEnabled = settings["notifications.emailEnabled"] !== false;
@@ -174,6 +177,24 @@ class EnquiryService {
       logger.warn("Service: updateEnquiryStatus failed, enquiry not found", { id });
     }
 
+    return enquiry;
+  }
+
+  async updateEnquiryCrm(id, { note, followUpDate, author }) {
+    logger.info("Service: updateEnquiryCrm invoked", { id });
+    const update = {};
+    if (note) {
+      update.$push = { adminNotes: { text: note, author, createdAt: new Date() } };
+    }
+    if (followUpDate !== undefined) {
+      update.$set = { followUpDate };
+    }
+
+    const enquiry = await Enquiry.findByIdAndUpdate(id, update, { new: true });
+    if (enquiry) {
+      await cacheService.invalidateEnquiries();
+      socketManager.emitEnquiryUpdate(enquiry);
+    }
     return enquiry;
   }
 

@@ -2,13 +2,19 @@ const Package = require("../models/Package");
 const cacheService = require("../utils/cache");
 const logger = require("../utils/logger");
 
+// "₹25,999 - 30,000 per person" → 25999 (first number only, so ranges don't concatenate)
+const parsePrice = (price) => {
+  const match = String(price || "").match(/\d[\d,]*/);
+  return match ? parseInt(match[0].replace(/,/g, ""), 10) : 0;
+};
+
 class PackageService {
   async getPackages(options = {}) {
-    const { category, subcategory, limit = 20, page = 1 } = options;
+    const { category, subcategory, limit = 20, page = 1, includeInactive = false } = options;
     logger.info("Service: getPackages invoked", { category, subcategory, limit, page });
 
     // Check cache first
-    const cacheKey = { category, subcategory, limit, page };
+    const cacheKey = { category, subcategory, limit, page, includeInactive };
     const cached = await cacheService.getPackages(cacheKey);
     if (cached) {
       logger.info("Service: getPackages cache HIT", { cacheKey });
@@ -16,7 +22,7 @@ class PackageService {
     }
 
     logger.info("Service: getPackages cache MISS. Querying database...", { cacheKey });
-    const filter = { isActive: true };
+    const filter = includeInactive ? {} : { isActive: true };
     if (category) filter.category = category;
     if (subcategory) filter.subcategory = subcategory;
 
@@ -141,7 +147,7 @@ class PackageService {
     logger.info("Service: createPackage invoked", { name: packageData.name });
     const pkg = new Package({
       ...packageData,
-      numericPrice: parseInt(packageData.price?.replace(/[^\d]/g, "") || "0", 10),
+      numericPrice: parsePrice(packageData.price),
     });
     await pkg.save();
 
@@ -154,7 +160,7 @@ class PackageService {
   async updatePackage(id, packageData) {
     logger.info("Service: updatePackage invoked", { id, name: packageData.name });
     if (packageData.price) {
-      packageData.numericPrice = parseInt(packageData.price.replace(/[^\d]/g, "") || "0", 10);
+      packageData.numericPrice = parsePrice(packageData.price);
     }
     const pkg = await Package.findByIdAndUpdate(id, packageData, {
       new: true,

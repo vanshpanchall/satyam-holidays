@@ -15,7 +15,6 @@ describe("Settings API", () => {
 
   beforeAll(async () => {
     const User = require("../models/User");
-    const bcrypt = require("bcryptjs");
     const mongoose = require("mongoose");
 
     if (mongoose.connection.readyState !== 1) {
@@ -25,11 +24,11 @@ describe("Settings API", () => {
     const email = process.env.ADMIN_EMAIL.toLowerCase();
     let user = await User.findOne({ email });
     if (!user) {
-      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+      // The User model hashes on save — pass the plain password
       await User.create({
         name: "Test Admin",
         email,
-        password: hashedPassword,
+        password: process.env.ADMIN_PASSWORD,
         role: "admin",
         mfaEnabled: false,
       });
@@ -82,7 +81,7 @@ describe("Settings API", () => {
   });
 
   test("PUT /api/settings rejects invalid payload", async () => {
-    if (!token) return;
+    expect(token).toBeTruthy();
 
     // Send an array instead of object (invalid)
     const res = await withCsrf(request(app).put("/api/settings"))
@@ -95,7 +94,7 @@ describe("Settings API", () => {
   });
 
   test("PUT /api/settings sanitizes malformed setting value types", async () => {
-    if (!token) return;
+    expect(token).toBeTruthy();
 
     const res = await withCsrf(request(app).put("/api/settings"))
       .set("Authorization", `Bearer ${token}`)

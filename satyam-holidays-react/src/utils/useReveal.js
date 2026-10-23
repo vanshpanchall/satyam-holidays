@@ -1,19 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Lightweight scroll-reveal hook using IntersectionObserver.
- * Returns a ref and an isVisible boolean. Once visible, stays visible (once: true).
- *
- * @param {number} threshold - 0-1, how much of the element must be visible
- * @param {string} rootMargin - margin around viewport for early/late triggering
+ * Lightweight scroll-reveal using IntersectionObserver. Stays visible once revealed.
+ * Pair the returned `className` with the `.reveal` styles in index.css.
  */
-const useReveal = (threshold = 0.15, rootMargin = "0px 0px -40px 0px") => {
+const useReveal = (threshold = 0.15, rootMargin = "0px 0px -60px 0px") => {
   const ref = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el) return undefined;
+    if (typeof IntersectionObserver === "undefined") {
+      setIsVisible(true);
+      return undefined;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -29,7 +30,7 @@ const useReveal = (threshold = 0.15, rootMargin = "0px 0px -40px 0px") => {
     return () => observer.disconnect();
   }, [threshold, rootMargin]);
 
-  return { ref, isVisible };
+  return { ref, isVisible, className: `reveal${isVisible ? " is-visible" : ""}` };
 };
 
 export default useReveal;

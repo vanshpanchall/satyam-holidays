@@ -78,6 +78,31 @@ const packageSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+    gallery: {
+      type: [String],
+      validate: {
+        validator: (v) => v.length <= 12,
+        message: "Cannot have more than 12 gallery images",
+      },
+    },
+    inclusions: {
+      type: [String],
+      validate: {
+        validator: (v) => v.length <= 30,
+        message: "Cannot have more than 30 inclusions",
+      },
+    },
+    exclusions: {
+      type: [String],
+      validate: {
+        validator: (v) => v.length <= 30,
+        message: "Cannot have more than 30 exclusions",
+      },
+    },
     slug: {
       type: String,
       unique: true,

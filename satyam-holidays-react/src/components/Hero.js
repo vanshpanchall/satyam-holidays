@@ -1,159 +1,257 @@
-import React from "react";
-import { FaPlane, FaMapMarkedAlt, FaHeart } from "react-icons/fa";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { PiMagnifyingGlass, PiMapPin } from "react-icons/pi";
 import { useSetting } from "../contexts/SettingsContext";
+import Accent from "./ui/Accent";
+import Img from "./ui/Img";
+import { asArray } from "../utils/format";
+import { BUDGETS } from "../pages/packagesFilters";
+import Select from "./ui/Select";
+import { FcGoogle } from "react-icons/fc";
+import useGoogleReviews from "../utils/useGoogleReviews";
 
-const StatCard = ({ stat, delay }) => {
+const TRIP_TYPES = [
+  { value: "", label: "Anywhere" },
+  { value: "domestic", label: "Within India" },
+  { value: "international", label: "International" },
+];
+const BUDGET_OPTIONS = [
+  { value: "", label: "Any budget" },
+  ...BUDGETS.map((b) => ({ value: b.id, label: b.label })),
+];
+
+const SLIDE_MS = 7000;
+
+const HeroSearch = ({ suggestions }) => {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
+  const [budget, setBudget] = useState("");
+
+  const submit = (e) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    if (category) params.set("category", category);
+    if (budget) params.set("budget", budget);
+    navigate(`/packages${params.toString() ? `?${params}` : ""}`);
+  };
+
   return (
-    <div
-      className="text-center glass-card rounded-2xl p-6 stat-card"
-      style={{ animationDelay: `${delay}ms` }}
+    <form
+      onSubmit={submit}
+      role="search"
+      aria-label="Find a holiday"
+      className="grid gap-px overflow-hidden rounded-3xl bg-line text-fg shadow-2xl shadow-ink-950/30 sm:grid-cols-[1.4fr_1fr_1fr_auto]"
     >
-      <div className="text-4xl font-bold gradient-text mb-2">
-        {stat.value}
-        {stat.suffix}
+      <label className="flex flex-col gap-1 bg-surface px-5 py-3.5">
+        <span className="text-[11px] uppercase tracking-[0.16em] text-muted">Where to</span>
+        <span className="flex items-center gap-2">
+          <PiMapPin className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            list="hero-destinations"
+            placeholder="Kashmir, Kedarnath, Dubai…"
+            className="w-full bg-transparent text-[15px] placeholder:text-muted/70 focus:outline-none"
+          />
+          <datalist id="hero-destinations">
+            {suggestions.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
+        </span>
+      </label>
+      <div className="flex flex-col gap-1 bg-surface px-5 py-3.5">
+        <span id="hero-type-label" className="text-[11px] uppercase tracking-[0.16em] text-muted">
+          Trip type
+        </span>
+        <Select
+          variant="bare"
+          value={category}
+          onChange={setCategory}
+          options={TRIP_TYPES}
+          aria-labelledby="hero-type-label"
+        />
       </div>
-      <div className="text-navy-700 dark:text-navy-200 font-medium">{stat.label}</div>
-    </div>
+      <div className="flex flex-col gap-1 bg-surface px-5 py-3.5">
+        <span id="hero-budget-label" className="text-[11px] uppercase tracking-[0.16em] text-muted">
+          Budget / person
+        </span>
+        <Select
+          variant="bare"
+          value={budget}
+          onChange={setBudget}
+          options={BUDGET_OPTIONS}
+          aria-labelledby="hero-budget-label"
+        />
+      </div>
+      <div className="bg-surface p-2">
+        <button
+          type="submit"
+          className="btn btn-accent h-full min-h-[3.25rem] w-full rounded-2xl px-6"
+        >
+          <PiMagnifyingGlass className="h-5 w-5" />
+          <span>Search trips</span>
+        </button>
+      </div>
+    </form>
   );
 };
 
-const Hero = () => {
-  const fallbackStats = [
-    { value: 500, suffix: "+", label: "Happy Travelers" },
-    { value: 50, suffix: "+", label: "Destinations" },
-    { value: 10, suffix: "+", label: "Years Experience" },
-  ];
-  const rawStats = useSetting("hero.stats", fallbackStats);
-  const rawHeroHeading = useSetting("hero.heading", "Discover Amazing Adventures With Us!");
-  const rawHeroSubheading = useSetting(
-    "hero.subheading",
-    "Experience the world's most beautiful destinations with our carefully crafted travel packages. From spiritual journeys to exotic beaches, we make your dream vacation a reality."
-  );
+const Hero = ({ locations = [] }) => {
+  const eyebrow = useSetting("hero.eyebrow");
+  const heading = useSetting("hero.heading");
+  const subheading = useSetting("hero.subheading");
+  const stats = asArray(useSetting("hero.stats")).filter((s) => s && s.label);
+  const google = useGoogleReviews();
+  const rawImages = useSetting("hero.images");
+  const images = useMemo(() => asArray(rawImages).filter((s) => s && s.url), [rawImages]);
+  const [active, setActive] = useState(0);
 
-  const stats = Array.isArray(rawStats) ? rawStats : fallbackStats;
-  const heroHeading =
-    typeof rawHeroHeading === "string" ? rawHeroHeading : "Discover Amazing Adventures With Us!";
-  const heroSubheading =
-    typeof rawHeroSubheading === "string"
-      ? rawHeroSubheading
-      : "Experience the world's most beautiful destinations with our carefully crafted travel packages. From spiritual journeys to exotic beaches, we make your dream vacation a reality.";
+  useEffect(() => {
+    if (active >= images.length) setActive(0);
+  }, [active, images.length]);
 
-  const scrollToSection = (sectionId) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    }
-  };
+  useEffect(() => {
+    if (images.length < 2) return undefined;
+    const timer = setInterval(() => setActive((i) => (i + 1) % images.length), SLIDE_MS);
+    return () => clearInterval(timer);
+  }, [images.length]);
 
-  // Split heading into lines for multi-line display
-  const headingWords = heroHeading.split(" ");
-  const midpoint = Math.ceil(headingWords.length / 2);
-  const line1 = headingWords.slice(0, midpoint).join(" ");
-  const line2 = headingWords.slice(midpoint).join(" ");
+  const current = images[active % Math.max(images.length, 1)];
 
   return (
     <section
       id="home"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 md:pt-28 lg:pt-32 scroll-mt-24 md:scroll-mt-28"
+      className="grain relative isolate flex min-h-[100svh] flex-col overflow-hidden bg-ink-950 text-white"
     >
-      {/* Background with gradient and pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-cream to-navy-50 dark:from-navy-900 dark:via-navy-800 dark:to-navy-900"></div>
-      <div className="absolute inset-0 bg-hero-pattern opacity-10"></div>
-      <div className="absolute inset-0 mesh-gradient hidden md:block"></div>
-
-      {/* Animated background orbs — CSS only */}
-      <div
-        className="absolute top-20 left-10 w-24 h-24 rounded-full animate-float opacity-40 hidden md:block"
-        style={{
-          background: "radial-gradient(circle, rgba(245,158,11,0.25) 0%, transparent 70%)",
-        }}
-      ></div>
-      <div
-        className="absolute top-40 right-20 w-20 h-20 rounded-full animate-float opacity-35 hidden md:block"
-        style={{
-          animationDelay: "1s",
-          background: "radial-gradient(circle, rgba(100,116,139,0.2) 0%, transparent 70%)",
-        }}
-      ></div>
-      <div
-        className="absolute bottom-40 left-20 w-16 h-16 rounded-full animate-float opacity-45 hidden md:block"
-        style={{
-          animationDelay: "2s",
-          background: "radial-gradient(circle, rgba(245,158,11,0.3) 0%, transparent 70%)",
-        }}
-      ></div>
-
-      {/* Main content */}
-      <div className="container-custom relative z-10">
-        <div className="text-center max-w-4xl mx-auto hero-content hero-content--visible">
-          {/* Main heading */}
-          <h1 className="text-4xl md:text-6xl font-bold text-navy-900 dark:text-white mb-6 leading-tight">
-            <span className="block">{line1}</span>
-            <span className="block gradient-text">{line2}</span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-navy-700 dark:text-navy-200 mb-8 leading-relaxed">
-            {heroSubheading}
-          </p>
-
-          {/* Call to action buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <button
-              type="button"
-              onClick={() => scrollToSection("packages")}
-              className="btn btn-primary text-lg px-8 py-4 inline-flex items-center justify-center"
-            >
-              <FaPlane className="mr-2" />
-              Plan Your Trip
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection("enquiry")}
-              className="btn btn-outline text-lg px-8 py-4 inline-flex items-center justify-center"
-            >
-              <FaMapMarkedAlt className="mr-2" />
-              Enquiry Now
-            </button>
+      {/* Slides */}
+      <div className="absolute inset-0 -z-10" aria-hidden="true">
+        {images.map((img, i) => (
+          <div
+            key={img.url}
+            className={`absolute inset-0 transition-opacity duration-[1.4s] ease-out ${
+              i === active ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {(i === active || i === (active + 1) % images.length) && (
+              <Img
+                src={img.url}
+                alt=""
+                width={1920}
+                priority={i === 0}
+                className={i === active ? "animate-ken-burns" : ""}
+              />
+            )}
           </div>
-
-          {/* Stats section */}
-          <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
-            {stats.map((stat, i) => (
-              <StatCard key={stat.label} stat={stat} delay={i * 150} />
-            ))}
-          </div>
-        </div>
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-b from-ink-950/60 via-ink-950/20 to-ink-950/85" />
+        <div className="absolute inset-0 bg-gradient-to-r from-ink-950/50 to-transparent" />
       </div>
 
-      {/* Scroll indicator */}
       <div
-        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce-slow"
-        aria-hidden="true"
+        className="container-site flex flex-1 flex-col justify-end pb-8 md:pb-12"
+        style={{ paddingTop: "calc(var(--header-h, 4.5rem) + 3rem)" }}
       >
-        <div className="w-6 h-10 border-2 border-navy-400 dark:border-navy-500 rounded-full flex justify-center">
-          <div className="w-1 h-3 bg-navy-400 dark:bg-navy-500 rounded-full mt-2 animate-pulse"></div>
+        <div className="max-w-4xl animate-fade-up">
+          {eyebrow && (
+            <p className="mb-6 inline-flex items-center gap-3 text-[11px] uppercase tracking-[0.22em] text-white/75">
+              <span className="h-px w-8 bg-saffron-400" />
+              {eyebrow}
+            </p>
+          )}
+          <h1 className="text-balance font-display text-display-xl font-light">
+            <Accent text={heading} />
+          </h1>
+          {subheading && (
+            <p className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-white/80 md:text-lg">
+              {subheading}
+            </p>
+          )}
         </div>
-      </div>
 
-      {/* Floating glass elements */}
-      <div className="absolute top-1/4 right-10 hidden lg:block">
-        <div className="glass-card rounded-2xl p-6 animate-float">
-          <FaHeart className="text-primary-500 text-2xl mb-2" />
-          <p className="text-sm text-navy-700 dark:text-navy-200 font-medium">
-            Trusted by {stats[0]?.value || 500}
-            {stats[0]?.suffix || "+"} travelers
-          </p>
+        <div className="mt-10 md:mt-14">
+          <HeroSearch suggestions={locations} />
         </div>
-      </div>
 
-      <div className="absolute bottom-1/4 left-10 hidden lg:block">
-        <div className="glass-card rounded-2xl p-6 animate-float" style={{ animationDelay: "1s" }}>
-          <FaPlane className="text-primary-500 text-2xl mb-2" />
-          <p className="text-sm text-navy-700 dark:text-navy-200 font-medium">
-            {stats[1]?.value || 50}
-            {stats[1]?.suffix || "+"} destinations worldwide
-          </p>
+        <div className="mt-8 flex flex-col-reverse gap-6 md:flex-row md:items-end md:justify-between md:pr-44">
+          {stats.length > 0 && (
+            <dl className="flex flex-wrap gap-x-10 gap-y-4">
+              {stats.map((stat) => (
+                <div key={stat.label}>
+                  <dt className="sr-only">{stat.label}</dt>
+                  <dd className="font-display text-3xl font-light md:text-4xl">
+                    {Number(stat.value).toLocaleString("en-IN")}
+                    <span className="text-saffron-400">{stat.suffix}</span>
+                  </dd>
+                  <p
+                    className="mt-1 text-xs uppercase tracking-[0.16em] text-white/60"
+                    aria-hidden="true"
+                  >
+                    {stat.label}
+                  </p>
+                </div>
+              ))}
+              {google?.rating > 0 && (
+                <div>
+                  <dt className="sr-only">Google rating</dt>
+                  <dd>
+                    <a
+                      href={google.mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 font-display text-3xl font-light md:text-4xl"
+                    >
+                      <FcGoogle
+                        className="h-7 w-7 rounded-full bg-white p-0.5"
+                        aria-hidden="true"
+                      />
+                      {google.rating.toFixed(1)}
+                      <span className="text-saffron-400">★</span>
+                    </a>
+                  </dd>
+                  <p
+                    className="mt-1 text-xs uppercase tracking-[0.16em] text-white/60"
+                    aria-hidden="true"
+                  >
+                    {google.totalReviews.toLocaleString("en-IN")} Google reviews
+                  </p>
+                </div>
+              )}
+            </dl>
+          )}
+
+          {images.length > 1 && (
+            <div className="flex items-center gap-4 text-sm text-white/75">
+              <span className="tabular-nums">
+                {String(active + 1).padStart(2, "0")} / {String(images.length).padStart(2, "0")}
+              </span>
+              <div className="flex gap-1.5" role="tablist" aria-label="Hero photos">
+                {images.map((img, i) => (
+                  <button
+                    key={img.url}
+                    type="button"
+                    role="tab"
+                    aria-selected={i === active}
+                    aria-label={img.caption || `Photo ${i + 1}`}
+                    onClick={() => setActive(i)}
+                    className="relative h-1 w-8 overflow-hidden rounded-full bg-white/25"
+                  >
+                    {i === active && (
+                      <span
+                        key={active}
+                        className="absolute inset-y-0 left-0 bg-white"
+                        style={{ animation: `hero-progress ${SLIDE_MS}ms linear forwards` }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+              {current?.caption && <span className="hidden sm:inline">{current.caption}</span>}
+            </div>
+          )}
         </div>
       </div>
     </section>

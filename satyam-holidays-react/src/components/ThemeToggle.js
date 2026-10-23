@@ -1,30 +1,18 @@
 import React from "react";
-import { FaSun, FaMoon } from "react-icons/fa";
+import { PiMoon, PiSun } from "react-icons/pi";
 import { useTheme } from "./ThemeProvider";
 
-const ThemeToggle = ({ className = "" }) => {
-  const { toggleTheme, isDark } = useTheme();
-
+const ThemeToggle = ({ className = "icon-btn" }) => {
+  const { isDark, toggleTheme } = useTheme();
   return (
     <button
-      onClick={toggleTheme}
-      className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors duration-300 focus:outline-none bg-gray-200 dark:bg-navy-800 border border-gray-300 dark:border-navy-600 shadow-inner ${className}`}
-      aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
-      role="switch"
-      aria-checked={isDark}
       type="button"
+      onClick={toggleTheme}
+      className={className}
+      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      title={isDark ? "Light theme" : "Dark theme"}
     >
-      <span
-        className={`${
-          isDark ? "translate-x-8" : "translate-x-1"
-        } flex h-6 w-6 transform items-center justify-center rounded-full shadow-md transition-transform duration-300 bg-gradient-to-br from-primary-400 to-secondary-500`}
-      >
-        {isDark ? (
-          <FaMoon className="h-4 w-4 text-white" />
-        ) : (
-          <FaSun className="h-4 w-4 text-white" />
-        )}
-      </span>
+      {isDark ? <PiSun className="h-[18px] w-[18px]" /> : <PiMoon className="h-[18px] w-[18px]" />}
     </button>
   );
 };

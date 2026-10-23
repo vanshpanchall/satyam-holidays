@@ -1,394 +1,271 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
-import { apiUrl, resolveImageUrl } from "../config/siteConfig";
-import { FaTrash, FaPlus, FaExchangeAlt, FaStar, FaMapMarkerAlt, FaClock } from "react-icons/fa";
+import { PiCheck, PiMagnifyingGlass, PiPlus, PiStarFill, PiX } from "react-icons/pi";
+import SiteLayout from "../components/SiteLayout";
+import Meta from "../components/Meta";
+import Img from "../components/ui/Img";
+import { ScrollArea } from "../components/ui/Scrollbar";
+import usePackageCatalog from "../utils/usePackageCatalog";
+import { useWishlist } from "../utils/savedTrips";
+import { formatINR, parseNights, pkgHref, pkgId, startingPrice } from "../utils/format";
 
-const ComparePage = () => {
-  const [allPackages, setAllPackages] = useState([]);
-  const [selectedPackages, setSelectedPackages] = useState([]);
-  const [showSelectorIndex, setShowSelectorIndex] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+const MAX = 3;
 
-  useEffect(() => {
-    const fetchAllPackages = async () => {
-      try {
-        const res = await fetch(apiUrl("/api/v1/packages?limit=100"));
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            setAllPackages(json.data);
+const ROWS = [
+  {
+    label: "Starting price",
+    render: (p) => (
+      <span className="font-display text-xl text-fg">{formatINR(startingPrice(p))}</span>
+    ),
+  },
+  {
+    label: "Duration",
+    render: (p) => {
+      const n = parseNights(p.duration);
+      return n > 0 ? `${n} nights / ${n + 1} days` : p.duration;
+    },
+  },
+  { label: "Where", render: (p) => p.location },
+  {
+    label: "Rating",
+    render: (p) =>
+      p.rating ? (
+        <span className="flex items-center gap-1">
+          <PiStarFill className="h-4 w-4 text-saffron-500" /> {Number(p.rating).toFixed(1)}
+          {p.reviews > 0 && <span className="text-muted">({p.reviews})</span>}
+        </span>
+      ) : (
+        "—"
+      ),
+  },
+  { label: "Visa", render: (p) => p.visa || "Not required" },
+  {
+    label: "Next departure",
+    render: (p) => {
+      const next = (p.availableDates || [])
+        .filter((d) => new Date(d.startDate) > new Date() && d.status !== "sold_out")
+        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))[0];
+      return next
+        ? new Date(next.startDate).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+        : "Flexible dates";
+    },
+  },
+  {
+    label: "Highlights",
+    render: (p) =>
+      p.highlights?.length ? (
+        <ul className="space-y-1.5">
+          {p.highlights.slice(0, 5).map((h) => (
+            <li key={h} className="flex gap-2">
+              <PiCheck className="mt-1 h-3.5 w-3.5 shrink-0 text-accent" /> {h}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        "—"
+      ),
+  },
+  {
+    label: "Included",
+    render: (p) =>
+      p.inclusions?.length ? p.inclusions.slice(0, 5).join(" · ") : "Ask your planner",
+  },
+];
 
-            // pre-load first 2 packages from wishlist if available
-            const savedWishlist = localStorage.getItem("wishlist");
-            if (savedWishlist) {
-              const wishlistIds = JSON.parse(savedWishlist);
-              const preSelect = json.data
-                .filter((pkg) => wishlistIds.includes(pkg._id || pkg.id))
-                .slice(0, 2);
-              setSelectedPackages(preSelect);
-            } else {
-              // otherwise pre-load first 2 packages in list
-              setSelectedPackages(json.data.slice(0, 2));
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load packages for comparison", err);
-      }
-    };
-    fetchAllPackages();
-  }, []);
-
-  const handleRemove = (index) => {
-    setSelectedPackages(selectedPackages.filter((_, i) => i !== index));
-  };
-
-  const handleAdd = (pkg) => {
-    if (selectedPackages.some((p) => (p._id || p.id) === (pkg._id || pkg.id))) return;
-    if (selectedPackages.length >= 3) {
-      // replace last one
-      setSelectedPackages([...selectedPackages.slice(0, 2), pkg]);
-    } else {
-      setSelectedPackages([...selectedPackages, pkg]);
-    }
-    setShowSelectorIndex(null);
-    setSearchTerm("");
-  };
-
-  const filteredSearchList = allPackages.filter((pkg) => {
-    const matchesSearch =
-      pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pkg.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const alreadySelected = selectedPackages.some((p) => (p._id || p.id) === (pkg._id || pkg.id));
-    return matchesSearch && !alreadySelected;
-  });
+const Picker = ({ options, onPick, onClose }) => {
+  const [term, setTerm] = useState("");
+  const inputRef = useRef(null);
+  useEffect(() => inputRef.current?.focus(), []);
+  const list = options.filter((p) =>
+    `${p.name} ${p.location}`.toLowerCase().includes(term.toLowerCase())
+  );
 
   return (
-    <>
-      <Header />
-      <main className="min-h-screen pt-28 pb-16 px-4 md:px-8 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-4 border-b border-gray-200 dark:border-navy-800">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
-              Compare Packages
-            </h1>
-            <p className="text-gray-500 dark:text-navy-300 mt-2">
-              Compare travel packages side-by-side to make the best decision.
-            </p>
-          </div>
-          <div className="mt-4 md:mt-0 flex gap-4">
-            <Link
-              to="/wishlist"
-              className="btn btn-secondary border border-gray-300 dark:border-navy-700"
-            >
-              My Wishlist
-            </Link>
-            <Link
-              to="/"
-              className="btn btn-primary text-white bg-amber-500 hover:bg-amber-600 px-6 py-2 rounded-xl font-medium shadow-md"
-            >
-              Browse Packages
-            </Link>
-          </div>
+    <div className="flex h-full min-h-[280px] flex-col rounded-3xl border border-line bg-surface p-4">
+      <div className="flex items-center gap-2 border-b border-line pb-3">
+        <PiMagnifyingGlass className="h-4 w-4 text-muted" />
+        <input
+          ref={inputRef}
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder="Search trips"
+          aria-label="Search trips to compare"
+          className="w-full bg-transparent text-sm focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="text-muted hover:text-fg"
+        >
+          <PiX className="h-4 w-4" />
+        </button>
+      </div>
+      <ScrollArea className="mt-2 max-h-64 flex-1">
+        <ul>
+          {list.length === 0 && (
+            <li className="py-6 text-center text-sm text-muted">No trips found</li>
+          )}
+          {list.map((p) => (
+            <li key={pkgId(p)}>
+              <button
+                type="button"
+                onClick={() => onPick(p)}
+                className="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-2.5 text-left text-sm hover:bg-raised"
+              >
+                <span className="truncate text-fg">{p.name}</span>
+                <span className="shrink-0 text-muted">{formatINR(startingPrice(p))}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </ScrollArea>
+    </div>
+  );
+};
+
+const ComparePage = () => {
+  const { packages, loading } = usePackageCatalog();
+  const { ids: wishlist } = useWishlist();
+  const [selectedIds, setSelectedIds] = useState(null);
+  const [pickerSlot, setPickerSlot] = useState(null);
+
+  // Start from the wishlist (or nothing) once the catalogue has loaded
+  useEffect(() => {
+    if (selectedIds !== null || loading) return;
+    const available = new Set(packages.map(pkgId));
+    setSelectedIds(wishlist.filter((id) => available.has(id)).slice(0, MAX));
+  }, [loading, packages, wishlist, selectedIds]);
+
+  const byId = useMemo(() => new Map(packages.map((p) => [pkgId(p), p])), [packages]);
+  const selected = (selectedIds || []).map((id) => byId.get(id)).filter(Boolean);
+  const options = packages.filter((p) => !(selectedIds || []).includes(pkgId(p)));
+
+  const add = (pkg) => {
+    setSelectedIds((prev) => [...(prev || []), pkgId(pkg)].slice(0, MAX));
+    setPickerSlot(null);
+  };
+  const remove = (id) => setSelectedIds((prev) => (prev || []).filter((x) => x !== id));
+
+  const slots = Array.from({ length: MAX }, (_, i) => selected[i] || null);
+
+  return (
+    <SiteLayout>
+      <Meta
+        title="Compare trips | Satyam Holidays"
+        description="Compare holiday packages side by side."
+      />
+
+      <header className="border-b border-line">
+        <div className="container-site py-12 md:py-16">
+          <p className="eyebrow mb-4">Side by side</p>
+          <h1 className="font-display text-display-lg font-light text-fg">Compare trips</h1>
+          <p className="mt-3 max-w-xl text-muted">
+            Pick up to three trips to see price, length, dates and what's included next to each
+            other.
+          </p>
         </div>
+      </header>
 
-        {/* Selected Packages Headers Card Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 items-stretch">
-          <div className="bg-gray-50 dark:bg-navy-800/40 p-6 rounded-2xl flex flex-col justify-center border border-gray-200 dark:border-navy-800">
-            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-950/50 rounded-xl flex items-center justify-center text-amber-500 mb-4">
-              <FaExchangeAlt className="text-xl" />
-            </div>
-            <h3 className="text-lg font-bold text-navy-900 dark:text-white">Package Comparison</h3>
-            <p className="text-xs text-gray-500 dark:text-navy-300 mt-1">
-              Select up to 3 holiday packages. Hover or click card rows to compare itineraries,
-              pricing models, and key highlights.
-            </p>
-          </div>
-
-          {[0, 1, 2].map((idx) => {
-            const pkg = selectedPackages[idx];
-            if (pkg) {
-              return (
-                <div
-                  key={pkg._id || pkg.id}
-                  className="glass-card rounded-2xl p-4 relative flex flex-col justify-between border border-gray-200 dark:border-navy-800 group"
-                >
-                  <button
-                    onClick={() => handleRemove(idx)}
-                    className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Remove from comparison"
-                  >
-                    <FaTrash className="text-xs" />
-                  </button>
-                  <div className="h-28 overflow-hidden rounded-xl mb-3">
-                    <img
-                      src={resolveImageUrl(pkg.image)}
-                      alt={pkg.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <h4 className="font-bold text-navy-950 dark:text-white line-clamp-1 mb-1">
-                    {pkg.name}
-                  </h4>
-                  <div className="flex items-center text-xs text-gray-500 dark:text-navy-300 mb-2">
-                    <FaMapMarkerAlt className="text-amber-500 mr-1" /> {pkg.location}
-                  </div>
-                  <div className="text-lg font-extrabold text-amber-500 mt-auto">{pkg.price}</div>
-                </div>
-              );
-            } else {
-              return (
-                <div
-                  key={`empty-${idx}`}
-                  className="border-2 border-dashed border-gray-300 dark:border-navy-800 rounded-2xl flex flex-col items-center justify-center p-6 bg-gray-50/50 dark:bg-navy-900/20 relative"
-                >
-                  {showSelectorIndex === idx ? (
-                    <div className="absolute inset-0 bg-white dark:bg-navy-900 z-20 rounded-2xl p-4 flex flex-col">
-                      <div className="flex items-center justify-between mb-2 pb-2 border-b dark:border-navy-800">
-                        <span className="text-sm font-semibold">Select Package</span>
-                        <button
-                          onClick={() => setShowSelectorIndex(null)}
-                          className="text-gray-400 hover:text-gray-600 text-xs"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Search destination..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg text-xs dark:bg-navy-800 dark:border-navy-700 outline-none focus:ring-1 focus:ring-amber-500"
-                        autoFocus
+      <div className="container-site py-12">
+        <div className="-mx-4 overflow-x-auto px-4 pb-4">
+          <div className="grid min-w-[760px] grid-cols-[10rem_repeat(3,minmax(0,1fr))] gap-x-4">
+            {/* Header row */}
+            <div />
+            {slots.map((pkg, i) =>
+              pkg ? (
+                <div key={pkgId(pkg)} className="relative">
+                  <Link to={pkgHref(pkg)} className="group block">
+                    <div className="aspect-[4/3] overflow-hidden rounded-3xl">
+                      <Img
+                        src={pkg.image}
+                        alt={pkg.name}
+                        width={600}
+                        className="transition-transform duration-700 group-hover:scale-105"
                       />
-                      <div className="mt-2 overflow-y-auto flex-1 max-h-40 divide-y divide-gray-100 dark:divide-navy-800">
-                        {filteredSearchList.length === 0 ? (
-                          <div className="text-center text-xs text-gray-400 py-4">
-                            No packages found
-                          </div>
-                        ) : (
-                          filteredSearchList.map((p) => (
-                            <button
-                              key={p._id || p.id}
-                              onClick={() => handleAdd(p)}
-                              className="w-full text-left py-2 px-1 hover:bg-gray-50 dark:hover:bg-navy-800 text-xs flex items-center justify-between"
-                            >
-                              <span>{p.name}</span>
-                              <span className="text-amber-500 font-semibold">{p.price}</span>
-                            </button>
-                          ))
-                        )}
-                      </div>
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setShowSelectorIndex(idx);
-                        setSearchTerm("");
-                      }}
-                      className="flex flex-col items-center text-gray-400 hover:text-amber-500 transition-colors"
-                    >
-                      <FaPlus className="text-2xl mb-2" />
-                      <span className="text-xs font-semibold">Add Package</span>
-                    </button>
-                  )}
+                    <p className="mt-3 font-display text-lg leading-snug text-fg">{pkg.name}</p>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => remove(pkgId(pkg))}
+                    aria-label={`Remove ${pkg.name}`}
+                    className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-ink-900 hover:bg-white"
+                  >
+                    <PiX className="h-4 w-4" />
+                  </button>
                 </div>
-              );
-            }
-          })}
+              ) : pickerSlot === i ? (
+                <Picker
+                  key={`picker-${i}`}
+                  options={options}
+                  onPick={add}
+                  onClose={() => setPickerSlot(null)}
+                />
+              ) : (
+                <button
+                  key={`empty-${i}`}
+                  type="button"
+                  disabled={loading || options.length === 0}
+                  onClick={() => setPickerSlot(i)}
+                  className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-3xl border border-dashed border-line text-muted transition hover:border-fg/40 hover:text-fg disabled:opacity-50"
+                >
+                  <PiPlus className="h-6 w-6" />
+                  <span className="text-sm">{loading ? "Loading…" : "Add a trip"}</span>
+                </button>
+              )
+            )}
+
+            {/* Data rows */}
+            {selected.length > 0 &&
+              ROWS.map((row) => (
+                <React.Fragment key={row.label}>
+                  <div className="border-t border-line py-5 text-[11px] uppercase tracking-[0.16em] text-muted">
+                    {row.label}
+                  </div>
+                  {slots.map((pkg, i) => (
+                    <div
+                      key={i}
+                      className="border-t border-line py-5 text-sm leading-relaxed text-fg"
+                    >
+                      {pkg ? row.render(pkg) : ""}
+                    </div>
+                  ))}
+                </React.Fragment>
+              ))}
+
+            {selected.length > 0 && (
+              <>
+                <div className="border-t border-line" />
+                {slots.map((pkg, i) => (
+                  <div key={i} className="border-t border-line pt-6">
+                    {pkg && (
+                      <Link to={pkgHref(pkg)} className="btn btn-ink w-full">
+                        View trip
+                      </Link>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Comparison Grid Table */}
-        {selectedPackages.length === 0 ? (
-          <div className="text-center py-16 text-gray-500">
-            Please select packages to start comparison.
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-navy-800/20 border border-gray-200 dark:border-navy-800 rounded-3xl overflow-hidden shadow-sm">
-            <table className="w-full text-left border-collapse table-fixed">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-navy-950/40">
-                  <th className="p-5 font-semibold text-navy-900 dark:text-white w-1/4 border-r dark:border-navy-800">
-                    Criteria
-                  </th>
-                  {[0, 1, 2].map((idx) => (
-                    <th
-                      key={`head-${idx}`}
-                      className="p-5 font-semibold text-navy-900 dark:text-white w-1/4 border-r dark:border-navy-800 last:border-r-0"
-                    >
-                      {selectedPackages[idx] ? selectedPackages[idx].name : ""}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-navy-800">
-                {/* Location */}
-                <tr>
-                  <td className="p-5 font-semibold text-navy-800 dark:text-navy-300 bg-gray-50/20 dark:bg-navy-900/10 border-r dark:border-navy-800">
-                    Location
-                  </td>
-                  {[0, 1, 2].map((idx) => {
-                    const p = selectedPackages[idx];
-                    return (
-                      <td
-                        key={`loc-${idx}`}
-                        className="p-5 text-gray-700 dark:text-navy-200 border-r dark:border-navy-800 last:border-r-0"
-                      >
-                        {p ? (
-                          <span className="flex items-center">
-                            <FaMapMarkerAlt className="text-amber-500 mr-2" /> {p.location}
-                          </span>
-                        ) : (
-                          ""
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-
-                {/* Duration */}
-                <tr>
-                  <td className="p-5 font-semibold text-navy-800 dark:text-navy-300 bg-gray-50/20 dark:bg-navy-900/10 border-r dark:border-navy-800">
-                    Duration
-                  </td>
-                  {[0, 1, 2].map((idx) => {
-                    const p = selectedPackages[idx];
-                    return (
-                      <td
-                        key={`dur-${idx}`}
-                        className="p-5 text-gray-700 dark:text-navy-200 border-r dark:border-navy-800 last:border-r-0"
-                      >
-                        {p ? (
-                          <span className="flex items-center">
-                            <FaClock className="text-amber-500 mr-2" /> {p.duration}
-                          </span>
-                        ) : (
-                          ""
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-
-                {/* Price */}
-                <tr>
-                  <td className="p-5 font-semibold text-navy-800 dark:text-navy-300 bg-gray-50/20 dark:bg-navy-900/10 border-r dark:border-navy-800">
-                    Starting Price
-                  </td>
-                  {[0, 1, 2].map((idx) => {
-                    const p = selectedPackages[idx];
-                    return (
-                      <td
-                        key={`price-${idx}`}
-                        className="p-5 text-amber-500 font-extrabold text-lg border-r dark:border-navy-800 last:border-r-0"
-                      >
-                        {p ? p.price : ""}
-                      </td>
-                    );
-                  })}
-                </tr>
-
-                {/* Rating */}
-                <tr>
-                  <td className="p-5 font-semibold text-navy-800 dark:text-navy-300 bg-gray-50/20 dark:bg-navy-900/10 border-r dark:border-navy-800">
-                    Rating
-                  </td>
-                  {[0, 1, 2].map((idx) => {
-                    const p = selectedPackages[idx];
-                    return (
-                      <td
-                        key={`rate-${idx}`}
-                        className="p-5 border-r dark:border-navy-800 last:border-r-0"
-                      >
-                        {p ? (
-                          <div className="flex items-center text-sm">
-                            <FaStar className="text-yellow-400 mr-1" />
-                            <span className="font-semibold">{p.rating}</span>
-                            <span className="text-gray-400 ml-1">({p.reviews} reviews)</span>
-                          </div>
-                        ) : (
-                          ""
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-
-                {/* Visa */}
-                <tr>
-                  <td className="p-5 font-semibold text-navy-800 dark:text-navy-300 bg-gray-50/20 dark:bg-navy-900/10 border-r dark:border-navy-800">
-                    Visa Requirements
-                  </td>
-                  {[0, 1, 2].map((idx) => {
-                    const p = selectedPackages[idx];
-                    return (
-                      <td
-                        key={`visa-${idx}`}
-                        className="p-5 text-gray-700 dark:text-navy-200 border-r dark:border-navy-800 last:border-r-0"
-                      >
-                        {p ? p.visa || "Not Required" : ""}
-                      </td>
-                    );
-                  })}
-                </tr>
-
-                {/* Highlights */}
-                <tr>
-                  <td className="p-5 font-semibold text-navy-800 dark:text-navy-300 bg-gray-50/20 dark:bg-navy-900/10 border-r dark:border-navy-800">
-                    Key Highlights
-                  </td>
-                  {[0, 1, 2].map((idx) => {
-                    const p = selectedPackages[idx];
-                    return (
-                      <td
-                        key={`high-${idx}`}
-                        className="p-5 border-r dark:border-navy-800 last:border-r-0"
-                      >
-                        {p ? (
-                          <div className="flex flex-wrap gap-1.5">
-                            {p.highlights?.slice(0, 5).map((h, i) => (
-                              <span
-                                key={i}
-                                className="px-2 py-0.5 text-[10px] rounded-full bg-amber-50 dark:bg-amber-950/20 text-amber-600 border border-amber-200/50"
-                              >
-                                {h}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          ""
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-
-                {/* Description */}
-                <tr>
-                  <td className="p-5 font-semibold text-navy-800 dark:text-navy-300 bg-gray-50/20 dark:bg-navy-900/10 border-r dark:border-navy-800">
-                    Overview
-                  </td>
-                  {[0, 1, 2].map((idx) => {
-                    const p = selectedPackages[idx];
-                    return (
-                      <td
-                        key={`desc-${idx}`}
-                        className="p-5 text-xs text-gray-500 dark:text-navy-300 leading-relaxed border-r dark:border-navy-800 last:border-r-0"
-                      >
-                        {p ? p.description : ""}
-                      </td>
-                    );
-                  })}
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        {!loading && selected.length === 0 && (
+          <p className="mt-10 text-center text-muted">
+            Add trips above, or{" "}
+            <Link to="/packages" className="text-fg underline underline-offset-4">
+              save a few from the packages page
+            </Link>{" "}
+            and they'll show up here automatically.
+          </p>
         )}
-      </main>
-      <Footer />
-    </>
+      </div>
+    </SiteLayout>
   );
 };
 

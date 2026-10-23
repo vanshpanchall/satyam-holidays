@@ -6,10 +6,15 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { PageSkeleton } from "./components/SkeletonLoaders";
+import ScrollToTop from "./components/ScrollToTop";
+import PageTransition from "./components/PageTransition";
+import { PageScrollbar } from "./components/ui/Scrollbar";
 import { lazyWithRecovery } from "./utils/lazyWithRecovery";
+import { refreshCsrfToken } from "./utils/csrf";
 
 const Home = lazyWithRecovery(() => import("./components/Home"), "home");
 const AdminRouter = lazyWithRecovery(() => import("./pages/admin/AdminRouter.jsx"), "admin-router");
+const PackagesPage = lazyWithRecovery(() => import("./pages/PackagesPage"), "packages-page");
 const PackageLandingPage = lazyWithRecovery(
   () => import("./pages/PackageLandingPage"),
   "package-landing"
@@ -17,15 +22,14 @@ const PackageLandingPage = lazyWithRecovery(
 const WishlistPage = lazyWithRecovery(() => import("./pages/WishlistPage"), "wishlist-page");
 const ComparePage = lazyWithRecovery(() => import("./pages/ComparePage"), "compare-page");
 const AiPlannerPage = lazyWithRecovery(() => import("./pages/AiPlannerPage"), "ai-planner-page");
+const LegalPage = lazyWithRecovery(() => import("./pages/LegalPage"), "legal-page");
+const NotFoundPage = lazyWithRecovery(() => import("./pages/NotFoundPage"), "not-found-page");
 
-import ScrollToTop from "./components/ScrollToTop";
-import PageTransition from "./components/PageTransition";
-import { refreshCsrfToken } from "./utils/csrf";
+const page = (element) => <PageTransition>{element}</PageTransition>;
 
 function App() {
   const [ToastContainerComponent, setToastContainerComponent] = useState(null);
 
-  // Initialize CSRF token on page load
   useEffect(() => {
     refreshCsrfToken();
   }, []);
@@ -33,7 +37,6 @@ function App() {
   useEffect(() => {
     const dsn = process.env.REACT_APP_SENTRY_DSN;
     if (!dsn) return;
-
     import("@sentry/react")
       .then((Sentry) => {
         Sentry.init({
@@ -47,25 +50,19 @@ function App() {
       });
   }, []);
 
+  // react-toastify is loaded after first paint; toasts fired earlier are queued by the library
   useEffect(() => {
-    let isCancelled = false;
-
-    const loadToastUi = () => {
+    let cancelled = false;
+    const load = () =>
       Promise.all([import("react-toastify"), import("react-toastify/dist/ReactToastify.css")])
-        .then(([module]) => {
-          if (!isCancelled) {
-            setToastContainerComponent(() => module.ToastContainer);
-          }
-        })
-        .catch(() => {
-          // Ignore toast UI bootstrap failures; custom toast provider still works.
-        });
-    };
-
-    const timer = setTimeout(loadToastUi, 10000);
+        .then(([module]) => !cancelled && setToastContainerComponent(() => module.ToastContainer))
+        .catch(() => {});
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 1500));
+    const handle = idle(load);
     return () => {
-      isCancelled = true;
-      clearTimeout(timer);
+      cancelled = true;
+      if (window.cancelIdleCallback && typeof handle === "number")
+        window.cancelIdleCallback(handle);
     };
   }, []);
 
@@ -74,77 +71,39 @@ function App() {
       <SettingsProvider>
         <ToastProvider>
           <ErrorBoundary>
-            <div className="App min-h-screen bg-white dark:bg-navy-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-              <BrowserRouter>
-                <ScrollToTop />
-                <Suspense fallback={<PageSkeleton />}>
-                  <Routes>
-                    <Route path="/admin/*" element={<AdminRouter />} />
-                    <Route
-                      path="/"
-                      element={
-                        <PageTransition>
-                          <Home />
-                        </PageTransition>
-                      }
-                    />
-                    <Route
-                      path="/packages/:slug"
-                      element={
-                        <PageTransition>
-                          <PackageLandingPage />
-                        </PageTransition>
-                      }
-                    />
-                    <Route
-                      path="/wishlist"
-                      element={
-                        <PageTransition>
-                          <WishlistPage />
-                        </PageTransition>
-                      }
-                    />
-                    <Route
-                      path="/compare"
-                      element={
-                        <PageTransition>
-                          <ComparePage />
-                        </PageTransition>
-                      }
-                    />
-                    <Route
-                      path="/ai-planner"
-                      element={
-                        <PageTransition>
-                          <AiPlannerPage />
-                        </PageTransition>
-                      }
-                    />
-                    <Route
-                      path="*"
-                      element={
-                        <PageTransition>
-                          <Home />
-                        </PageTransition>
-                      }
-                    />
-                  </Routes>
-                </Suspense>
-              </BrowserRouter>
-              {ToastContainerComponent ? (
-                <ToastContainerComponent
-                  position="bottom-right"
-                  autoClose={4000}
-                  hideProgressBar={false}
-                  newestOnTop
-                  closeOnClick
-                  pauseOnFocusLoss
-                  draggable
-                  pauseOnHover
-                  theme="colored"
-                />
-              ) : null}
-            </div>
+            <PageScrollbar />
+            <BrowserRouter>
+              <ScrollToTop />
+              <Suspense fallback={<PageSkeleton />}>
+                <Routes>
+                  <Route path="/admin/*" element={<AdminRouter />} />
+                  <Route path="/" element={page(<Home />)} />
+                  <Route path="/packages" element={page(<PackagesPage />)} />
+                  <Route path="/packages/:slug" element={page(<PackageLandingPage />)} />
+                  <Route path="/wishlist" element={page(<WishlistPage />)} />
+                  <Route path="/compare" element={page(<ComparePage />)} />
+                  <Route path="/ai-planner" element={page(<AiPlannerPage />)} />
+                  <Route
+                    path="/privacy-policy"
+                    element={page(<LegalPage page="privacy-policy" />)}
+                  />
+                  <Route path="/terms" element={page(<LegalPage page="terms" />)} />
+                  <Route path="/refund-policy" element={page(<LegalPage page="refund-policy" />)} />
+                  <Route path="*" element={page(<NotFoundPage />)} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+            {ToastContainerComponent ? (
+              <ToastContainerComponent
+                position="bottom-left"
+                autoClose={4000}
+                newestOnTop
+                closeOnClick
+                pauseOnFocusLoss
+                pauseOnHover
+                theme="colored"
+              />
+            ) : null}
           </ErrorBoundary>
         </ToastProvider>
       </SettingsProvider>

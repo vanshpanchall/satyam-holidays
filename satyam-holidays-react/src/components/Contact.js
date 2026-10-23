@@ -1,314 +1,123 @@
 import React from "react";
 import {
-  FaMapMarkerAlt,
-  FaPhone,
-  FaEnvelope,
-  FaClock,
-  FaFacebook,
-  FaInstagram,
-  FaTwitter,
-  FaWhatsapp,
-} from "react-icons/fa";
-import { toWhatsAppLink } from "../config/siteConfig";
+  PiArrowUpRight,
+  PiEnvelopeSimple,
+  PiMapPin,
+  PiPhone,
+  PiWhatsappLogo,
+} from "react-icons/pi";
 import { useSiteConfig } from "../contexts/SettingsContext";
-import useReveal from "../utils/useReveal";
+import SectionHeader from "./ui/SectionHeader";
+import { toTel, toWhatsApp } from "../utils/format";
+
+const Row = ({ icon: Icon, label, children }) => (
+  <div className="grid grid-cols-[2.5rem_1fr] gap-4 border-t border-line py-6">
+    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-saffron-500/10 text-accent">
+      <Icon className="h-[18px] w-[18px]" />
+    </span>
+    <div>
+      <p className="text-[11px] uppercase tracking-[0.16em] text-muted">{label}</p>
+      <div className="mt-1.5 space-y-1 text-fg">{children}</div>
+    </div>
+  </div>
+);
 
 const Contact = ({ sectionId = "contact" }) => {
-  const siteConfig = useSiteConfig();
-  const headerReveal = useReveal(0.2);
-  const infoReveal = useReveal(0.1);
-  const mapReveal = useReveal(0.1);
-  const cardsReveal = useReveal(0.1);
-  const emergencyReveal = useReveal(0.15);
-  const socialLinks = [
-    {
-      name: "Facebook",
-      icon: <FaFacebook className="text-xl" />,
-      url: siteConfig.social.facebook,
-      color: "hover:bg-blue-600",
-    },
-    {
-      name: "Instagram",
-      icon: <FaInstagram className="text-xl" />,
-      url: siteConfig.social.instagram,
-      color: "hover:bg-pink-600",
-    },
-    {
-      name: "Twitter",
-      icon: <FaTwitter className="text-xl" />,
-      url: siteConfig.social.twitter,
-      color: "hover:bg-blue-400",
-    },
-    {
-      name: "WhatsApp",
-      icon: <FaWhatsapp className="text-xl" />,
-      url: toWhatsAppLink(siteConfig.company.whatsapp),
-      color: "hover:bg-green-500",
-    },
-  ];
+  const { company } = useSiteConfig();
+  const directions = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    `${company.name}, ${company.address.line1}, ${company.address.line2}`
+  )}`;
 
   return (
-    <section
-      id={sectionId || undefined}
-      className="section-padding relative overflow-hidden text-white scroll-mt-24 md:scroll-mt-28"
-    >
-      {/* Dark glass background */}
-      <div className="absolute inset-0 bg-navy-900"></div>
-      <div className="absolute inset-0 mesh-gradient"></div>
-      <div className="container-custom relative z-10">
-        {/* Section Header */}
-        <div
-          ref={headerReveal.ref}
-          className={`text-center mb-16 reveal ${headerReveal.isVisible ? "reveal--visible" : ""}`}
-        >
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Get in <span className="gradient-text">Touch</span>
-          </h2>
-          <p className="text-xl text-navy-200 max-w-3xl mx-auto">
-            Ready to start your journey? Contact us today and let our travel experts help you plan
-            the perfect vacation.
-          </p>
-        </div>
+    <section id={sectionId || undefined} className="section anchor">
+      <div className="container-site">
+        <SectionHeader
+          eyebrow="Visit or call"
+          title="Come by for chai and *a proper chat.*"
+          intro="Most trips start with a conversation. Drop into the office, call, or message — whichever is easiest."
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Contact Information */}
-          <div
-            ref={infoReveal.ref}
-            className={`reveal-left ${infoReveal.isVisible ? "reveal-left--visible" : ""}`}
-          >
-            <div className="glass-dark rounded-2xl p-8">
-              <h3 className="text-2xl font-bold mb-8">Contact Information</h3>
-
-              <div className="space-y-6">
-                {/* Address */}
-                <div className="flex items-start space-x-4">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0"
-                    style={{ background: "linear-gradient(135deg, #f59e0b, #ea580c)" }}
-                  >
-                    <FaMapMarkerAlt className="text-xl" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-lg mb-2">Our Office</h4>
-                    <p className="text-navy-200 leading-relaxed">
-                      {siteConfig.company.address.line1}
-                      <br />
-                      {siteConfig.company.address.line2}
-                      <br />
-                      {siteConfig.company.address.country}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Phone */}
-                <div className="flex items-start space-x-4">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0"
-                    style={{ background: "linear-gradient(135deg, #f59e0b, #ea580c)" }}
-                  >
-                    <FaPhone className="text-xl" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-lg mb-2">Call Us</h4>
-                    <div className="text-navy-200">
-                      {siteConfig.company.phones.map((p) => (
-                        <div key={p}>
-                          <a
-                            href={`tel:${p.replace(/\s/g, "")}`}
-                            className="hover:text-primary-400 transition-colors"
-                          >
-                            {p}
-                          </a>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div className="flex items-start space-x-4">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0"
-                    style={{ background: "linear-gradient(135deg, #f59e0b, #ea580c)" }}
-                  >
-                    <FaEnvelope className="text-xl" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-lg mb-2">Email Us</h4>
-                    <div className="text-navy-200">
-                      <a
-                        href={`mailto:${siteConfig.company.email}`}
-                        className="hover:text-primary-400 transition-colors"
-                      >
-                        {siteConfig.company.email}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Business Hours */}
-                <div className="flex items-start space-x-4">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0"
-                    style={{ background: "linear-gradient(135deg, #f59e0b, #ea580c)" }}
-                  >
-                    <FaClock className="text-xl" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-lg mb-2">Business Hours</h4>
-                    <p className="text-navy-200">
-                      {siteConfig.company.hours.weekdays}
-                      <br />
-                      {siteConfig.company.hours.saturday}
-                      <br />
-                      {siteConfig.company.hours.sunday}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Map and Social Links */}
-          <div
-            ref={mapReveal.ref}
-            className={`reveal-right ${mapReveal.isVisible ? "reveal-right--visible" : ""}`}
-          >
-            {/* Map Embed */}
-            <div className="glass-dark rounded-2xl p-8 mb-8">
-              <h3 className="text-2xl font-bold mb-6">Find Us</h3>
-              <div className="bg-navy-800 rounded-xl h-64 overflow-hidden relative">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3545.9275301777448!2d72.56326727516657!3d23.090565779126248!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395e834ebdc109cd%3A0xac3baa0a6a626357!2sSatyam%20Holidays!5e1!3m2!1sen!2sus!4v1784476925120!5m2!1sen!2sus"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen=""
-                  loading="lazy"
-                  title="Satyam Holidays Office Location"
-                  className="absolute inset-0 w-full h-full border-0"
-                ></iframe>
-              </div>
-            </div>
-
-            {/* Social Media Links */}
-            <div className="glass-dark rounded-2xl p-8">
-              <h3 className="text-2xl font-bold mb-6">Follow Us</h3>
-              <p className="text-navy-200 mb-6">
-                Stay updated with our latest offers, travel tips, and destination guides.
+        <div className="grid gap-10 lg:grid-cols-12">
+          <div className="lg:col-span-5">
+            <Row icon={PiMapPin} label="Office">
+              <address className="not-italic leading-relaxed">
+                {company.address.line1}
+                <br />
+                {company.address.line2}, {company.address.country}
+              </address>
+              <a
+                href={directions}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-sm text-accent"
+              >
+                Get directions <PiArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            </Row>
+            <Row icon={PiPhone} label="Phone">
+              {company.phones.map((p) => (
+                <a key={p} href={toTel(p)} className="link-underline block w-fit">
+                  {p}
+                </a>
+              ))}
+            </Row>
+            <Row icon={PiEnvelopeSimple} label="Email">
+              <a href={`mailto:${company.email}`} className="link-underline block w-fit break-all">
+                {company.email}
+              </a>
+            </Row>
+            <Row icon={PiWhatsappLogo} label="Office hours">
+              <p className="text-sm leading-relaxed text-muted">
+                {company.hours.weekdays}
+                <br />
+                {company.hours.saturday}
+                <br />
+                {company.hours.sunday}
               </p>
-
-              <div className="flex flex-wrap gap-4">
-                {socialLinks.map((social, index) => (
+            </Row>
+            <div className="border-t border-line pt-6">
+              <div className="rounded-2xl bg-raised p-5">
+                <p className="font-medium text-fg">Already travelling and need help?</p>
+                <p className="mt-1 text-sm text-muted">
+                  Our emergency line is for guests currently on a trip with us.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <a href={toTel(company.emergencyPhone)} className="btn btn-ink">
+                    <PiPhone className="h-4 w-4" /> {company.emergencyPhone}
+                  </a>
                   <a
-                    key={index}
-                    href={social.url}
+                    href={toWhatsApp(company.whatsapp)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`group relative w-12 h-12 rounded-full border border-white/20 bg-white/5 backdrop-blur-md flex items-center justify-center transition-all duration-300 hover:bg-white/10 hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 ${social.color}`}
-                    aria-label={social.name}
+                    className="btn btn-ghost"
                   >
-                    <span className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                    <span className="text-white group-hover:scale-110 transition-transform">
-                      {social.icon}
-                    </span>
+                    <PiWhatsappLogo className="h-4 w-4" /> WhatsApp
                   </a>
-                ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Quick Contact Cards */}
-        <div
-          ref={cardsReveal.ref}
-          className={`mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 reveal ${cardsReveal.isVisible ? "reveal--visible" : ""}`}
-        >
-          <div className="glass-dark rounded-2xl p-6 text-center hover:shadow-glass-lg transition-all duration-300 group">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: "linear-gradient(135deg, #f59e0b, #ea580c)" }}
-            >
-              <FaPhone className="text-2xl text-white" />
-            </div>
-            <h4 className="text-xl font-bold mb-2">Call Now</h4>
-            <p className="text-navy-200 mb-4">Get instant assistance</p>
-            <a
-              href={`tel:${siteConfig.company.emergencyPhone.replace(/\s/g, "")}`}
-              className="btn btn-primary w-full shadow-glow-primary"
-            >
-              {siteConfig.company.emergencyPhone}
-            </a>
-          </div>
-
-          <div className="glass-dark rounded-2xl p-6 text-center hover:shadow-glass-lg transition-all duration-300 group">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: "linear-gradient(135deg, #f59e0b, #ea580c)" }}
-            >
-              <FaWhatsapp className="text-2xl text-white" />
-            </div>
-            <h4 className="text-xl font-bold mb-2">WhatsApp</h4>
-            <p className="text-navy-200 mb-4">Quick chat support</p>
-            <a
-              href={toWhatsAppLink(siteConfig.company.whatsapp)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-primary w-full shadow-glow-primary"
-            >
-              Chat on WhatsApp
-            </a>
-          </div>
-
-          <div className="glass-dark rounded-2xl p-6 text-center hover:shadow-glass-lg transition-all duration-300 group">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: "linear-gradient(135deg, #f59e0b, #ea580c)" }}
-            >
-              <FaEnvelope className="text-2xl text-white" />
-            </div>
-            <h4 className="text-xl font-bold mb-2">Email Us</h4>
-            <p className="text-navy-200 mb-4">Send us a message</p>
-            <a
-              href={`mailto:${siteConfig.company.email}`}
-              className="btn btn-primary w-full shadow-glow-primary"
-            >
-              Send Email
-            </a>
-          </div>
-        </div>
-
-        {/* Emergency Contact */}
-        <div
-          ref={emergencyReveal.ref}
-          className={`mt-16 text-center reveal-scale ${emergencyReveal.isVisible ? "reveal-scale--visible" : ""}`}
-        >
-          <div
-            className="glass-dark rounded-2xl p-8 max-w-2xl mx-auto"
-            style={{
-              background: "linear-gradient(135deg, rgba(245,158,11,0.2), rgba(234,88,12,0.15))",
-              border: "1px solid rgba(245,158,11,0.2)",
-            }}
-          >
-            <h3 className="text-2xl font-bold text-white mb-4">24/7 Emergency Support</h3>
-            <p className="text-white/90 mb-6">
-              Need immediate assistance while traveling? Our emergency support team is available
-              round the clock.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="min-h-[360px] overflow-hidden rounded-4xl border border-line lg:col-span-7">
+            {company.mapEmbed ? (
+              <iframe
+                src={company.mapEmbed}
+                title={`${company.name} office location`}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+                className="h-full min-h-[360px] w-full border-0 grayscale-[35%] dark:invert-[0.9] dark:hue-rotate-180"
+              />
+            ) : (
               <a
-                href={`tel:${siteConfig.company.emergencyPhone.replace(/\s/g, "")}`}
-                className="btn bg-white text-primary-600 hover:bg-gray-100"
+                href={directions}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-full items-center justify-center bg-raised text-muted"
               >
-                Emergency: {siteConfig.company.emergencyPhone}
+                Open in Google Maps
               </a>
-              <a
-                href={`mailto:${siteConfig.company.emergencyEmail}`}
-                className="btn bg-white text-primary-600 hover:bg-gray-100"
-              >
-                Emergency Email
-              </a>
-            </div>
+            )}
           </div>
         </div>
       </div>

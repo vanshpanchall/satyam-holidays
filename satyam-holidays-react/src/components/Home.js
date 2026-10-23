@@ -1,80 +1,81 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useMemo } from "react";
 import Meta from "./Meta";
-import Header from "./Header";
-import DeferredMount from "./DeferredMount";
+import SiteLayout from "./SiteLayout";
 import Hero from "./Hero";
+import DeferredMount from "./DeferredMount";
+import DestinationStrip from "./home/DestinationStrip";
+import Collections from "./home/Collections";
+import FeaturedTrips from "./home/FeaturedTrips";
+import usePackageCatalog from "../utils/usePackageCatalog";
 import { lazyWithRecovery } from "../utils/lazyWithRecovery";
 
-const Services = lazyWithRecovery(() => import("./Services"), "home-services");
-const About = lazyWithRecovery(() => import("./About"), "home-about");
-const DomesticPackages = lazyWithRecovery(() => import("./DomesticPackages"), "home-domestic");
-const InternationalPackages = lazyWithRecovery(
-  () => import("./InternationalPackages"),
-  "home-international"
-);
+// Below-the-fold sections load as the visitor scrolls
+const WhyUs = lazyWithRecovery(() => import("./home/WhyUs"), "home-why");
+const AboutStory = lazyWithRecovery(() => import("./home/AboutStory"), "home-about");
+const Testimonials = lazyWithRecovery(() => import("./home/Testimonials"), "home-testimonials");
+const PlannerBand = lazyWithRecovery(() => import("./home/PlannerBand"), "home-planner");
+const Faq = lazyWithRecovery(() => import("./home/Faq"), "home-faq");
 const Enquiry = lazyWithRecovery(() => import("./Enquiry"), "home-enquiry");
 const Contact = lazyWithRecovery(() => import("./Contact"), "home-contact");
-const Footer = lazyWithRecovery(() => import("./Footer"), "home-footer");
 
-const SectionPlaceholder = ({ height }) => (
-  <div aria-hidden="true" style={{ minHeight: height, width: "100%" }} />
+const Lazy = ({ children, minHeight = "60vh", id }) => (
+  <div id={id} className={id ? "anchor" : undefined}>
+    <DeferredMount fallback={<div style={{ minHeight }} />} rootMargin="800px 0px">
+      <Suspense fallback={<div style={{ minHeight }} />}>{children}</Suspense>
+    </DeferredMount>
+  </div>
 );
 
 const Home = () => {
+  const { packages, loading, error, retry } = usePackageCatalog();
+
+  const locations = useMemo(() => {
+    const seen = new Set();
+    packages.forEach((p) =>
+      String(p.location || "")
+        .split(/[,&/]| - /)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 2 && s.length < 24)
+        .forEach((s) => seen.add(s))
+    );
+    return Array.from(seen);
+  }, [packages]);
+
   return (
-    <>
+    <SiteLayout overlay>
       <Meta
-        title="Satyam Holidays — Best Travel Packages | Domestic & International Tours from Ahmedabad"
-        description="Satyam Holidays — Your trusted travel partner from Ahmedabad, Gujarat. Book affordable Chardham Yatra, Kashmir, Goa, Rajasthan, Dubai, Singapore, Thailand tour packages. 15000+ happy travelers, personalized itineraries, 24/7 support. Journey With Joy!"
-        keywords="Satyam Holidays, travel agency Ahmedabad, domestic tour packages, international tour packages, Chardham Yatra, Kashmir tour, Dubai tour, Singapore tour, Thailand tour, Goa packages, honeymoon packages, family tour, Gujarat travel agent"
+        title="Satyam Holidays — Tour Packages from Ahmedabad | Chardham, Kashmir, Dubai & more"
+        description="Satyam Holidays is a family-run travel agency in Ahmedabad planning Chardham Yatra, Kashmir, Kerala, Rajasthan, Dubai, Singapore and Thailand tours. Personalised itineraries and on-trip support."
+        keywords="Satyam Holidays, travel agency Ahmedabad, Chardham Yatra package, Kashmir tour package, Dubai tour from Ahmedabad, honeymoon packages, family tour packages, Gujarat travel agent"
         url="https://satyamholidays.vercel.app/"
       />
-      <Header />
-      <main id="main-content">
-        <Hero />
-        <div id="services" className="scroll-mt-24 md:scroll-mt-28">
-          <DeferredMount fallback={<SectionPlaceholder height="70vh" />} rootMargin="600px 0px">
-            <Suspense fallback={<SectionPlaceholder height="70vh" />}>
-              <Services sectionId={null} />
-            </Suspense>
-          </DeferredMount>
-        </div>
-        <div id="about" className="scroll-mt-24 md:scroll-mt-28">
-          <DeferredMount fallback={<SectionPlaceholder height="80vh" />} rootMargin="600px 0px">
-            <Suspense fallback={<SectionPlaceholder height="80vh" />}>
-              <About sectionId={null} />
-            </Suspense>
-          </DeferredMount>
-        </div>
-        <div id="packages" className="scroll-mt-24 md:scroll-mt-28">
-          <DeferredMount fallback={<SectionPlaceholder height="120vh" />} rootMargin="600px 0px">
-            <Suspense fallback={<SectionPlaceholder height="120vh" />}>
-              <DomesticPackages sectionId={null} />
-              <InternationalPackages />
-            </Suspense>
-          </DeferredMount>
-        </div>
-        <div id="enquiry" className="scroll-mt-24 md:scroll-mt-28">
-          <DeferredMount fallback={<SectionPlaceholder height="85vh" />} rootMargin="600px 0px">
-            <Suspense fallback={<SectionPlaceholder height="85vh" />}>
-              <Enquiry sectionId={null} />
-            </Suspense>
-          </DeferredMount>
-        </div>
-        <div id="contact" className="scroll-mt-24 md:scroll-mt-28">
-          <DeferredMount fallback={<SectionPlaceholder height="95vh" />} rootMargin="600px 0px">
-            <Suspense fallback={<SectionPlaceholder height="95vh" />}>
-              <Contact sectionId={null} />
-            </Suspense>
-          </DeferredMount>
-        </div>
-      </main>
-      <DeferredMount fallback={<SectionPlaceholder height="24vh" />} rootMargin="400px 0px">
-        <Suspense fallback={<SectionPlaceholder height="24vh" />}>
-          <Footer />
-        </Suspense>
-      </DeferredMount>
-    </>
+      <Hero locations={locations} />
+      <DestinationStrip locations={locations} />
+      <Collections />
+      <FeaturedTrips packages={packages} loading={loading} error={error} onRetry={retry} />
+      <Lazy>
+        <WhyUs />
+      </Lazy>
+      {/* Wrappers own the #about / #enquiry / #contact anchors so links work before sections mount */}
+      <Lazy id="about" minHeight="80vh">
+        <AboutStory sectionId={null} />
+      </Lazy>
+      <Lazy minHeight="40vh">
+        <Testimonials />
+      </Lazy>
+      <Lazy minHeight="40vh">
+        <PlannerBand />
+      </Lazy>
+      <Lazy>
+        <Faq />
+      </Lazy>
+      <Lazy id="enquiry" minHeight="90vh">
+        <Enquiry sectionId={null} />
+      </Lazy>
+      <Lazy id="contact" minHeight="70vh">
+        <Contact sectionId={null} />
+      </Lazy>
+    </SiteLayout>
   );
 };
 

@@ -1,40 +1,275 @@
-import React, { useState, useEffect, Suspense, useRef } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
-import ReviewList from "../components/ReviewList";
-import ReviewForm from "../components/ReviewForm";
-import OptimizedImage from "../components/OptimizedImage";
+import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
-  apiUrl,
-  resolveImageUrl,
-  fetchWithAuth,
-  toastApiError,
-  safeJson,
-} from "../config/siteConfig";
+  PiArrowLeft,
+  PiCalendarBlank,
+  PiCaretDown,
+  PiCheck,
+  PiClock,
+  PiForkKnife,
+  PiHeart,
+  PiHeartFill,
+  PiMapPin,
+  PiMinus,
+  PiIdentificationCard,
+  PiPlus,
+  PiShareNetwork,
+  PiShieldCheck,
+  PiStarFill,
+  PiTag,
+  PiWhatsappLogo,
+  PiX,
+} from "react-icons/pi";
+import SiteLayout from "../components/SiteLayout";
+import Meta from "../components/Meta";
+import Img from "../components/ui/Img";
+import Select from "../components/ui/Select";
+import PackageCard from "../components/PackageCard";
+import ReviewList from "../components/ReviewList";
+import ReviewForm from "../components/ReviewForm";
 import { PackageDetailSkeleton } from "../components/SkeletonLoaders";
-import {
-  FaMapMarkerAlt,
-  FaClock,
-  FaHeart,
-  FaShareAlt,
-  FaPlus,
-  FaCheckCircle,
-  FaSpinner,
-  FaPercent,
-  FaPassport,
-  FaShieldAlt,
-  FaChevronDown,
-} from "react-icons/fa";
+import { apiUrl, fetchWithAuth, safeJson, toastApiError } from "../config/siteConfig";
+import { useSiteConfig } from "../contexts/SettingsContext";
 import { lazyWithRecovery } from "../utils/lazyWithRecovery";
+import usePackageCatalog from "../utils/usePackageCatalog";
+import { trackRecentlyViewed, useWishlist } from "../utils/savedTrips";
+import {
+  formatINR,
+  imageUrl,
+  parseNights,
+  pkgId,
+  startingPrice,
+  toWhatsApp,
+} from "../utils/format";
 
 const ReCAPTCHA = lazyWithRecovery(() => import("react-google-recaptcha"), "enquiry-recaptcha");
 const HCaptcha = lazyWithRecovery(() => import("@hcaptcha/react-hcaptcha"), "enquiry-hcaptcha");
 
+const SITE_URL = process.env.REACT_APP_SITE_URL || "https://satyamholidays.vercel.app";
+
+const fmtDate = (d, opts = { day: "numeric", month: "short", year: "numeric" }) =>
+  new Date(d).toLocaleDateString("en-IN", opts);
+
+const DEPARTURE_STATUS = {
+  available: { label: "Available", className: "text-emerald-700 dark:text-emerald-400" },
+  filling_fast: { label: "Filling fast", className: "text-saffron-600 dark:text-saffron-400" },
+  sold_out: { label: "Sold out", className: "text-muted line-through" },
+};
+
+/* ── Gallery with lightbox ─────────────────────────────── */
+const Gallery = ({ images, name }) => {
+  const [open, setOpen] = useState(null);
+
+  useEffect(() => {
+    if (open === null) return undefined;
+    document.body.classList.add("modal-open");
+    const onKey = (e) => {
+      if (e.key === "Escape") setOpen(null);
+      if (e.key === "ArrowRight") setOpen((i) => (i + 1) % images.length);
+      if (e.key === "ArrowLeft") setOpen((i) => (i - 1 + images.length) % images.length);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("modal-open");
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, images.length]);
+
+  const tiles = images.slice(0, 5);
+  const layouts = {
+    1: ["col-span-4 row-span-2"],
+    2: ["col-span-4 md:col-span-2 row-span-2", "hidden md:block md:col-span-2 row-span-2"],
+    3: [
+      "col-span-4 md:col-span-2 row-span-2",
+      "hidden md:block md:col-span-2",
+      "hidden md:block md:col-span-2",
+    ],
+    4: [
+      "col-span-4 md:col-span-2 row-span-2",
+      "hidden md:block md:col-span-2",
+      "hidden md:block",
+      "hidden md:block",
+    ],
+    5: [
+      "col-span-4 md:col-span-2 row-span-2",
+      "hidden md:block",
+      "hidden md:block",
+      "hidden md:block",
+      "hidden md:block",
+    ],
+  }[tiles.length];
+
+  return (
+    <>
+      <div className="grid h-[52vh] min-h-[320px] grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-4xl md:h-[64vh]">
+        {tiles.map((src, i) => (
+          <button
+            key={src + i}
+            type="button"
+            onClick={() => setOpen(i)}
+            className={`group relative overflow-hidden ${layouts[i]}`}
+            aria-label={`Open photo ${i + 1} of ${images.length}`}
+          >
+            <Img
+              src={src}
+              alt={i === 0 ? name : ""}
+              width={i === 0 ? 1600 : 800}
+              priority={i === 0}
+              sizes={i === 0 ? "(max-width: 768px) 100vw, 50vw" : "25vw"}
+              className="transition-transform duration-700 group-hover:scale-[1.04]"
+            />
+            {i === tiles.length - 1 && images.length > 1 && (
+              <span className="absolute bottom-4 right-4 rounded-full bg-white/95 px-4 py-2 text-sm text-ink-900 shadow">
+                View {images.length} photos
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {open !== null && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo viewer"
+          className="fixed inset-0 z-[70] flex flex-col bg-ink-950/95"
+        >
+          <div className="flex items-center justify-between p-4 text-white">
+            <span className="text-sm tabular-nums">
+              {open + 1} / {images.length}
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpen(null)}
+              className="icon-btn border-white/30 text-white"
+              aria-label="Close"
+            >
+              <PiX className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="relative flex flex-1 items-center justify-center px-4 pb-6">
+            <img
+              src={imageUrl(images[open], 1920)}
+              alt=""
+              className="max-h-full max-w-full rounded-2xl object-contain"
+            />
+            {images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setOpen((i) => (i - 1 + images.length) % images.length)}
+                  className="icon-btn absolute left-4 border-white/30 bg-ink-950/40 text-white"
+                  aria-label="Previous photo"
+                >
+                  <PiArrowLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpen((i) => (i + 1) % images.length)}
+                  className="icon-btn absolute right-4 rotate-180 border-white/30 bg-ink-950/40 text-white"
+                  aria-label="Next photo"
+                >
+                  <PiArrowLeft className="h-5 w-5" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+/* ── Itinerary accordion ───────────────────────────────── */
+const Itinerary = ({ days }) => {
+  const [openDays, setOpenDays] = useState(() => new Set([days[0]?.day]));
+  const allOpen = openDays.size === days.length;
+  const toggle = (day) =>
+    setOpenDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(day)) next.delete(day);
+      else next.add(day);
+      return next;
+    });
+
+  return (
+    <div>
+      <div className="mb-4 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setOpenDays(allOpen ? new Set() : new Set(days.map((d) => d.day)))}
+          className="text-sm text-muted underline underline-offset-4 hover:text-fg"
+        >
+          {allOpen ? "Collapse all" : "Expand all"}
+        </button>
+      </div>
+      <ol className="relative ml-4 border-l border-line pl-8">
+        {days.map((day) => {
+          const open = openDays.has(day.day);
+          return (
+            <li key={day.day} className="relative pb-6 last:pb-0">
+              <span
+                className={`absolute -left-[3rem] top-1 flex h-8 w-8 items-center justify-center rounded-full border font-display text-sm transition ${
+                  open ? "border-fg bg-fg text-page" : "border-line bg-page text-muted"
+                }`}
+              >
+                {day.day}
+              </span>
+              <button
+                type="button"
+                onClick={() => toggle(day.day)}
+                aria-expanded={open}
+                className="flex w-full items-start justify-between gap-4 text-left"
+              >
+                <span>
+                  <span className="text-[11px] uppercase tracking-[0.16em] text-muted">
+                    Day {day.day}
+                  </span>
+                  <span className="mt-1 block font-display text-xl text-fg">{day.title}</span>
+                </span>
+                <PiCaretDown
+                  className={`mt-6 h-4 w-4 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+                />
+              </button>
+              <div
+                className={`grid transition-[grid-template-rows] duration-500 ease-out-expo ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+              >
+                <div className="overflow-hidden">
+                  <p className="pt-3 leading-relaxed text-muted">{day.description}</p>
+                  {day.meals?.length > 0 && (
+                    <p className="mt-3 flex items-center gap-2 text-sm text-fg">
+                      <PiForkKnife className="h-4 w-4 text-accent" /> {day.meals.join(" · ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+};
+
+const Section = ({ id, title, children }) => (
+  <section
+    id={id}
+    className="anchor border-t border-line py-12 first-of-type:border-t-0 first-of-type:pt-0"
+  >
+    <h2 className="mb-6 font-display text-3xl text-fg">{title}</h2>
+    {children}
+  </section>
+);
+
+/* ── Page ─────────────────────────────────────────────── */
 const PackageLandingPage = () => {
   const { slug } = useParams();
-  const navigate = useNavigate();
+  const siteConfig = useSiteConfig();
+  const { has, toggle } = useWishlist();
+  const { packages: catalog } = usePackageCatalog();
+  const bookingRef = useRef(null);
+
   const [pkg, setPkg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -48,27 +283,8 @@ const PackageLandingPage = () => {
   const [insuranceEnabled, setInsuranceEnabled] = useState(false);
   const [visaRequested, setVisaRequested] = useState(false);
 
-  // Wishlist state
-  const [inWishlist, setInWishlist] = useState(false);
-
-  // Tab State
-  const [activeTab, setActiveTab] = useState("overview");
-
-  // Itinerary expand State
-  const [expandedDays, setExpandedDays] = useState([1]); // Day 1 expanded by default
-  const toggleDayExpand = (dayNum) => {
-    if (expandedDays.includes(dayNum)) {
-      setExpandedDays(expandedDays.filter((d) => d !== dayNum));
-    } else {
-      setExpandedDays([...expandedDays, dayNum]);
-    }
-  };
-
-  // Booking Enquiry form state
-  const [enquiryName, setEnquiryName] = useState("");
-  const [enquiryEmail, setEnquiryEmail] = useState("");
-  const [enquiryPhone, setEnquiryPhone] = useState("");
-  const [enquiryMsg, setEnquiryMsg] = useState("");
+  // Booking enquiry state
+  const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [enquirySubmitting, setEnquirySubmitting] = useState(false);
   const [enquirySuccess, setEnquirySuccess] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
@@ -83,964 +299,747 @@ const PackageLandingPage = () => {
 
   useEffect(() => {
     const controller = new AbortController();
-    const fetchPackage = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(apiUrl(`/api/v1/packages/slug/${slug}`), {
-          signal: controller.signal,
-        });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            setPkg(json.data);
+    setLoading(true);
+    setError(null);
+    setPriceData(null);
+    setSelectedDate("");
+    setEnquirySuccess(false);
 
-            // Check wishlist
-            const savedWishlist = localStorage.getItem("wishlist");
-            if (savedWishlist) {
-              const ids = JSON.parse(savedWishlist);
-              setInWishlist(ids.includes(json.data._id || json.data.id));
-            }
-          } else {
-            throw new Error("Failed to resolve package details");
-          }
-        } else {
-          throw new Error("Package not found");
-        }
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          console.error(err);
-          setError(err.message);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      }
-    };
-    fetchPackage();
-    return () => {
-      controller.abort();
-    };
+    fetch(apiUrl(`/api/v1/packages/slug/${slug}`), { signal: controller.signal })
+      .then(async (res) => {
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json?.success || !json.data) throw new Error("Package not found");
+        setPkg(json.data);
+        trackRecentlyViewed(pkgId(json.data));
+      })
+      .catch((err) => err.name !== "AbortError" && setError(err.message))
+      .finally(() => !controller.signal.aborted && setLoading(false));
+
+    return () => controller.abort();
   }, [slug]);
 
-  // Inject Structured Schema (JSON-LD)
+  // Structured data (JSON-LD) for search engines
   useEffect(() => {
-    if (!pkg) return;
-
-    const schemaId = "structured-package-schema";
-    let script = document.getElementById(schemaId);
-    if (!script) {
-      script = document.createElement("script");
-      script.id = schemaId;
-      script.type = "application/ld+json";
-      document.head.appendChild(script);
-    }
-
-    const priceNum = parseFloat(pkg.price?.replace(/[^\d]/g, "") || "10000");
-
-    const schema = {
+    if (!pkg) return undefined;
+    // Replace the copy written by the build-time pre-renderer (scripts/prerender.js)
+    document.getElementById("structured-package-schema")?.remove();
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "structured-package-schema";
+    script.textContent = JSON.stringify({
       "@context": "https://schema.org",
       "@type": "TouristTrip",
       name: pkg.name,
       description: pkg.description,
-      touristType: "Sightseeing",
+      touristType: pkg.subcategory,
       itinerary: pkg.itinerary?.map((day) => ({
         "@type": "TouristAttraction",
         name: day.title,
         description: day.description,
       })),
+      ...(pkg.rating && pkg.reviews
+        ? {
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: pkg.rating,
+              reviewCount: pkg.reviews,
+            },
+          }
+        : {}),
       offers: {
         "@type": "Offer",
-        price: priceNum,
+        price: startingPrice(pkg),
         priceCurrency: "INR",
         availability: "https://schema.org/InStock",
-        seller: {
-          "@type": "TravelAgency",
-          name: "Satyam Holidays",
-          url: "https://satyamholidays.com",
-        },
+        url: `${SITE_URL}/packages/${pkg.slug || pkgId(pkg)}`,
+        seller: { "@type": "TravelAgency", name: siteConfig.company.name, url: SITE_URL },
       },
-    };
+    });
+    document.head.appendChild(script);
+    return () => script.remove();
+  }, [pkg, siteConfig.company.name]);
 
-    script.textContent = JSON.stringify(schema);
-
-    return () => {
-      const existing = document.getElementById(schemaId);
-      if (existing) {
-        existing.remove();
-      }
-    };
-  }, [pkg]);
-
-  // Recalculate price when variables change
+  // Recalculate price when inputs change (debounced)
   useEffect(() => {
-    if (!pkg) return;
+    if (!pkg) return undefined;
     const controller = new AbortController();
-
-    const calculatePrice = async () => {
+    const timer = setTimeout(async () => {
       setCalcLoading(true);
       try {
-        const res = await fetchWithAuth(
-          apiUrl(`/api/v1/packages/${pkg._id || pkg.id}/calculate-price`),
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              date: selectedDate,
-              travelersCount,
-              promoCode,
-            }),
-            signal: controller.signal,
-          }
-        );
+        const res = await fetchWithAuth(apiUrl(`/api/v1/packages/${pkgId(pkg)}/calculate-price`), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date: selectedDate, travelersCount, promoCode }),
+          signal: controller.signal,
+        });
         if (res.ok) {
           const json = await res.json();
-          if (json.success && json.data) {
-            setPriceData(json.data);
-          }
+          if (json.success && json.data) setPriceData(json.data);
         }
       } catch (err) {
-        if (err.name !== "AbortError") {
-          console.error("Price calculation error", err);
-        }
+        // Keep the client-side estimate if the calculator is unreachable
       } finally {
-        if (!controller.signal.aborted) {
-          setCalcLoading(false);
-        }
+        if (!controller.signal.aborted) setCalcLoading(false);
       }
-    };
-
-    const timer = setTimeout(calculatePrice, 300);
+    }, 300);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
   }, [pkg, selectedDate, travelersCount, promoCode]);
 
-  const handleWishlistToggle = () => {
-    if (!pkg) return;
-    const pkgId = pkg._id || pkg.id;
-    const saved = localStorage.getItem("wishlist");
-    let ids = saved ? JSON.parse(saved) : [];
+  const departures = useMemo(
+    () =>
+      (pkg?.availableDates || [])
+        .filter((d) => new Date(d.startDate) >= new Date(new Date().toDateString()))
+        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate)),
+    [pkg]
+  );
 
-    if (inWishlist) {
-      ids = ids.filter((id) => id !== pkgId);
-      setInWishlist(false);
-    } else {
-      ids.push(pkgId);
-      setInWishlist(true);
+  const related = useMemo(() => {
+    if (!pkg) return [];
+    const id = pkgId(pkg);
+    return catalog
+      .filter((p) => pkgId(p) !== id && p.category === pkg.category)
+      .sort(
+        (a, b) =>
+          Number(b.subcategory === pkg.subcategory) - Number(a.subcategory === pkg.subcategory)
+      )
+      .slice(0, 3);
+  }, [catalog, pkg]);
+
+  if (loading) return <PackageDetailSkeleton />;
+
+  if (error || !pkg) {
+    return (
+      <SiteLayout>
+        <div className="container-site flex min-h-[60vh] flex-col items-start justify-center py-20">
+          <p className="eyebrow mb-4">Not found</p>
+          <h1 className="font-display text-display-md">This trip isn't available any more.</h1>
+          <p className="mt-4 max-w-md text-muted">
+            It may have been retired or renamed. Have a look at what's running now.
+          </p>
+          <Link to="/packages" className="btn btn-ink mt-8">
+            Browse all trips
+          </Link>
+        </div>
+      </SiteLayout>
+    );
+  }
+
+  const id = pkgId(pkg);
+  const saved = has(id);
+  const nights = parseNights(pkg.duration);
+  const unit = startingPrice(pkg);
+  const images = [pkg.image, ...(pkg.gallery || [])].filter(Boolean);
+  const isInternational = pkg.category === "international";
+  const insuranceRate = isInternational ? 1999 : 499;
+  const insuranceCost = insuranceEnabled ? insuranceRate * travelersCount : 0;
+  const baseCost = priceData ? priceData.finalTotalPrice : unit * travelersCount;
+  const finalDisplayPrice = baseCost + insuranceCost;
+  const pageUrl = `${SITE_URL}/packages/${pkg.slug || id}`;
+  const whatsappMsg = `Hi ${siteConfig.company.name}, I'm interested in "${pkg.name}"${
+    selectedDate ? ` departing ${fmtDate(selectedDate)}` : ""
+  } for ${travelersCount} traveller${travelersCount > 1 ? "s" : ""}. ${pageUrl}`;
+
+  const navItems = [
+    { id: "overview", label: "Overview" },
+    pkg.itinerary?.length && { id: "itinerary", label: "Itinerary" },
+    (pkg.inclusions?.length || pkg.exclusions?.length) && {
+      id: "inclusions",
+      label: "What's included",
+    },
+    departures.length && { id: "dates", label: "Dates" },
+    { id: "reviews", label: "Reviews" },
+  ].filter(Boolean);
+
+  const share = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: pkg.name,
+          text: pkg.description?.slice(0, 120),
+          url: pageUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(pageUrl);
+        toast.success("Link copied");
+      }
+    } catch {
+      // user cancelled share sheet
     }
-    localStorage.setItem("wishlist", JSON.stringify(ids));
   };
+
+  const scrollToBooking = () =>
+    bookingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const handleEnquirySubmit = async (e) => {
     e.preventDefault();
-    if (!enquiryName || !enquiryPhone || !enquiryEmail) {
-      toast.error("Name, email, and phone number are required.");
+    if (!form.name || !form.phone || !form.email) {
+      toast.error("Please add your name, phone and email.");
       return;
     }
-
     setEnquirySubmitting(true);
-    setEnquirySuccess(false);
 
     try {
-      // For reCAPTCHA v3, execute invisible challenge to retrieve token at submit time
       let currentToken = captchaToken;
       if (PROVIDER === "recaptcha_v3" && RECAPTCHA_SITE_KEY && recaptchaRef.current) {
         try {
-          const v3Token = await recaptchaRef.current.executeAsync();
-          currentToken = v3Token || "";
+          currentToken = (await recaptchaRef.current.executeAsync()) || "";
           setCaptchaToken(currentToken);
         } catch (_) {
-          // ignore
+          // backend rejects if a token is required
         }
       }
-
       if (useCaptcha && !currentToken) {
-        throw new Error("CAPTCHA verification is required. Please solve the CAPTCHA.");
+        throw new Error("Please complete the verification first.");
       }
 
       const payload = {
-        name: enquiryName,
-        email: enquiryEmail,
-        phone: enquiryPhone,
-        destination: pkg.category === "domestic" ? "domestic" : "international",
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        destination: isInternational ? "international" : "domestic",
         travelDate: selectedDate || undefined,
-        travelers: travelersCount.toString(),
-        budget: pkg.category === "international" ? "50k-1l" : "20k-50k",
-        message: `${enquiryMsg}\n\n[Inquired via Package Page: ${pkg.name}]\n- Dynamic Price Total: INR ${finalDisplayPrice}\n- Insurance Requested: ${insuranceEnabled ? "Yes" : "No"}\n- Visa Help Requested: ${visaRequested ? "Yes" : "No"}`,
+        travelers: travelersCount >= 5 ? "5+" : String(travelersCount),
+        budget: isInternational ? "50k-1l" : "20k-50k",
+        message:
+          `${form.message}\n\n[Inquired via Package Page: ${pkg.name}]\n- Estimated total: INR ${finalDisplayPrice}\n- Insurance requested: ${
+            insuranceEnabled ? "Yes" : "No"
+          }\n- Visa help requested: ${visaRequested ? "Yes" : "No"}${
+            priceData?.promoApplied ? `\n- Promo: ${promoCode}` : ""
+          }`.slice(0, 1000),
         visaRequired: visaRequested,
         travelInsurance: insuranceEnabled,
         referralCodeUsed: promoCode || undefined,
+        source: "package-page",
         captchaToken: currentToken || undefined,
       };
 
       const res = await fetchWithAuth(apiUrl("/api/v1/enquiries"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       const json = await safeJson(res);
       if (res.ok && json.success) {
         setEnquirySuccess(true);
-        setEnquiryName("");
-        setEnquiryEmail("");
-        setEnquiryPhone("");
-        setEnquiryMsg("");
+        setForm({ name: "", email: "", phone: "", message: "" });
         setCaptchaToken("");
-        toast.success("Enquiry submitted successfully!");
+        toast.success("Request sent — we'll call you shortly.");
       } else {
-        toastApiError(json, "Failed to submit booking enquiry");
+        toastApiError(json, "Couldn't send your request");
       }
     } catch (err) {
-      console.error(err);
-      toastApiError(err, "Failed to submit booking enquiry");
+      toastApiError(err, "Couldn't send your request");
     } finally {
       setEnquirySubmitting(false);
     }
   };
 
-  if (loading) return <PackageDetailSkeleton />;
-  if (error || !pkg) {
-    return (
-      <>
-        <Header />
-        <div className="min-h-screen pt-40 pb-20 text-center max-w-md mx-auto px-4">
-          <div className="text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold mb-2">Package Not Found</h2>
-          <p className="text-gray-500 mb-6">
-            The holiday package details could not be resolved. It may have been disabled or deleted.
-          </p>
-          <Link
-            to="/"
-            className="btn btn-primary bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow-md"
-          >
-            Go to Homepage
-          </Link>
-        </div>
-        <Footer />
-      </>
-    );
-  }
-
-  // Insurance pricing
-  const insuranceRate = pkg.category === "international" ? 1999 : 499;
-  const insuranceCost = insuranceEnabled ? insuranceRate * travelersCount : 0;
-
-  // Final calculated total price
-  const baseCost = priceData
-    ? priceData.finalTotalPrice
-    : parseFloat(pkg.price?.replace(/[^\d]/g, "") || "0") * travelersCount;
-  const finalDisplayPrice = baseCost + insuranceCost;
+  const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   return (
-    <>
-      <Header />
-      <main className="min-h-screen pt-24 pb-28 lg:pb-16 dark:bg-navy-950">
-        {/* Banner Section */}
-        <div className="relative h-[60vh] w-full overflow-hidden">
-          <OptimizedImage
-            src={resolveImageUrl(pkg.image)}
-            alt={pkg.name}
-            className="w-full h-full object-cover transform scale-102 hover:scale-105 transition-transform duration-[6000ms] ease-out"
-            aspectRatio="16/9"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/45 to-transparent"></div>
-          <div className="absolute bottom-0 left-0 right-0 pt-20 pb-16 bg-gradient-to-t from-navy-950 to-transparent">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-amber-500/20 border border-amber-500/35 text-amber-500 dark:text-amber-400 text-xs font-bold uppercase tracking-wider rounded-full backdrop-blur-md mb-4 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                {pkg.category} • {pkg.subcategory}
-              </div>
-              <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-4 drop-shadow-md">
-                {pkg.name}
-              </h1>
-              <div className="flex flex-wrap gap-5 text-xs md:text-sm font-semibold text-gray-300 items-center">
-                <span className="flex items-center">
-                  <FaMapMarkerAlt className="text-amber-500 mr-2 text-base" /> {pkg.location}
+    <SiteLayout floatingRaised>
+      <Meta
+        title={`${pkg.name} — ${pkg.duration} | ${siteConfig.company.name}`}
+        description={`${pkg.name}: ${pkg.duration} in ${pkg.location}. ${String(pkg.description || "").slice(0, 140)}`}
+        image={imageUrl(pkg.image, 1200)}
+        url={pageUrl}
+      />
+
+      <div className="container-site pb-16 pt-6 md:pt-10">
+        {/* Breadcrumb + title */}
+        <nav aria-label="Breadcrumb" className="mb-6 text-sm text-muted">
+          <ol className="flex flex-wrap items-center gap-2">
+            <li>
+              <Link to="/" className="hover:text-fg">
+                Home
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link to={`/packages?category=${pkg.category}`} className="hover:text-fg">
+                {isInternational ? "International" : "India"}
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li className="truncate text-fg" aria-current="page">
+              {pkg.name}
+            </li>
+          </ol>
+        </nav>
+
+        <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-3xl">
+            <p className="flex items-center gap-2 text-sm text-muted">
+              <PiMapPin className="h-4 w-4 text-accent" /> {pkg.location}
+            </p>
+            <h1 className="mt-3 text-balance font-display text-display-lg font-light text-fg">
+              {pkg.name}
+            </h1>
+            <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted">
+              <span className="flex items-center gap-1.5">
+                <PiClock className="h-4 w-4" />{" "}
+                {nights > 0 ? `${nights} nights · ${nights + 1} days` : pkg.duration}
+              </span>
+              {pkg.rating > 0 && (
+                <a href="#reviews" className="flex items-center gap-1.5 hover:text-fg">
+                  <PiStarFill className="h-4 w-4 text-saffron-500" />
+                  <span className="text-fg">{Number(pkg.rating).toFixed(1)}</span>
+                  {pkg.reviews > 0 && `(${pkg.reviews} reviews)`}
+                </a>
+              )}
+              {pkg.visa && (
+                <span className="flex items-center gap-1.5">
+                  <PiIdentificationCard className="h-4 w-4" /> {pkg.visa}
                 </span>
-                <span className="flex items-center">
-                  <FaClock className="text-amber-500 mr-2 text-base" /> {pkg.duration}
+              )}
+              {pkg.hasOffers && (
+                <span className="flex items-center gap-1.5 text-accent">
+                  <PiTag className="h-4 w-4" /> Offers available
                 </span>
-                {pkg.visa && (
-                  <span className="flex items-center">
-                    <FaPassport className="text-amber-500 mr-2 text-base" /> Visa: {pkg.visa}
-                  </span>
-                )}
-              </div>
+              )}
             </div>
           </div>
-
-          {/* Quick Actions (Wishlist & Share) float top right */}
-          <div className="absolute top-8 right-4 md:right-8 flex gap-3.5 z-10">
+          <div className="flex gap-2">
             <button
-              onClick={handleWishlistToggle}
-              className={`p-3.5 rounded-2xl backdrop-blur-md border flex items-center justify-center transition-all duration-300 shadow-lg ${
-                inWishlist
-                  ? "bg-rose-500 text-white border-rose-600 scale-105"
-                  : "bg-black/45 border-white/20 text-white hover:bg-black/60 hover:scale-105"
-              }`}
-              title={inWishlist ? "Saved to Wishlist" : "Save to Wishlist"}
+              type="button"
+              onClick={() => toggle(id)}
+              aria-pressed={saved}
+              className={`btn ${saved ? "btn-accent" : "btn-ghost"}`}
             >
-              <FaHeart className="text-base" />
+              {saved ? <PiHeartFill className="h-4 w-4" /> : <PiHeart className="h-4 w-4" />}
+              {saved ? "Saved" : "Save"}
             </button>
             <button
-              onClick={() => {
-                navigator.clipboard.writeText(window.location.href);
-                toast.success("Link copied to clipboard!");
-              }}
-              className="p-3.5 rounded-2xl bg-black/45 border border-white/20 text-white hover:bg-black/60 hover:scale-105 backdrop-blur-md flex items-center justify-center transition-all duration-300 shadow-lg"
-              title="Share Package"
+              type="button"
+              onClick={share}
+              className="btn btn-ghost"
+              aria-label="Share this trip"
             >
-              <FaShareAlt className="text-base" />
+              <PiShareNetwork className="h-4 w-4" /> <span className="hidden sm:inline">Share</span>
             </button>
           </div>
         </div>
 
-        {/* Quick Facts Strip (Floating Overlay) */}
-        <div className="-mt-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-30">
-          <div className="bg-white/95 dark:bg-navy-900/95 backdrop-blur-xl border border-gray-150 dark:border-navy-800 p-5 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-center">
-              <div className="flex items-center space-x-3.5 px-3 md:px-4">
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 text-amber-500 rounded-2xl border border-amber-500/10">
-                  <FaClock className="text-lg" />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-navy-450">
-                    Duration
-                  </p>
-                  <p className="text-sm font-extrabold text-navy-900 dark:text-white">
-                    {pkg.duration}
-                  </p>
-                </div>
-              </div>
+        <Gallery images={images} name={pkg.name} />
 
-              <div className="flex items-center space-x-3.5 px-3 md:px-4 md:border-l border-gray-100 dark:border-navy-800">
-                <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-500 rounded-2xl border border-indigo-500/10">
-                  <FaMapMarkerAlt className="text-lg" />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-navy-450">
-                    Location
-                  </p>
-                  <p className="text-sm font-extrabold text-navy-900 dark:text-white">
-                    {pkg.location}
-                  </p>
-                </div>
-              </div>
+        <div className="mt-12 grid gap-12 lg:grid-cols-12">
+          {/* Content */}
+          <div className="lg:col-span-7 xl:col-span-8">
+            <nav
+              aria-label="On this page"
+              className="sticky z-20 -mx-4 mb-10 overflow-x-auto border-b border-line bg-page px-4 scrollbar-none sm:mx-0 sm:px-0"
+              style={{ top: "var(--header-h)" }}
+            >
+              <ul className="flex gap-6">
+                {navItems.map((item) => (
+                  <li key={item.id}>
+                    <a
+                      href={`#${item.id}`}
+                      className="block whitespace-nowrap border-b-2 border-transparent py-4 text-sm text-muted hover:border-fg hover:text-fg"
+                    >
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
 
-              <div className="flex items-center space-x-3.5 px-3 md:px-4 md:border-l border-gray-100 dark:border-navy-800">
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 rounded-2xl border border-emerald-500/10">
-                  <FaPassport className="text-lg" />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-navy-450">
-                    Visa Requirements
-                  </p>
-                  <p className="text-sm font-extrabold text-navy-900 dark:text-white">
-                    {pkg.visa || "Flexible Support"}
-                  </p>
-                </div>
-              </div>
+            <Section id="overview" title="Overview">
+              <p className="whitespace-pre-line text-pretty text-lg leading-relaxed text-muted">
+                {pkg.description}
+              </p>
+              {pkg.highlights?.length > 0 && (
+                <ul className="mt-8 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                  {pkg.highlights.map((h) => (
+                    <li key={h} className="flex items-start gap-3 text-fg">
+                      <PiCheck className="mt-1 h-4 w-4 shrink-0 text-accent" /> {h}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Section>
 
-              <div className="flex items-center space-x-3.5 px-3 md:px-4 md:border-l border-gray-100 dark:border-navy-800">
-                <div className="p-3 bg-rose-50 dark:bg-rose-950/40 text-rose-500 rounded-2xl border border-rose-500/10">
-                  <FaHeart className="text-lg" />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-navy-450">
-                    Tour Type
-                  </p>
-                  <p className="text-sm font-extrabold text-navy-900 dark:text-white capitalize">
-                    {pkg.category} Holiday
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Core Layout Split */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
-          {/* Details & Itinerary Side */}
-          <div className="lg:col-span-2 space-y-8 text-left">
-            {/* Tabs Segment Control */}
-            <div className="flex space-x-1 p-1 bg-gray-100/80 dark:bg-navy-900/80 rounded-full backdrop-blur-xl max-w-md border border-gray-200/50 dark:border-navy-800/50 shadow-inner">
-              {["overview", "itinerary", "reviews"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-2.5 px-5 text-xs font-bold uppercase tracking-wider rounded-full transition-all duration-300 relative ${
-                    activeTab === tab
-                      ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/20 scale-102"
-                      : "text-gray-500 hover:text-navy-900 dark:text-navy-355 dark:hover:text-white hover:bg-white/40 dark:hover:bg-navy-850/40"
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            {/* Overview Tab */}
-            {activeTab === "overview" && (
-              <div className="bg-white dark:bg-navy-900 border border-gray-150 dark:border-navy-850 p-6 sm:p-8 rounded-3xl space-y-8 shadow-sm">
-                <div>
-                  <h3 className="text-xl font-extrabold text-navy-950 dark:text-white mb-4">
-                    About This Holiday
-                  </h3>
-                  <p className="text-gray-600 dark:text-navy-200 leading-relaxed text-sm whitespace-pre-line font-medium">
-                    {pkg.description}
-                  </p>
-                </div>
-
-                {/* Highlights Board */}
-                {pkg.highlights && pkg.highlights.length > 0 && (
-                  <div className="border-t border-gray-100 dark:border-navy-850 pt-6">
-                    <h3 className="text-lg font-extrabold text-navy-950 dark:text-white mb-4">
-                      Package Highlights
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {pkg.highlights.map((h, i) => (
-                        <div
-                          key={i}
-                          className="flex items-start gap-3 text-sm text-gray-700 dark:text-navy-200 bg-gray-50/60 dark:bg-navy-850/40 p-4 rounded-2xl border border-gray-100 dark:border-navy-800/50 transition-all duration-300 hover:scale-102 shadow-sm"
-                        >
-                          <FaCheckCircle className="text-amber-500 flex-shrink-0 mt-0.5 text-base" />
-                          <span className="font-semibold">{h}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Expert Suggestions Box */}
-                <div className="border-t border-gray-100 dark:border-navy-800 pt-6">
-                  <h3 className="text-lg font-extrabold text-navy-950 dark:text-white mb-5 flex items-center gap-2">
-                    <span className="text-amber-550">💡</span> Smart Suggestions & Expert Tips
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-5 bg-gradient-to-br from-amber-500/5 to-transparent rounded-2xl border-l-4 border-amber-500 border-y border-r border-gray-150 dark:border-navy-800 space-y-2.5 transition-all duration-300 hover:shadow-md">
-                      <p className="text-xs uppercase font-extrabold tracking-wider text-amber-605 dark:text-amber-400 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-550"></span> Best Season
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-navy-300 leading-relaxed font-medium">
-                        {pkg.location?.toLowerCase().includes("manali") ||
-                        pkg.location?.toLowerCase().includes("kullu") ||
-                        pkg.location?.toLowerCase().includes("shimla")
-                          ? "March to June offers pleasant weather; December to February is best for experiencing snow."
-                          : pkg.location?.toLowerCase().includes("kedarnath") ||
-                              pkg.location?.toLowerCase().includes("chardham")
-                            ? "May to June and September to October. Avoid monsoons (July-August) due to landslide risks."
-                            : pkg.location?.toLowerCase().includes("sundarban")
-                              ? "October to March. Winter is highly pleasant and optimal for wildlife spotting in the reserve."
-                              : "Recommended to visit during the dry winter and pleasant spring months for the best experience."}
-                      </p>
-                    </div>
-
-                    <div className="p-5 bg-gradient-to-br from-indigo-500/5 to-transparent rounded-2xl border-l-4 border-indigo-500 border-y border-r border-gray-150 dark:border-navy-800 space-y-2.5 transition-all duration-300 hover:shadow-md">
-                      <p className="text-xs uppercase font-extrabold tracking-wider text-indigo-650 dark:text-indigo-400 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span> Packing
-                        Guide
-                      </p>
-                      <p className="text-xs text-gray-605 dark:text-navy-350 leading-relaxed font-medium">
-                        {pkg.category === "international"
-                          ? "Universal power adaptor, light layers for flights, comfortable walking sneakers, and copies of visa documents."
-                          : pkg.location?.toLowerCase().includes("kedarnath") ||
-                              pkg.location?.toLowerCase().includes("chardham")
-                            ? "Heavy woolens, thermal wear, sturdy trekking boots, rain poncho, walking stick, and personal medication."
-                            : "Comfortable breathable clothing, sunglasses, high SPF sunblock, travel water bottle, and light sports shoes."}
-                      </p>
-                    </div>
-
-                    <div className="p-5 bg-gradient-to-br from-emerald-500/5 to-transparent rounded-2xl border-l-4 border-emerald-500 border-y border-r border-gray-150 dark:border-navy-800 space-y-2.5 transition-all duration-300 hover:shadow-md">
-                      <p className="text-xs uppercase font-extrabold tracking-wider text-emerald-650 dark:text-emerald-400 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-550"></span> Expert Tip
-                      </p>
-                      <p className="text-xs text-gray-605 dark:text-navy-355 leading-relaxed font-medium">
-                        {pkg.location?.toLowerCase().includes("kedarnath") ||
-                        pkg.location?.toLowerCase().includes("chardham")
-                          ? "Start your trek extremely early (around 4:00 AM) to avoid midday heat and arrive before afternoon clouds gather."
-                          : "Carry local currency in cash as smaller vendors or remote stops do not always accept cards or UPI."}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {pkg.itinerary?.length > 0 && (
+              <Section id="itinerary" title="Day by day">
+                <Itinerary days={[...pkg.itinerary].sort((a, b) => a.day - b.day)} />
+              </Section>
             )}
 
-            {/* Itinerary Tab */}
-            {activeTab === "itinerary" && (
-              <div className="bg-white dark:bg-navy-900 border border-gray-150 dark:border-navy-850 p-6 sm:p-8 rounded-3xl space-y-8 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-extrabold text-navy-950 dark:text-white">
-                    Day-by-Day Schedule
-                  </h3>
-                  {pkg.itinerary && pkg.itinerary.length > 0 && (
-                    <button
-                      onClick={() => {
-                        const allDaysExpanded = expandedDays.length === pkg.itinerary.length;
-                        if (allDaysExpanded) {
-                          setExpandedDays([]);
-                        } else {
-                          setExpandedDays(pkg.itinerary.map((d) => d.day));
-                        }
-                      }}
-                      className="text-[10px] uppercase font-bold tracking-wider text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 px-3.5 py-2 rounded-xl transition-all"
-                    >
-                      {expandedDays.length === pkg.itinerary.length ? "Collapse All" : "Expand All"}
-                    </button>
+            {(pkg.inclusions?.length > 0 || pkg.exclusions?.length > 0) && (
+              <Section id="inclusions" title="What's included">
+                <div className="grid gap-8 sm:grid-cols-2">
+                  {pkg.inclusions?.length > 0 && (
+                    <div>
+                      <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-muted">
+                        Included
+                      </p>
+                      <ul className="space-y-3">
+                        {pkg.inclusions.map((item) => (
+                          <li key={item} className="flex items-start gap-3 text-fg">
+                            <PiCheck className="mt-1 h-4 w-4 shrink-0 text-emerald-600" /> {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {pkg.exclusions?.length > 0 && (
+                    <div>
+                      <p className="mb-4 text-[11px] uppercase tracking-[0.16em] text-muted">
+                        Not included
+                      </p>
+                      <ul className="space-y-3">
+                        {pkg.exclusions.map((item) => (
+                          <li key={item} className="flex items-start gap-3 text-muted">
+                            <PiX className="mt-1 h-4 w-4 shrink-0 text-red-500" /> {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
-                {pkg.itinerary && pkg.itinerary.length > 0 ? (
-                  <div className="relative before:absolute before:left-[22px] before:top-4 before:bottom-4 before:w-0.5 before:bg-gradient-to-b before:from-amber-500 before:via-orange-550 before:to-transparent space-y-6">
-                    {pkg.itinerary.map((day) => {
-                      const isExpanded = expandedDays.includes(day.day);
-                      return (
-                        <div key={day.day} className="relative pl-14 group">
-                          {/* Timeline node */}
-                          <button
-                            onClick={() => toggleDayExpand(day.day)}
-                            className={`absolute left-[6px] top-1.5 w-8.5 h-8.5 rounded-full font-black flex items-center justify-center text-xs shadow-md border-2 transition-all duration-350 z-10 ${
-                              isExpanded
-                                ? "bg-gradient-to-r from-amber-500 to-orange-550 border-amber-600 text-white scale-110 shadow-lg shadow-amber-500/30"
-                                : "bg-white dark:bg-navy-850 border-gray-300 dark:border-navy-750 text-gray-500 dark:text-navy-350 group-hover:border-amber-500 group-hover:text-amber-500 group-hover:scale-105"
-                            }`}
-                          >
-                            {day.day}
-                          </button>
+              </Section>
+            )}
 
-                          {/* Day Card */}
-                          <div
-                            className={`p-6 rounded-3xl border transition-all duration-355 ${
-                              isExpanded
-                                ? "bg-white dark:bg-navy-900/90 backdrop-blur-xl border-amber-500/25 dark:border-amber-500/15 shadow-xl shadow-amber-500/5 transform translate-x-1"
-                                : "bg-white/50 dark:bg-navy-900/30 border-gray-150 dark:border-navy-850 hover:bg-white dark:hover:bg-navy-900/50 hover:border-gray-250 hover:translate-x-0.5"
-                            }`}
-                          >
-                            <div
-                              className="flex items-center justify-between cursor-pointer select-none"
-                              onClick={() => toggleDayExpand(day.day)}
-                            >
-                              <h4 className="text-sm sm:text-base font-extrabold text-navy-900 dark:text-white group-hover:text-amber-550 transition-colors flex items-center gap-2">
-                                <span>Day {day.day}:</span>
-                                <span className="font-semibold text-gray-750 dark:text-navy-150">
-                                  {day.title}
-                                </span>
-                              </h4>
-                              <span
-                                className={`text-[10px] uppercase font-bold px-3 py-1 rounded-full border transition-all duration-300 ${
-                                  isExpanded
-                                    ? "text-amber-550 bg-amber-500/10 border-amber-500/20"
-                                    : "text-gray-400 bg-gray-50 dark:bg-navy-850 border-gray-200 dark:border-navy-800 group-hover:text-amber-550 group-hover:bg-amber-500/5 group-hover:border-amber-500/10"
-                                } ml-4 flex-shrink-0`}
-                              >
-                                {isExpanded ? "Collapse" : "Expand"}
-                              </span>
-                            </div>
-
-                            {/* Collapsible Content */}
-                            {isExpanded && (
-                              <div className="mt-5 pt-4 border-t border-gray-100 dark:border-navy-800/80 space-y-4 animate-fadeIn">
-                                <p className="text-sm text-gray-600 dark:text-navy-200 leading-relaxed font-medium">
-                                  {day.description}
-                                </p>
-
-                                {day.meals && day.meals.length > 0 && (
-                                  <div className="flex flex-wrap items-center gap-2.5 pt-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                                      Meals Included:
-                                    </span>
-                                    <div className="flex gap-1.5 flex-wrap">
-                                      {day.meals.map((meal, mIdx) => (
-                                        <span
-                                          key={mIdx}
-                                          className="px-3 py-1 text-[10px] rounded-full bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-700 dark:text-amber-400 font-bold border border-amber-550/20 shadow-sm"
-                                        >
-                                          🍽️ {meal}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
+            {departures.length > 0 && (
+              <Section id="dates" title="Upcoming departures">
+                <ul className="divide-y divide-line overflow-hidden rounded-3xl border border-line">
+                  {departures.map((d) => {
+                    const status = DEPARTURE_STATUS[d.status] || DEPARTURE_STATUS.available;
+                    const seatsLeft = Math.max(0, (d.capacity || 0) - (d.booked || 0));
+                    const soldOut = d.status === "sold_out";
+                    return (
+                      <li
+                        key={d.startDate}
+                        className="flex flex-wrap items-center justify-between gap-4 bg-surface p-5"
+                      >
+                        <div>
+                          <p className="font-medium text-fg">
+                            {fmtDate(d.startDate, { day: "numeric", month: "short" })} –{" "}
+                            {fmtDate(d.endDate)}
+                          </p>
+                          <p className={`mt-0.5 text-sm ${status.className}`}>
+                            {status.label}
+                            {!soldOut &&
+                              seatsLeft > 0 &&
+                              seatsLeft <= 10 &&
+                              ` · ${seatsLeft} seats left`}
+                          </p>
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="p-10 border border-dashed rounded-3xl text-center bg-gray-50/50 dark:bg-navy-850/30 text-gray-500 border-gray-200 dark:border-navy-800">
-                    Daily itinerary details are being updated. Check back shortly or submit an
-                    enquiry for the full schedule!
-                  </div>
-                )}
-              </div>
+                        <div className="flex items-center gap-4">
+                          <p className="text-fg">{formatINR(d.priceOverride || unit)}</p>
+                          <button
+                            type="button"
+                            disabled={soldOut}
+                            onClick={() => {
+                              setSelectedDate(d.startDate);
+                              scrollToBooking();
+                            }}
+                            className="btn btn-ghost h-9"
+                          >
+                            {selectedDate === d.startDate ? "Selected" : "Select"}
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Section>
             )}
 
-            {/* Reviews Tab */}
-            {activeTab === "reviews" && (
-              <div className="bg-white dark:bg-navy-900 border border-gray-150 dark:border-navy-850 p-6 sm:p-8 rounded-3xl space-y-8 shadow-sm">
-                <div>
-                  <h3 className="text-xl font-extrabold text-navy-950 dark:text-white mb-4">
-                    Customer Reviews
-                  </h3>
-                  <ReviewList packageId={pkg._id || pkg.id} />
-                </div>
-                <div className="border-t border-gray-150 dark:border-navy-800 pt-8">
-                  <h3 className="text-lg font-extrabold text-navy-950 dark:text-white mb-4">
-                    Leave a Review
-                  </h3>
-                  <ReviewForm packageId={pkg._id || pkg.id} />
-                </div>
+            <Section id="reviews" title="Reviews">
+              <ReviewList packageId={id} />
+              <div className="mt-10">
+                <ReviewForm packageId={id} packageTitle={pkg.name} />
               </div>
-            )}
+            </Section>
           </div>
 
-          {/* Pricing Calculator & Enquiry Form Sidebar */}
-          <div
-            className="lg:col-span-1 space-y-6 lg:sticky lg:top-28 scroll-mt-28"
-            id="booking-sidebar-section"
-          >
-            {/* Price Estimator Widget */}
-            <div className="bg-white/80 dark:bg-navy-900/80 backdrop-blur-xl p-6 rounded-3xl border border-amber-500/20 dark:border-amber-500/10 text-left shadow-xl shadow-gray-200/30 dark:shadow-black/20 relative overflow-hidden transition-all duration-300 hover:shadow-2xl">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500"></div>
-              <h3 className="text-lg font-extrabold text-navy-950 dark:text-white mb-5 flex items-center gap-2">
-                <span className="text-amber-550">✨</span> Configure Booking
-              </h3>
+          {/* Booking card */}
+          <aside className="lg:col-span-5 xl:col-span-4" aria-label="Book this trip">
+            <div
+              ref={bookingRef}
+              className="anchor lg:sticky"
+              style={{ top: "calc(var(--header-h) + 1.5rem)" }}
+            >
+              <div className="card overflow-hidden">
+                <div className="border-b border-line p-6">
+                  <p className="text-sm text-muted">Starting from</p>
+                  <p className="mt-1 font-display text-4xl text-fg">
+                    {formatINR(priceData?.unitPrice || unit)}
+                    <span className="font-sans text-sm text-muted"> / person</span>
+                  </p>
+                </div>
 
-              <div className="space-y-4">
-                {/* Date Dropdown */}
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-navy-400 mb-1.5">
-                    Select Departure Date
-                  </label>
-                  {pkg.availableDates && pkg.availableDates.length > 0 ? (
-                    <div className="relative">
-                      <select
+                <div className="space-y-5 p-6">
+                  <div>
+                    <label htmlFor="bk-date" className="label">
+                      Departure
+                    </label>
+                    {departures.some((d) => d.status !== "sold_out") ? (
+                      <Select
+                        id="bk-date"
                         value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="w-full pl-3 pr-8 py-3 border border-gray-200 dark:border-navy-750 rounded-xl bg-gray-50/50 dark:bg-navy-850 outline-none text-xs focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 appearance-none font-semibold cursor-pointer transition-all duration-300"
-                      >
-                        <option value="">-- Choose departure --</option>
-                        {pkg.availableDates
-                          .filter((d) => d.status !== "sold_out")
-                          .map((d, i) => (
-                            <option key={i} value={d.startDate}>
-                              {new Date(d.startDate).toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                              {d.priceOverride ? ` (Override Price: ₹${d.priceOverride})` : ""}
-                            </option>
-                          ))}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
-                        <FaChevronDown className="text-[10px]" />
+                        onChange={setSelectedDate}
+                        options={[
+                          { value: "", label: "Flexible / choose later" },
+                          ...departures
+                            .filter((d) => d.status !== "sold_out")
+                            .map((d) => ({
+                              value: d.startDate,
+                              label: `${fmtDate(d.startDate)}${d.priceOverride ? ` · ${formatINR(d.priceOverride)}` : ""}`,
+                              hint: d.status === "filling_fast" ? "Filling fast" : undefined,
+                            })),
+                        ]}
+                      />
+                    ) : (
+                      <p className="flex items-center gap-2 rounded-xl bg-raised px-4 py-3 text-sm text-muted">
+                        <PiCalendarBlank className="h-4 w-4" /> Flexible dates — tell us when suits
+                        you.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="label">Travellers</span>
+                      <div className="flex h-12 items-center justify-between rounded-xl border border-line px-2">
+                        <button
+                          type="button"
+                          onClick={() => setTravelersCount((n) => Math.max(1, n - 1))}
+                          className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-raised"
+                          aria-label="Fewer travellers"
+                        >
+                          <PiMinus className="h-4 w-4" />
+                        </button>
+                        <span className="font-medium tabular-nums" aria-live="polite">
+                          {travelersCount}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setTravelersCount((n) => Math.min(30, n + 1))}
+                          className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-raised"
+                          aria-label="More travellers"
+                        >
+                          <PiPlus className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/5 dark:bg-amber-950/20 px-3.5 py-3.5 rounded-xl font-semibold border border-amber-500/10 shadow-inner">
-                      Flexible Departure Dates (Enquire below)
-                    </div>
-                  )}
-                </div>
-
-                {/* Travelers counter & Promo Code Row */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-navy-400 mb-1.5">
-                      Travelers
-                    </label>
-                    <div className="flex items-center border border-gray-200 dark:border-navy-750 rounded-xl overflow-hidden bg-gray-50/50 dark:bg-navy-850 focus-within:ring-2 focus-within:ring-amber-500/20 focus-within:border-amber-500 transition-all duration-300">
-                      <button
-                        type="button"
-                        onClick={() => setTravelersCount(Math.max(1, travelersCount - 1))}
-                        className="px-3.5 py-2.5 hover:bg-gray-150 dark:hover:bg-navy-700 text-gray-500 dark:text-white font-extrabold text-sm transition-colors"
-                      >
-                        -
-                      </button>
-                      <span className="flex-1 text-center font-extrabold text-xs text-navy-900 dark:text-white">
-                        {travelersCount}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setTravelersCount(travelersCount + 1)}
-                        className="px-3.5 py-2.5 hover:bg-gray-150 dark:hover:bg-navy-700 text-gray-500 dark:text-white font-extrabold text-sm transition-colors"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-navy-400 mb-1.5">
-                      Promo Code
-                    </label>
-                    <div className="relative">
-                      <FaPercent className="absolute left-3.5 top-3.5 text-gray-400 text-[10px]" />
+                    <div>
+                      <label htmlFor="bk-promo" className="label">
+                        Promo code
+                      </label>
                       <input
+                        id="bk-promo"
                         type="text"
-                        placeholder="CODE"
                         value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                        className="w-full pl-8 pr-3 py-3 border border-gray-200 dark:border-navy-750 rounded-xl bg-gray-50/50 dark:bg-navy-850 outline-none text-xs focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-bold uppercase tracking-wider transition-all duration-300"
+                        onChange={(e) => setPromoCode(e.target.value.toUpperCase().trim())}
+                        placeholder="Optional"
+                        className={`field uppercase ${promoCode && priceData && !priceData.promoApplied && !calcLoading ? "field-error" : ""}`}
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Checkboxes Group */}
-                <div className="space-y-3 pt-2">
-                  {/* Optional Visa Checkbox */}
-                  {pkg.visa && pkg.visa !== "Not Required" && (
-                    <label className="flex items-center gap-3 cursor-pointer select-none group">
-                      <div className="relative flex items-center">
+                  <div className="space-y-3">
+                    {pkg.visa && !/not required|no visa/i.test(pkg.visa) && (
+                      <label className="flex cursor-pointer items-center gap-3 text-sm text-fg">
                         <input
                           type="checkbox"
                           checked={visaRequested}
                           onChange={(e) => setVisaRequested(e.target.checked)}
-                          className="rounded text-amber-500 focus:ring-amber-500 focus:ring-offset-0 h-4.5 w-4.5 border-gray-300 dark:border-navy-700 dark:bg-navy-850 cursor-pointer transition-all"
+                          className="h-4 w-4 accent-saffron-500"
                         />
-                      </div>
-                      <span className="text-[11px] font-semibold text-gray-650 dark:text-navy-200 flex items-center gap-1.5 group-hover:text-amber-500 transition-colors">
-                        <FaPassport className="text-amber-500 text-sm" /> Request Visa Assistance
-                      </span>
-                    </label>
-                  )}
-
-                  {/* Optional Travel Insurance Checkbox */}
-                  <label className="flex items-center gap-3 cursor-pointer select-none group">
-                    <div className="relative flex items-center">
+                        <PiIdentificationCard className="h-4 w-4 text-muted" /> Help me with the
+                        visa
+                      </label>
+                    )}
+                    <label className="flex cursor-pointer items-center gap-3 text-sm text-fg">
                       <input
                         type="checkbox"
                         checked={insuranceEnabled}
                         onChange={(e) => setInsuranceEnabled(e.target.checked)}
-                        className="rounded text-amber-500 focus:ring-amber-500 focus:ring-offset-0 h-4.5 w-4.5 border-gray-300 dark:border-navy-700 dark:bg-navy-850 cursor-pointer transition-all"
+                        className="h-4 w-4 accent-saffron-500"
                       />
-                    </div>
-                    <span className="text-[11px] font-semibold text-gray-650 dark:text-navy-200 flex items-center gap-1.5 group-hover:text-amber-500 transition-colors">
-                      <FaShieldAlt className="text-amber-500 text-sm" /> Add Travel Insurance (+₹
-                      {insuranceRate}/person)
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Price Details Summary Board */}
-              <div className="mt-6 pt-5 border-t border-gray-150 dark:border-navy-800 space-y-2.5 text-[11px] font-medium">
-                <div className="flex justify-between text-gray-500 dark:text-navy-450 font-bold">
-                  <span>Unit Price:</span>
-                  <span className="font-bold text-navy-900 dark:text-white">
-                    ₹{priceData ? priceData.unitPrice.toLocaleString("en-IN") : pkg.price}
-                  </span>
-                </div>
-                <div className="flex justify-between text-gray-500 dark:text-navy-450">
-                  <span>Subtotal ({travelersCount} travelers):</span>
-                  <span className="font-bold text-navy-900 dark:text-white">
-                    ₹
-                    {(priceData
-                      ? priceData.originalTotalPrice
-                      : parseFloat(pkg.price?.replace(/[^\d]/g, "") || "0") * travelersCount
-                    ).toLocaleString("en-IN")}
-                  </span>
-                </div>
-                {priceData?.promoApplied && (
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1.5 rounded-lg border border-emerald-500/10">
-                    <span>Discount ({priceData.discountPercent}%):</span>
-                    <span>-₹{priceData.discountAmount.toLocaleString("en-IN")}</span>
-                  </div>
-                )}
-                {insuranceEnabled && (
-                  <div className="flex justify-between text-gray-500 dark:text-navy-450 font-bold">
-                    <span>Travel Insurance:</span>
-                    <span className="font-bold text-navy-900 dark:text-white">
-                      +₹{insuranceCost.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center text-sm font-extrabold text-navy-950 dark:text-white pt-4 border-t border-dashed border-gray-200 dark:border-navy-800">
-                  <span>Estimated Total:</span>
-                  <span className="text-xl text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-550 font-black">
-                    ₹{finalDisplayPrice.toLocaleString("en-IN")}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Enquiry Booking form */}
-            <div className="bg-white/80 dark:bg-navy-900/80 backdrop-blur-xl p-6 rounded-3xl border border-amber-500/20 dark:border-amber-500/10 text-left shadow-xl shadow-gray-200/30 dark:shadow-black/20 relative overflow-hidden transition-all duration-300 hover:shadow-2xl">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-blue-500"></div>
-              <h3 className="text-lg font-extrabold text-navy-950 dark:text-white mb-5 flex items-center gap-2">
-                <span className="text-indigo-500">📅</span> Book This Holiday
-              </h3>
-
-              {enquirySuccess ? (
-                <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-2xl text-center space-y-3 animate-fadeIn">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xl mx-auto shadow-md">
-                    🎉
-                  </div>
-                  <h4 className="font-extrabold text-sm uppercase tracking-wider">
-                    Enquiry Submitted!
-                  </h4>
-                  <p className="text-xs leading-relaxed text-gray-650 dark:text-navy-300">
-                    Thank you! We've received your booking inquiry. Our team will review your
-                    requirements and reach out within 2 hours.
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleEnquirySubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-navy-450 mb-1.5">
-                      Full Name *
+                      <PiShieldCheck className="h-4 w-4 text-muted" /> Travel insurance (+
+                      {formatINR(insuranceRate)}/person)
                     </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Enter your name"
-                      value={enquiryName}
-                      onChange={(e) => setEnquiryName(e.target.value)}
-                      className="w-full px-3.5 py-3 border border-gray-200 dark:border-navy-750 rounded-xl bg-gray-50/50 dark:bg-navy-850 outline-none text-xs focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all duration-300 font-semibold"
-                    />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-navy-450 mb-1.5">
-                        Phone *
-                      </label>
+                  <dl
+                    className={`space-y-2 border-t border-dashed border-line pt-5 text-sm transition-opacity ${calcLoading ? "opacity-60" : ""}`}
+                  >
+                    <div className="flex justify-between text-muted">
+                      <dt>
+                        {formatINR(priceData?.unitPrice || unit)} × {travelersCount}
+                      </dt>
+                      <dd className="text-fg">
+                        {formatINR(priceData?.originalTotalPrice ?? unit * travelersCount)}
+                      </dd>
+                    </div>
+                    {priceData?.promoApplied && (
+                      <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+                        <dt>Promo ({priceData.discountPercent}% off)</dt>
+                        <dd>−{formatINR(priceData.discountAmount)}</dd>
+                      </div>
+                    )}
+                    {insuranceEnabled && (
+                      <div className="flex justify-between text-muted">
+                        <dt>Insurance</dt>
+                        <dd className="text-fg">+{formatINR(insuranceCost)}</dd>
+                      </div>
+                    )}
+                    <div className="flex items-baseline justify-between pt-2">
+                      <dt className="font-medium text-fg">Estimated total</dt>
+                      <dd className="font-display text-2xl text-fg">
+                        {formatINR(finalDisplayPrice)}
+                      </dd>
+                    </div>
+                    <p className="text-xs text-muted">
+                      Final price is confirmed by your planner based on hotel availability.
+                    </p>
+                  </dl>
+                </div>
+
+                <div className="border-t border-line bg-raised p-6">
+                  {enquirySuccess ? (
+                    <div role="status" className="space-y-2">
+                      <p className="font-display text-2xl text-fg">Request sent.</p>
+                      <p className="text-sm text-muted">
+                        A planner will call you to confirm availability and the final price.
+                      </p>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleEnquirySubmit} className="space-y-3">
+                      <p className="font-medium text-fg">Check availability</p>
+                      <input
+                        type="text"
+                        required
+                        autoComplete="name"
+                        placeholder="Your name"
+                        aria-label="Your name"
+                        value={form.name}
+                        onChange={setField("name")}
+                        className="field"
+                      />
                       <input
                         type="tel"
                         required
-                        placeholder="Enter phone number"
-                        value={enquiryPhone}
-                        onChange={(e) => setEnquiryPhone(e.target.value)}
-                        className="w-full px-3.5 py-3 border border-gray-200 dark:border-navy-750 rounded-xl bg-gray-50/50 dark:bg-navy-850 outline-none text-xs focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all duration-300 font-semibold"
+                        autoComplete="tel"
+                        placeholder="Phone / WhatsApp"
+                        aria-label="Phone"
+                        value={form.phone}
+                        onChange={setField("phone")}
+                        className="field"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-navy-450 mb-1.5">
-                        Email Address *
-                      </label>
                       <input
                         type="email"
                         required
-                        placeholder="Enter email address"
-                        value={enquiryEmail}
-                        onChange={(e) => setEnquiryEmail(e.target.value)}
-                        className="w-full px-3.5 py-3 border border-gray-200 dark:border-navy-750 rounded-xl bg-gray-50/50 dark:bg-navy-850 outline-none text-xs focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all duration-300 font-semibold"
+                        autoComplete="email"
+                        placeholder="Email"
+                        aria-label="Email"
+                        value={form.email}
+                        onChange={setField("email")}
+                        className="field"
                       />
-                    </div>
-                  </div>
+                      <textarea
+                        rows={2}
+                        placeholder="Anything we should know? (optional)"
+                        aria-label="Message"
+                        value={form.message}
+                        onChange={setField("message")}
+                        className="field resize-none"
+                      />
 
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-navy-450 mb-1.5">
-                      Special Requests
-                    </label>
-                    <textarea
-                      placeholder="e.g. Flight booking required, hotel category preference, extensions..."
-                      value={enquiryMsg}
-                      onChange={(e) => setEnquiryMsg(e.target.value)}
-                      rows="3"
-                      className="w-full p-3.5 border border-gray-250 dark:border-navy-700 rounded-xl bg-gray-50/50 dark:bg-navy-850 outline-none text-xs focus:ring-1 focus:ring-amber-500 transition-all font-semibold leading-relaxed"
-                    />
-                  </div>
+                      {useCaptcha ? (
+                        <Suspense
+                          fallback={<p className="text-xs text-muted">Loading verification…</p>}
+                        >
+                          {PROVIDER === "hcaptcha" ? (
+                            <HCaptcha
+                              sitekey={HCAPTCHA_SITE_KEY}
+                              onVerify={(v) => setCaptchaToken(v || "")}
+                              onExpire={() => setCaptchaToken("")}
+                            />
+                          ) : PROVIDER === "recaptcha_v3" ? (
+                            <ReCAPTCHA
+                              ref={recaptchaRef}
+                              sitekey={RECAPTCHA_SITE_KEY}
+                              size="invisible"
+                              onChange={(v) => setCaptchaToken(v || "")}
+                            />
+                          ) : (
+                            <div className="origin-left scale-90">
+                              <ReCAPTCHA
+                                sitekey={RECAPTCHA_SITE_KEY}
+                                onChange={(v) => setCaptchaToken(v || "")}
+                                onExpired={() => setCaptchaToken("")}
+                              />
+                            </div>
+                          )}
+                        </Suspense>
+                      ) : null}
 
-                  {/* CAPTCHA */}
-                  {useCaptcha ? (
-                    <Suspense
-                      fallback={
-                        <p className="text-[10px] text-navy-600 dark:text-navy-300">
-                          Loading CAPTCHA...
-                        </p>
-                      }
-                    >
-                      {PROVIDER === "hcaptcha" ? (
-                        <div className="my-2">
-                          <HCaptcha
-                            sitekey={HCAPTCHA_SITE_KEY}
-                            onVerify={(val) => setCaptchaToken(val || "")}
-                            onExpire={() => setCaptchaToken("")}
-                          />
-                        </div>
-                      ) : PROVIDER === "recaptcha_v3" ? (
-                        <div className="my-2">
-                          <ReCAPTCHA
-                            ref={recaptchaRef}
-                            sitekey={RECAPTCHA_SITE_KEY}
-                            size="invisible"
-                            onChange={(val) => setCaptchaToken(val || "")}
-                          />
-                          <p className="text-[9px] text-navy-500 dark:text-navy-450">
-                            Protected by reCAPTCHA v3
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="my-2 scale-90 origin-left">
-                          <ReCAPTCHA
-                            sitekey={RECAPTCHA_SITE_KEY}
-                            onChange={(val) => setCaptchaToken(val || "")}
-                            onExpired={() => setCaptchaToken("")}
-                          />
-                        </div>
-                      )}
-                    </Suspense>
-                  ) : null}
-
-                  <button
-                    type="submit"
-                    disabled={
-                      enquirySubmitting ||
-                      (PROVIDER !== "recaptcha_v3" && !!useCaptcha && !captchaToken)
-                    }
-                    className="w-full btn btn-primary bg-amber-500 hover:bg-amber-600 disabled:bg-amber-400 text-white py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all duration-300"
-                  >
-                    {enquirySubmitting ? (
-                      <>
-                        <FaSpinner className="animate-spin text-sm" /> Submitting Request...
-                      </>
-                    ) : (
-                      "Submit Booking Request"
-                    )}
-                  </button>
-                </form>
-              )}
+                      <button
+                        type="submit"
+                        disabled={
+                          enquirySubmitting ||
+                          (PROVIDER !== "recaptcha_v3" && !!useCaptcha && !captchaToken)
+                        }
+                        className="btn btn-accent btn-lg w-full"
+                      >
+                        {enquirySubmitting ? "Sending…" : "Request a callback"}
+                      </button>
+                      <a
+                        href={toWhatsApp(siteConfig.company.whatsapp, whatsappMsg)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-ghost w-full"
+                      >
+                        <PiWhatsappLogo className="h-4 w-4" /> Ask on WhatsApp
+                      </a>
+                    </form>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          </aside>
         </div>
 
-        {/* Sticky Mobile Bottom Booking Bar */}
-        <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-white/95 dark:bg-navy-900/95 backdrop-blur-md border-t border-gray-150 dark:border-navy-850 p-4 flex items-center justify-between z-40 shadow-[0_-8px_30px_rgb(0,0,0,0.06)]">
-          <div>
-            <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">
-              Estimated Total
-            </p>
-            <p className="text-xl font-extrabold text-amber-500">
-              ₹{finalDisplayPrice.toLocaleString("en-IN")}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              const element = document.getElementById("booking-sidebar-section");
-              if (element) {
-                element.scrollIntoView({ behavior: "smooth" });
-              }
-            }}
-            className="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs rounded-xl shadow-md uppercase tracking-wider transition-all duration-300"
-          >
-            Configure & Book
-          </button>
+        {related.length > 0 && (
+          <section className="mt-24 border-t border-line pt-16">
+            <div className="mb-10 flex items-end justify-between gap-4">
+              <h2 className="font-display text-display-md font-light text-fg">
+                You might also <em className="accent-italic">like</em>
+              </h2>
+              <Link
+                to={`/packages?category=${pkg.category}`}
+                className="btn btn-ghost hidden sm:inline-flex"
+              >
+                See all
+              </Link>
+            </div>
+            <div className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+              {related.map((p) => (
+                <PackageCard key={pkgId(p)} pkg={p} />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+
+      {/* Mobile booking bar */}
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-4 border-t border-line bg-page/95 px-4 py-3 backdrop-blur lg:hidden">
+        <div>
+          <p className="text-xs text-muted">Est. total · {travelersCount} pax</p>
+          <p className="font-display text-xl text-fg">{formatINR(finalDisplayPrice)}</p>
         </div>
-      </main>
-      <Footer />
-    </>
+        <button type="button" onClick={scrollToBooking} className="btn btn-accent">
+          Check availability
+        </button>
+      </div>
+    </SiteLayout>
   );
 };
 

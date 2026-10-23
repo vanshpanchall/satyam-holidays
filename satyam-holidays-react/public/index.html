@@ -15,8 +15,8 @@
   <meta name="author" content="Satyam Holidays" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <meta name="googlebot" content="index, follow" />
-  <meta name="theme-color" content="#f59e0b" />
-  <meta name="msapplication-TileColor" content="#f59e0b" />
+  <meta name="theme-color" content="#0f1e2e" />
+  <meta name="msapplication-TileColor" content="#0f1e2e" />
 
   <!-- Canonical URL -->
   <link rel="canonical" href="https://satyamholidays.vercel.app/" />
@@ -59,6 +59,20 @@
   <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,0..100,0..1;1,9..144,300..700,0..100,0..1&family=Geist:wght@300..700&display=swap" />
+
+  <!-- Apply saved/system theme before first paint to avoid a light→dark flash -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("theme");
+        if (!t) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.classList.add(t);
+      } catch (e) {}
+    })();
+  </script>
 
   <!-- JSON-LD Structured Data: Travel Agency (Local Business) -->
   <script type="application/ld+json">
@@ -262,99 +276,9 @@
       "url": "https://satyamholidays.vercel.app",
       "potentialAction": {
         "@type": "SearchAction",
-        "target": "https://satyamholidays.vercel.app/?q={search_term_string}",
+        "target": "https://satyamholidays.vercel.app/packages?q={search_term_string}",
         "query-input": "required name=search_term_string"
       }
-    }
-  </script>
-
-  <!-- JSON-LD: BreadcrumbList -->
-  <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "Home",
-          "item": "https://satyamholidays.vercel.app/"
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "name": "Domestic Packages",
-          "item": "https://satyamholidays.vercel.app/packages"
-        },
-        {
-          "@type": "ListItem",
-          "position": 3,
-          "name": "International Packages",
-          "item": "https://satyamholidays.vercel.app/packages"
-        },
-        {
-          "@type": "ListItem",
-          "position": 4,
-          "name": "Contact Us",
-          "item": "https://satyamholidays.vercel.app/contact"
-        },
-        {
-          "@type": "ListItem",
-          "position": 5,
-          "name": "Enquiry",
-          "item": "https://satyamholidays.vercel.app/enquiry"
-        }
-      ]
-    }
-  </script>
-
-  <!-- JSON-LD: FAQPage for rich snippets -->
-  <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "What types of tour packages does Satyam Holidays offer?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Satyam Holidays offers a wide range of domestic and international tour packages including Chardham Yatra, Kashmir, Goa, Rajasthan, Kerala, Andaman, Dubai, Singapore, Thailand, Vietnam, Nepal, and Europe tours. We specialize in pilgrimage tours, honeymoon packages, family vacations, adventure trips, and group travel."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Where is Satyam Holidays located?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Satyam Holidays is located at 56, Uttar Gujarat Panchal Society, Ranip, Ahmedabad, Gujarat, India. You can reach us at +91 98247 37137 or email satyamholidays19@gmail.com."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "How can I book a tour package with Satyam Holidays?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "You can book a tour package by submitting an enquiry on our website, calling us at +91 98247 37137, or sending a WhatsApp message. Our travel experts will create a personalized itinerary based on your preferences, budget, and travel dates."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Does Satyam Holidays provide customized tour packages?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Yes! We specialize in creating customized tour packages tailored to your specific needs. Whether you want a luxury getaway, budget-friendly trip, adventure tour, or spiritual journey, our team will design the perfect itinerary for you."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "What is the starting price for tour packages?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Our domestic tour packages start from as low as ₹8,999 per person, while international packages start from ₹19,999 per person. Prices vary based on destination, duration, accommodation, and travel season."
-          }
-        }
-      ]
     }
   </script>
 </head>

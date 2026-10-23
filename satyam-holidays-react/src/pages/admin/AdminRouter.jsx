@@ -4,15 +4,15 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import PageTransition from "../../components/PageTransition";
 import { lazyWithRecovery } from "../../utils/lazyWithRecovery";
 
-import AdminDashboard from "./AdminDashboard";
-import AdminEnquiries from "./AdminEnquiries";
-import AdminPackages from "./AdminPackages";
-import AdminSettings from "./AdminSettings";
-import CrmAnalytics from "./CrmAnalytics";
-import ReviewModeration from "./ReviewModeration";
-
+// Each screen is its own chunk, so opening the dashboard doesn't download the package editor etc.
 const AdminLayout = lazyWithRecovery(() => import("./AdminLayout"), "admin-layout");
 const AdminLogin = lazyWithRecovery(() => import("./AdminLogin"), "admin-login");
+const AdminDashboard = lazyWithRecovery(() => import("./AdminDashboard"), "admin-dashboard");
+const AdminEnquiries = lazyWithRecovery(() => import("./AdminEnquiries"), "admin-enquiries");
+const AdminPackages = lazyWithRecovery(() => import("./AdminPackages"), "admin-packages");
+const AdminSettings = lazyWithRecovery(() => import("./AdminSettings"), "admin-settings");
+const CrmAnalytics = lazyWithRecovery(() => import("./CrmAnalytics"), "crm-analytics");
+const ReviewModeration = lazyWithRecovery(() => import("./ReviewModeration"), "review-moderation");
 
 const AdminRouter = () => (
   <Suspense fallback={null}>

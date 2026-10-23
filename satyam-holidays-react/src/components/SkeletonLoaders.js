@@ -1,288 +1,59 @@
 import React from "react";
 
-/* ─── Shimmer base ─── */
-const Shimmer = ({ className = "" }) => <div className={`skeleton-shimmer rounded ${className}`} />;
+const Bone = ({ className = "" }) => <div className={`skeleton rounded-full ${className}`} />;
 
-/* ─── Page-level skeleton (used by App.js Suspense) ─── */
-export const PageSkeleton = () => (
-  <div className="min-h-screen bg-white dark:bg-navy-900">
-    {/* Navbar skeleton */}
-    <div className="glass-navbar sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+const BarSkeleton = () => (
+  <div className="border-b border-line">
+    <div className="container-site flex h-[4.5rem] items-center justify-between">
       <div className="flex items-center gap-3">
-        <Shimmer className="w-10 h-10 rounded-full" />
-        <Shimmer className="w-36 h-5" />
+        <Bone className="h-10 w-10" />
+        <Bone className="h-5 w-36" />
       </div>
-      <div className="hidden md:flex items-center gap-6">
-        <Shimmer className="w-16 h-4" />
-        <Shimmer className="w-16 h-4" />
-        <Shimmer className="w-16 h-4" />
-        <Shimmer className="w-16 h-4" />
-        <Shimmer className="w-28 h-10 rounded-xl" />
-      </div>
-    </div>
-
-    {/* Hero skeleton */}
-    <div className="relative h-[80vh] flex items-center justify-center">
-      <Shimmer className="absolute inset-0 rounded-none" />
-      <div className="relative z-10 text-center space-y-4 px-4">
-        <Shimmer className="w-64 h-8 mx-auto" />
-        <Shimmer className="w-96 h-12 mx-auto" />
-        <Shimmer className="w-80 h-5 mx-auto" />
-        <div className="flex gap-4 justify-center mt-6">
-          <Shimmer className="w-40 h-12 rounded-xl" />
-          <Shimmer className="w-40 h-12 rounded-xl" />
-        </div>
-      </div>
-    </div>
-
-    {/* Section skeletons */}
-    <ServicesSkeleton />
-    <PackagesSkeleton />
-  </div>
-);
-
-/* ─── Services section skeleton ─── */
-export const ServicesSkeleton = () => (
-  <section className="section-padding">
-    <div className="container-custom">
-      <div className="text-center mb-12 space-y-3">
-        <Shimmer className="w-32 h-4 mx-auto" />
-        <Shimmer className="w-64 h-8 mx-auto" />
-        <Shimmer className="w-96 h-4 mx-auto" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="glass-card rounded-2xl p-6 space-y-4">
-            <Shimmer className="w-14 h-14 rounded-xl" />
-            <Shimmer className="w-40 h-5" />
-            <div className="space-y-2">
-              <Shimmer className="w-full h-3" />
-              <Shimmer className="w-3/4 h-3" />
-            </div>
-          </div>
+      <div className="hidden gap-6 lg:flex">
+        {Array.from({ length: 5 }, (_, i) => (
+          <Bone key={i} className="h-3 w-16" />
         ))}
       </div>
-    </div>
-  </section>
-);
-
-/* ─── About section skeleton ─── */
-export const AboutSkeleton = () => (
-  <section className="section-padding">
-    <div className="container-custom">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        <div className="space-y-6">
-          <Shimmer className="w-24 h-4" />
-          <Shimmer className="w-72 h-8" />
-          <div className="space-y-3">
-            <Shimmer className="w-full h-4" />
-            <Shimmer className="w-full h-4" />
-            <Shimmer className="w-5/6 h-4" />
-          </div>
-          <div className="grid grid-cols-2 gap-4 pt-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="glass-card rounded-xl p-4 space-y-2">
-                <Shimmer className="w-16 h-8" />
-                <Shimmer className="w-24 h-3" />
-              </div>
-            ))}
-          </div>
-        </div>
-        <Shimmer className="w-full h-80 rounded-2xl" />
-      </div>
-    </div>
-  </section>
-);
-
-/* ─── Packages section skeleton (domestic/international) ─── */
-export const PackagesSkeleton = () => (
-  <section className="section-padding">
-    <div className="container-custom">
-      <div className="text-center mb-12 space-y-3">
-        <Shimmer className="w-40 h-4 mx-auto" />
-        <Shimmer className="w-72 h-8 mx-auto" />
-      </div>
-      {/* Category tabs */}
-      <div className="flex gap-3 justify-center mb-8 flex-wrap">
-        {[...Array(5)].map((_, i) => (
-          <Shimmer key={i} className="w-24 h-9 rounded-full" />
-        ))}
-      </div>
-      {/* Package cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {[...Array(6)].map((_, i) => (
-          <PackageCardSkeleton key={i} />
-        ))}
-      </div>
-    </div>
-  </section>
-);
-
-/* ─── Single package card skeleton ─── */
-export const PackageCardSkeleton = () => (
-  <div className="glass-card rounded-2xl overflow-hidden">
-    <Shimmer className="w-full h-48 rounded-none" />
-    <div className="p-5 space-y-3">
-      <div className="flex items-center justify-between">
-        <Shimmer className="w-40 h-5" />
-        <Shimmer className="w-16 h-4" />
-      </div>
-      <Shimmer className="w-full h-3" />
-      <Shimmer className="w-2/3 h-3" />
-      <div className="flex items-center gap-2 pt-1">
-        <Shimmer className="w-20 h-4" />
-        <Shimmer className="w-24 h-4" />
-      </div>
-      <div className="flex flex-wrap gap-2 pt-2">
-        {[...Array(3)].map((_, i) => (
-          <Shimmer key={i} className="w-20 h-6 rounded-full" />
-        ))}
-      </div>
-      <Shimmer className="w-full h-11 rounded-xl mt-2" />
+      <Bone className="h-10 w-28" />
     </div>
   </div>
 );
 
-/* ─── Enquiry form skeleton ─── */
-export const EnquirySkeleton = () => (
-  <section className="section-padding">
-    <div className="container-custom max-w-3xl">
-      <div className="text-center mb-10 space-y-3">
-        <Shimmer className="w-32 h-4 mx-auto" />
-        <Shimmer className="w-56 h-8 mx-auto" />
-        <Shimmer className="w-80 h-4 mx-auto" />
-      </div>
-      <div className="glass-card rounded-2xl p-8 space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="space-y-2">
-              <Shimmer className="w-20 h-4" />
-              <Shimmer className="w-full h-11 rounded-lg" />
-            </div>
-          ))}
-        </div>
-        <div className="space-y-2">
-          <Shimmer className="w-20 h-4" />
-          <Shimmer className="w-full h-24 rounded-lg" />
-        </div>
-        <Shimmer className="w-full h-12 rounded-xl" />
-      </div>
-    </div>
-  </section>
-);
-
-/* ─── Contact section skeleton ─── */
-export const ContactSkeleton = () => (
-  <section className="section-padding">
-    <div className="container-custom">
-      <div className="text-center mb-10 space-y-3">
-        <Shimmer className="w-32 h-4 mx-auto" />
-        <Shimmer className="w-48 h-8 mx-auto" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="glass-card rounded-2xl p-6 text-center space-y-3">
-            <Shimmer className="w-12 h-12 mx-auto rounded-full" />
-            <Shimmer className="w-28 h-5 mx-auto" />
-            <Shimmer className="w-40 h-3 mx-auto" />
-          </div>
+/** Route-level fallback (App.js Suspense) */
+export const PageSkeleton = () => (
+  <div className="min-h-screen bg-page" role="status" aria-label="Loading">
+    <BarSkeleton />
+    <div className="container-site py-16">
+      <Bone className="h-3 w-24" />
+      <Bone className="mt-6 h-12 w-2/3 max-w-2xl" />
+      <Bone className="mt-4 h-12 w-1/2 max-w-xl" />
+      <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div key={i} className="skeleton aspect-[4/5] rounded-3xl" />
         ))}
       </div>
     </div>
-  </section>
+  </div>
 );
 
-/* ─── Footer skeleton ─── */
-export const FooterSkeleton = () => (
-  <footer className="bg-navy-900 py-12">
-    <div className="container-custom">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="space-y-3">
-            <Shimmer className="w-32 h-5" />
-            <Shimmer className="w-full h-3" />
-            <Shimmer className="w-5/6 h-3" />
-            <Shimmer className="w-3/4 h-3" />
-          </div>
-        ))}
-      </div>
-    </div>
-  </footer>
-);
-
-/* ─── Detail page layout-matching skeleton ─── */
+/** Mirrors the package detail layout so the page doesn't jump when data arrives */
 export const PackageDetailSkeleton = () => (
-  <div className="min-h-screen bg-white dark:bg-navy-950">
-    {/* Navbar skeleton */}
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
-      <div className="flex items-center justify-between py-3">
-        <div className="flex items-center gap-3">
-          <Shimmer className="w-12 h-12 rounded-2xl" />
-          <div className="space-y-1.5">
-            <Shimmer className="w-24 h-5" />
-            <Shimmer className="w-16 h-3" />
-          </div>
+  <div className="min-h-screen bg-page" role="status" aria-label="Loading trip">
+    <BarSkeleton />
+    <div className="container-site pt-10">
+      <Bone className="h-3 w-48" />
+      <Bone className="mt-8 h-4 w-32" />
+      <Bone className="mt-4 h-12 w-3/4 max-w-3xl" />
+      <Bone className="mt-4 h-4 w-72" />
+      <div className="skeleton mt-8 h-[52vh] min-h-[320px] rounded-4xl md:h-[64vh]" />
+      <div className="mt-12 grid gap-12 lg:grid-cols-12">
+        <div className="space-y-4 lg:col-span-8">
+          <Bone className="h-8 w-40" />
+          <Bone className="h-4 w-full" />
+          <Bone className="h-4 w-full" />
+          <Bone className="h-4 w-4/5" />
         </div>
-        <div className="hidden md:flex items-center gap-6">
-          <Shimmer className="w-12 h-4" />
-          <Shimmer className="w-12 h-4" />
-          <Shimmer className="w-12 h-4" />
-          <Shimmer className="w-20 h-10 rounded-xl" />
-        </div>
-      </div>
-    </div>
-
-    {/* Hero Banner skeleton */}
-    <div className="relative h-[60vh] bg-navy-950 flex items-end pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-left space-y-4">
-        <Shimmer className="w-32 h-6 rounded-full" />
-        <Shimmer className="w-[50%] h-12" />
-        <div className="flex gap-4">
-          <Shimmer className="w-28 h-5" />
-          <Shimmer className="w-28 h-5" />
-        </div>
-      </div>
-    </div>
-
-    {/* Quick Facts Strip skeleton */}
-    <div className="-mt-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-      <div className="bg-white dark:bg-navy-900 border border-gray-150 dark:border-navy-850 p-6 rounded-3xl shadow-md grid grid-cols-2 md:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex items-center gap-3.5">
-            <Shimmer className="w-12 h-12 rounded-2xl" />
-            <div className="space-y-1.5 flex-1">
-              <Shimmer className="w-12 h-3" />
-              <Shimmer className="w-20 h-4" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    {/* Core Grid skeleton */}
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
-      {/* Left detail side */}
-      <div className="lg:col-span-2 space-y-6">
-        <div className="flex gap-2 max-w-sm">
-          <Shimmer className="flex-1 h-10 rounded-xl" />
-          <Shimmer className="flex-1 h-10 rounded-xl" />
-          <Shimmer className="flex-1 h-10 rounded-xl" />
-        </div>
-        <div className="bg-white dark:bg-navy-900 border border-gray-150 dark:border-navy-850 p-6 rounded-3xl space-y-4 shadow-sm">
-          <Shimmer className="w-40 h-6" />
-          <Shimmer className="w-full h-4" />
-          <Shimmer className="w-full h-4" />
-          <Shimmer className="w-[85%] h-4" />
-        </div>
-      </div>
-      {/* Right sidebar side */}
-      <div className="lg:col-span-1 space-y-6">
-        <div className="bg-white dark:bg-navy-900 border border-gray-150 dark:border-navy-850 p-6 rounded-3xl space-y-4 shadow-md">
-          <Shimmer className="w-36 h-6" />
-          <Shimmer className="w-full h-10 rounded-xl" />
-          <Shimmer className="w-full h-10 rounded-xl" />
-          <Shimmer className="w-full h-8" />
-        </div>
+        <div className="skeleton h-96 rounded-3xl lg:col-span-4" />
       </div>
     </div>
   </div>

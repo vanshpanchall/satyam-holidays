@@ -60,6 +60,12 @@ const reviewSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Public response from the business, shown under the review
+    adminReply: {
+      text: { type: String, trim: true, maxlength: 1000 },
+      repliedAt: { type: Date },
+      author: { type: String },
+    },
   },
   {
     timestamps: true,

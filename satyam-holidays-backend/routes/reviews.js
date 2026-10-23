@@ -92,6 +92,108 @@ router.post("/", postReviewLimiter, validateReview, handleValidationErrors, asyn
   }
 });
 
+// Public: recent approved 4-5 star reviews across all packages (homepage testimonials)
+router.get("/featured", async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 6, 1), 12);
+    const reviews = await reviewService.getFeaturedReviews(limit);
+    res.set("Cache-Control", "public, s-maxage=600, stale-while-revalidate=120");
+    return successResponse(res, reviews);
+  } catch (error) {
+    logger.error("Error fetching featured reviews:", error);
+    return errorResponse(res, ApiErrors.internal("Failed to fetch reviews"), req.id);
+  }
+});
+
+// Public: Google rating + latest Google reviews (cached server-side; key never leaves the backend)
+router.get("/google", async (req, res) => {
+  try {
+    const googleReviewsService = require("../services/googleReviewsService");
+    const data = await googleReviewsService.getReviews();
+    res.set("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=21600");
+    return successResponse(res, data);
+  } catch (error) {
+    logger.error("Error fetching Google reviews:", error);
+    return successResponse(res, { configured: false, reason: "error" });
+  }
+});
+
+// Admin: bypass the cache (used by "Test connection" in settings)
+router.post("/google/refresh", auth, async (req, res) => {
+  try {
+    const googleReviewsService = require("../services/googleReviewsService");
+    res.set("Cache-Control", "private, no-store");
+    return successResponse(res, await googleReviewsService.getReviews({ force: true }));
+  } catch (error) {
+    logger.error("Error refreshing Google reviews:", error);
+    return errorResponse(res, ApiErrors.internal("Failed to refresh Google reviews"), req.id);
+  }
+});
+
+// Admin: moderation counts and rating spread
+router.get("/admin/stats", auth, async (req, res) => {
+  try {
+    res.set("Cache-Control", "private, no-store");
+    return successResponse(res, await reviewService.getAdminStats());
+  } catch (error) {
+    logger.error("Error fetching review stats:", error);
+    return errorResponse(res, ApiErrors.internal("Failed to fetch review stats"), req.id);
+  }
+});
+
+// Admin: change status of many reviews at once
+router.put(
+  "/bulk/status",
+  auth,
+  [
+    body("ids").isArray({ min: 1, max: 200 }).withMessage("ids must be a non-empty array"),
+    body("ids.*").isMongoId().withMessage("Invalid review ID"),
+    body("status").isIn(["pending", "approved", "rejected", "spam"]).withMessage("Invalid status"),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const updated = await reviewService.bulkUpdateStatus(req.body.ids, req.body.status);
+      logAudit(
+        req,
+        `BULK_STATUS_${req.body.status.toUpperCase()}`,
+        "review",
+        req.body.ids.join(",")
+      );
+      return successResponse(res, { updated }, 200, { message: `${updated} reviews updated` });
+    } catch (error) {
+      logger.error("Error bulk-updating reviews:", error);
+      return errorResponse(res, ApiErrors.internal("Failed to update reviews"), req.id);
+    }
+  }
+);
+
+// Admin: public reply to a review (empty text removes the reply)
+router.patch(
+  "/:reviewId/reply",
+  auth,
+  [
+    param("reviewId").isMongoId().withMessage("Invalid review ID"),
+    body("text").optional({ nullable: true }).isString().isLength({ max: 1000 }),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const text = String(req.body.text || "").trim();
+      const review = await reviewService.setReply(
+        req.params.reviewId,
+        text,
+        req.user?.user?.email || "admin"
+      );
+      logAudit(req, text ? "REPLY" : "REPLY_REMOVED", "review", req.params.reviewId);
+      return successResponse(res, review, 200, { message: text ? "Reply saved" : "Reply removed" });
+    } catch (error) {
+      logger.error("Error saving review reply:", error);
+      return errorResponse(res, ApiErrors.internal("Failed to save reply"), req.id);
+    }
+  }
+);
+
 // Get reviews for a package
 router.get("/package/:packageId", validatePagination, handleValidationErrors, async (req, res) => {
   try {
@@ -177,7 +279,8 @@ router.patch(
   async (req, res) => {
     try {
       const { reviewId } = req.params;
-      const review = await reviewService.verifyReview(reviewId);
+      // { verified: false } removes the badge; anything else (or no body) verifies
+      const review = await reviewService.verifyReview(reviewId, req.body?.verified !== false);
 
       logAudit(req, "VERIFY", "review", reviewId);
       return successResponse(res, review.getSummary(), 200, {
@@ -222,8 +325,9 @@ router.delete(
 router.get("/", auth, validatePagination, handleValidationErrors, async (req, res) => {
   try {
     const { page, limit } = parsePaginationParams(req.query);
-    const { packageId, verified, rating, status } = req.query;
+    const { packageId, verified, rating, status, q } = req.query;
     const filter = {};
+    if (q) filter.q = String(q);
 
     if (packageId) filter.packageId = packageId;
     if (verified !== undefined) filter.verified = verified === "true";

@@ -14,6 +14,29 @@ router.get("/analytics", auth, async (req, res) => {
   }
 });
 
+// GET /api/v1/crm/report?days=30 - period KPIs, trends and breakdowns (days=0 means all time)
+router.get("/report", auth, async (req, res) => {
+  try {
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 0, 0), 3650);
+    const report = await crmService.getReport({ days });
+    res.set("Cache-Control", "private, no-store");
+    return successResponse(res, report);
+  } catch (error) {
+    return errorResponse(res, error, req.id);
+  }
+});
+
+// GET /api/v1/crm/dashboard - one-call summary for the admin home screen
+router.get("/dashboard", auth, async (req, res) => {
+  try {
+    const data = await crmService.getDashboard();
+    res.set("Cache-Control", "private, no-store");
+    return successResponse(res, data);
+  } catch (error) {
+    return errorResponse(res, error, req.id);
+  }
+});
+
 // GET /api/v1/crm/export - Admin only
 router.get("/export", auth, async (req, res) => {
   try {

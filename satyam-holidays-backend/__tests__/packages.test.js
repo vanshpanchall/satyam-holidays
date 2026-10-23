@@ -15,7 +15,6 @@ describe("Packages API", () => {
 
   beforeAll(async () => {
     const User = require("../models/User");
-    const bcrypt = require("bcryptjs");
     const mongoose = require("mongoose");
 
     if (mongoose.connection.readyState !== 1) {
@@ -25,11 +24,11 @@ describe("Packages API", () => {
     const email = process.env.ADMIN_EMAIL.toLowerCase();
     let user = await User.findOne({ email });
     if (!user) {
-      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+      // The User model hashes on save — pass the plain password
       await User.create({
         name: "Test Admin",
         email,
-        password: hashedPassword,
+        password: process.env.ADMIN_PASSWORD,
         role: "admin",
         mfaEnabled: false,
       });
@@ -107,7 +106,7 @@ describe("Packages API", () => {
   });
 
   test("POST /api/packages with auth creates, PUT updates, DELETE removes", async () => {
-    if (!token) return;
+    expect(token).toBeTruthy();
 
     const payload = {
       name: `E2E Package ${Date.now()}`,

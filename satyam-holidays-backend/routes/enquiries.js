@@ -8,6 +8,10 @@ const logger = require("../utils/logger");
 const { ApiErrors, successResponse, errorResponse } = require("../utils/apiResponse");
 const { logAudit } = require("../utils/auditLogger");
 
+// Where a lead came from. Website forms send the first group; staff pick from both when logging one.
+const WEB_SOURCES = ["website", "homepage", "package-page", "ai-planner"];
+const MANUAL_SOURCES = ["phone", "whatsapp", "walk-in", "referral", "social", "other"];
+
 // Validation schema
 const enquirySchema = Joi.object({
   name: Joi.string().required().min(2).max(100),
@@ -38,6 +42,22 @@ const enquirySchema = Joi.object({
   travelers: Joi.string().valid("1", "2", "3", "4", "5+"),
   budget: Joi.string().valid("under-20k", "20k-50k", "50k-1l", "above-1l"),
   message: Joi.string().max(1000).optional(),
+  visaRequired: Joi.boolean().optional(),
+  travelInsurance: Joi.boolean().optional(),
+  referralCodeUsed: Joi.string().trim().max(30).allow("").optional(),
+  source: Joi.string()
+    .valid(...WEB_SOURCES)
+    .default("website"),
+});
+
+// Staff-entered leads: email optional, any channel, no CAPTCHA (admin auth instead)
+const manualEnquirySchema = enquirySchema.keys({
+  email: Joi.string().email().allow("").optional(),
+  source: Joi.string()
+    .valid(...WEB_SOURCES, ...MANUAL_SOURCES)
+    .default("phone"),
+  status: Joi.string().valid("pending", "contacted", "confirmed", "cancelled").default("pending"),
+  note: Joi.string().trim().max(1000).allow("").optional(),
 });
 
 // Create new enquiry
@@ -171,6 +191,43 @@ router.post("/", async (req, res) => {
       ApiErrors.internal("Failed to submit enquiry. Please try again."),
       req.id
     );
+  }
+});
+
+// Log a lead taken by phone, WhatsApp or in person (admin only)
+router.post("/manual", auth, async (req, res) => {
+  try {
+    const { error, value } = manualEnquirySchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+      convert: true,
+    });
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        errors: error.details.map((d) => d.message),
+      });
+    }
+
+    const { note, email, ...data } = value;
+    const author = req.user?.user?.email || "admin";
+    const enquiry = await enquiryService.createEnquiry(
+      {
+        ...data,
+        ...(email ? { email } : {}),
+        adminNotes: note ? [{ text: note, author, createdAt: new Date() }] : [],
+      },
+      req.ip,
+      req.get("User-Agent"),
+      { notify: false }
+    );
+
+    logAudit(req, "CREATE_MANUAL", "enquiry", enquiry._id, { source: data.source });
+    return successResponse(res, enquiry, 201, { message: "Lead added" });
+  } catch (err) {
+    logger.error("Manual enquiry error:", err);
+    return errorResponse(res, ApiErrors.internal("Failed to add lead"), req.id);
   }
 });
 
@@ -341,6 +398,35 @@ router.patch("/:id/status", auth, async (req, res) => {
   } catch (error) {
     logger.error("Update status error:", error);
     return errorResponse(res, ApiErrors.internal("Failed to update status"), req.id);
+  }
+});
+
+// Add an internal note and/or set a follow-up reminder (admin CRM)
+const crmUpdateSchema = Joi.object({
+  note: Joi.string().trim().min(1).max(1000).optional(),
+  followUpDate: Joi.date().allow(null).optional(),
+}).or("note", "followUpDate");
+
+router.patch("/:id/crm", auth, async (req, res) => {
+  try {
+    const { error, value } = crmUpdateSchema.validate(req.body, { stripUnknown: true });
+    if (error) {
+      return errorResponse(res, ApiErrors.badRequest(error.details[0].message), req.id);
+    }
+
+    const enquiry = await enquiryService.updateEnquiryCrm(req.params.id, {
+      ...value,
+      author: req.user?.user?.email || "admin",
+    });
+    if (!enquiry) {
+      return errorResponse(res, ApiErrors.notFound("Enquiry"), req.id);
+    }
+
+    logAudit(req, "UPDATE_CRM", "enquiry", req.params.id, value);
+    return successResponse(res, enquiry, 200, { message: "Enquiry updated" });
+  } catch (error) {
+    logger.error("Update enquiry CRM error:", error);
+    return errorResponse(res, ApiErrors.internal("Failed to update enquiry"), req.id);
   }
 });
 
