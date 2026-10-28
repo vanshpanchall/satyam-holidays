@@ -152,7 +152,12 @@ const PackagesPage = () => {
   useEffect(() => {
     if (!sheetOpen) return undefined;
     document.body.classList.add("modal-open");
-    return () => document.body.classList.remove("modal-open");
+    const onKey = (e) => e.key === "Escape" && setSheetOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("modal-open");
+      window.removeEventListener("keydown", onKey);
+    };
   }, [sheetOpen]);
 
   const setParam = (key, value) => {
@@ -371,7 +376,7 @@ const PackagesPage = () => {
           role="dialog"
           aria-modal="true"
           aria-label="Filters"
-          className={`absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-4xl bg-page transition-transform duration-500 ease-out-expo ${
+          className={`absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-4xl supports-[height:100dvh]:max-h-[85dvh] bg-page transition-transform duration-500 ease-out-expo ${
             sheetOpen ? "translate-y-0" : "translate-y-full"
           }`}
         >

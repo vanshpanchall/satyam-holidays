@@ -251,7 +251,7 @@ const AdminEnquiries = () => {
           onClick={(e) => e.stopPropagation()}
           className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden"
         >
-          <div className="flex items-center justify-between px-6 py-5">
+          <div className="flex items-start justify-between gap-3 px-5 py-4 sm:px-6 sm:py-5">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                 Enquiry Specification
@@ -272,7 +272,7 @@ const AdminEnquiries = () => {
             </button>
           </div>
 
-          <ScrollArea className="max-h-[75vh]" contentClassName="p-6 space-y-6">
+          <ScrollArea className="max-h-[75vh]" contentClassName="p-4 sm:p-6 space-y-6">
             <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-100 dark:border-slate-800">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-2xl shadow-sm">
                 {selectedEnquiry.name?.charAt(0)?.toUpperCase()}
@@ -488,7 +488,7 @@ const AdminEnquiries = () => {
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
               <a
                 href={`mailto:${selectedEnquiry.email}`}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-sm shadow-sm transition-colors"
@@ -554,7 +554,7 @@ const AdminEnquiries = () => {
               className="w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
             />
           </div>
-          <div className="flex gap-1 overflow-x-auto pb-1">
+          <div className="flex flex-wrap gap-1 lg:flex-nowrap lg:overflow-x-auto lg:pb-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -573,7 +573,7 @@ const AdminEnquiries = () => {
           <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-900/50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Customer
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">
@@ -582,10 +582,10 @@ const AdminEnquiries = () => {
                 <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">
                   Date
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden sm:table-cell">
                   Status
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-4 sm:px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Action
                 </th>
               </tr>
@@ -599,7 +599,7 @@ const AdminEnquiries = () => {
                       key={enquiry._id || enquiry.id}
                       className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                     >
-                      <td className="px-5 py-4">
+                      <td className="px-4 sm:px-5 py-4 w-full max-w-0 sm:w-auto sm:max-w-none">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                             {enquiry.name?.charAt(0)?.toUpperCase() || "?"}
@@ -610,6 +610,26 @@ const AdminEnquiries = () => {
                             </p>
                             <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
                               {enquiry.email}
+                            </p>
+                            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 sm:hidden">
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium capitalize ${status.color}`}
+                              >
+                                {status.icon} {enquiry.status}
+                              </span>
+                              {enquiry.createdAt && (
+                                <span className="text-xs text-slate-400">
+                                  {new Date(enquiry.createdAt).toLocaleDateString()}
+                                </span>
+                              )}
+                              {enquiry.followUpDate &&
+                                new Date(enquiry.followUpDate) <= new Date() &&
+                                enquiry.status !== "confirmed" &&
+                                enquiry.status !== "cancelled" && (
+                                  <span className="text-xs font-medium text-red-600 dark:text-red-400">
+                                    Follow-up due
+                                  </span>
+                                )}
                             </p>
                           </div>
                         </div>
@@ -622,7 +642,7 @@ const AdminEnquiries = () => {
                       <td className="px-5 py-4 hidden lg:table-cell text-sm text-slate-500 dark:text-slate-400">
                         {enquiry.createdAt ? new Date(enquiry.createdAt).toLocaleDateString() : "—"}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-4 hidden sm:table-cell">
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium capitalize ${status.color}`}
                         >
@@ -637,7 +657,7 @@ const AdminEnquiries = () => {
                             </span>
                           )}
                       </td>
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-4 sm:px-5 py-4 text-right">
                         <button
                           onClick={() => setSelectedEnquiry(enquiry)}
                           className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium text-sm"

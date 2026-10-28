@@ -25,6 +25,7 @@ import SiteLayout from "../components/SiteLayout";
 import Meta from "../components/Meta";
 import Img from "../components/ui/Img";
 import Select from "../components/ui/Select";
+import CaptchaFit from "../components/ui/CaptchaFit";
 import PackageCard from "../components/PackageCard";
 import ReviewList from "../components/ReviewList";
 import ReviewForm from "../components/ReviewForm";
@@ -60,6 +61,7 @@ const DEPARTURE_STATUS = {
 /* ── Gallery with lightbox ─────────────────────────────── */
 const Gallery = ({ images, name }) => {
   const [open, setOpen] = useState(null);
+  const touchX = useRef(0);
 
   useEffect(() => {
     if (open === null) return undefined;
@@ -119,8 +121,13 @@ const Gallery = ({ images, name }) => {
               sizes={i === 0 ? "(max-width: 768px) 100vw, 50vw" : "25vw"}
               className="transition-transform duration-700 group-hover:scale-[1.04]"
             />
-            {i === tiles.length - 1 && images.length > 1 && (
-              <span className="absolute bottom-4 right-4 rounded-full bg-white/95 px-4 py-2 text-sm text-ink-900 shadow">
+            {/* Phones only show the first tile, so the count badge moves onto it there */}
+            {images.length > 1 && (i === 0 || i === tiles.length - 1) && (
+              <span
+                className={`absolute bottom-4 right-4 rounded-full bg-white/95 px-4 py-2 text-sm text-ink-900 shadow ${
+                  i === 0 ? "md:hidden" : "hidden md:inline"
+                }`}
+              >
                 View {images.length} photos
               </span>
             )}
@@ -148,7 +155,17 @@ const Gallery = ({ images, name }) => {
               <PiX className="h-5 w-5" />
             </button>
           </div>
-          <div className="relative flex flex-1 items-center justify-center px-4 pb-6">
+          <div
+            className="relative flex min-h-0 flex-1 items-center justify-center px-4 pb-6"
+            onTouchStart={(e) => {
+              touchX.current = e.touches[0].clientX;
+            }}
+            onTouchEnd={(e) => {
+              const dx = e.changedTouches[0].clientX - touchX.current;
+              if (images.length < 2 || Math.abs(dx) < 50) return;
+              setOpen((i) => (i + (dx < 0 ? 1 : -1) + images.length) % images.length);
+            }}
+          >
             <img
               src={imageUrl(images[open], 1920)}
               alt=""
@@ -255,9 +272,9 @@ const Itinerary = ({ days }) => {
 const Section = ({ id, title, children }) => (
   <section
     id={id}
-    className="anchor border-t border-line py-12 first-of-type:border-t-0 first-of-type:pt-0"
+    className="anchor border-t border-line py-10 first-of-type:border-t-0 first-of-type:pt-0 sm:py-12"
   >
-    <h2 className="mb-6 font-display text-3xl text-fg">{title}</h2>
+    <h2 className="mb-6 font-display text-2xl text-fg sm:text-3xl">{title}</h2>
     {children}
   </section>
 );
@@ -269,6 +286,7 @@ const PackageLandingPage = () => {
   const { has, toggle } = useWishlist();
   const { packages: catalog } = usePackageCatalog();
   const bookingRef = useRef(null);
+  const [bookingInView, setBookingInView] = useState(false);
 
   const [pkg, setPkg] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -387,6 +405,15 @@ const PackageLandingPage = () => {
       controller.abort();
     };
   }, [pkg, selectedDate, travelersCount, promoCode]);
+
+  // The mobile booking bar would cover the booking form itself, so it steps aside while that's on screen
+  useEffect(() => {
+    const el = bookingRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(([entry]) => setBookingInView(entry.isIntersecting));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [pkg, loading]);
 
   const departures = useMemo(
     () =>
@@ -564,7 +591,7 @@ const PackageLandingPage = () => {
               </Link>
             </li>
             <li aria-hidden="true">/</li>
-            <li className="truncate text-fg" aria-current="page">
+            <li className="min-w-0 max-w-full truncate text-fg" aria-current="page">
               {pkg.name}
             </li>
           </ol>
@@ -625,9 +652,9 @@ const PackageLandingPage = () => {
 
         <Gallery images={images} name={pkg.name} />
 
-        <div className="mt-12 grid gap-12 lg:grid-cols-12">
-          {/* Content */}
-          <div className="lg:col-span-7 xl:col-span-8">
+        <div className="mt-10 grid gap-12 md:mt-12 lg:grid-cols-12">
+          {/* Content — min-w-0 so the horizontally scrolling section nav can't widen the column */}
+          <div className="min-w-0 lg:col-span-7 xl:col-span-8">
             <nav
               aria-label="On this page"
               className="sticky z-20 -mx-4 mb-10 overflow-x-auto border-b border-line bg-page px-4 scrollbar-none sm:mx-0 sm:px-0"
@@ -758,14 +785,14 @@ const PackageLandingPage = () => {
           </div>
 
           {/* Booking card */}
-          <aside className="lg:col-span-5 xl:col-span-4" aria-label="Book this trip">
+          <aside className="min-w-0 lg:col-span-5 xl:col-span-4" aria-label="Book this trip">
             <div
               ref={bookingRef}
               className="anchor lg:sticky"
               style={{ top: "calc(var(--header-h) + 1.5rem)" }}
             >
               <div className="card overflow-hidden">
-                <div className="border-b border-line p-6">
+                <div className="border-b border-line p-5 sm:p-6">
                   <p className="text-sm text-muted">Starting from</p>
                   <p className="mt-1 font-display text-4xl text-fg">
                     {formatINR(priceData?.unitPrice || unit)}
@@ -773,7 +800,7 @@ const PackageLandingPage = () => {
                   </p>
                 </div>
 
-                <div className="space-y-5 p-6">
+                <div className="space-y-5 p-5 sm:p-6">
                   <div>
                     <label htmlFor="bk-date" className="label">
                       Departure
@@ -902,7 +929,7 @@ const PackageLandingPage = () => {
                   </dl>
                 </div>
 
-                <div className="border-t border-line bg-raised p-6">
+                <div className="border-t border-line bg-raised p-5 sm:p-6">
                   {enquirySuccess ? (
                     <div role="status" className="space-y-2">
                       <p className="font-display text-2xl text-fg">Request sent.</p>
@@ -957,11 +984,13 @@ const PackageLandingPage = () => {
                           fallback={<p className="text-xs text-muted">Loading verification…</p>}
                         >
                           {PROVIDER === "hcaptcha" ? (
-                            <HCaptcha
-                              sitekey={HCAPTCHA_SITE_KEY}
-                              onVerify={(v) => setCaptchaToken(v || "")}
-                              onExpire={() => setCaptchaToken("")}
-                            />
+                            <CaptchaFit>
+                              <HCaptcha
+                                sitekey={HCAPTCHA_SITE_KEY}
+                                onVerify={(v) => setCaptchaToken(v || "")}
+                                onExpire={() => setCaptchaToken("")}
+                              />
+                            </CaptchaFit>
                           ) : PROVIDER === "recaptcha_v3" ? (
                             <ReCAPTCHA
                               ref={recaptchaRef}
@@ -970,13 +999,13 @@ const PackageLandingPage = () => {
                               onChange={(v) => setCaptchaToken(v || "")}
                             />
                           ) : (
-                            <div className="origin-left scale-90">
+                            <CaptchaFit>
                               <ReCAPTCHA
                                 sitekey={RECAPTCHA_SITE_KEY}
                                 onChange={(v) => setCaptchaToken(v || "")}
                                 onExpired={() => setCaptchaToken("")}
                               />
-                            </div>
+                            </CaptchaFit>
                           )}
                         </Suspense>
                       ) : null}
@@ -1030,12 +1059,22 @@ const PackageLandingPage = () => {
       </div>
 
       {/* Mobile booking bar */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-4 border-t border-line bg-page/95 px-4 py-3 backdrop-blur lg:hidden">
-        <div>
+      <div
+        className={`fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-4 border-t border-line bg-page/95 px-4 py-3 backdrop-blur transition-transform duration-300 ease-out-expo lg:hidden ${
+          bookingInView ? "translate-y-full" : ""
+        }`}
+        aria-hidden={bookingInView || undefined}
+      >
+        <div className="min-w-0">
           <p className="text-xs text-muted">Est. total · {travelersCount} pax</p>
           <p className="font-display text-xl text-fg">{formatINR(finalDisplayPrice)}</p>
         </div>
-        <button type="button" onClick={scrollToBooking} className="btn btn-accent">
+        <button
+          type="button"
+          onClick={scrollToBooking}
+          tabIndex={bookingInView ? -1 : undefined}
+          className="btn btn-accent"
+        >
           Check availability
         </button>
       </div>

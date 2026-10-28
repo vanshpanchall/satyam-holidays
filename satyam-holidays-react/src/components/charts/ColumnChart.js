@@ -1,4 +1,4 @@
-import React, { useId, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 
 /*
  * Column chart for 1–3 series over time (e.g. enquiries received vs confirmed per day).
@@ -51,13 +51,26 @@ const ColumnChart = ({
   const plotRef = useRef(null);
   const [active, setActive] = useState(null);
   const [showTable, setShowTable] = useState(false);
+  const [plotWidth, setPlotWidth] = useState(0);
+
+  useEffect(() => {
+    const el = plotRef.current;
+    if (!el) return undefined;
+    setPlotWidth(el.clientWidth);
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(([entry]) => setPlotWidth(entry.contentRect.width));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [showTable]);
 
   const max = useMemo(
     () => niceMax(Math.max(0, ...data.flatMap((d) => series.map((s) => d.values[s.key] || 0)))),
     [data, series]
   );
   const ticks = [max, max / 2, 0];
-  const labelEvery = Math.max(1, Math.ceil(data.length / 7));
+  // Roughly one x-axis label per 72px of plot (labels like "29 Sept" are ~45px), at most 7
+  const maxLabels = plotWidth ? Math.max(2, Math.min(7, Math.floor(plotWidth / 72))) : 7;
+  const labelEvery = Math.max(1, Math.ceil(data.length / maxLabels));
   const total = (key) => data.reduce((sum, d) => sum + (d.values[key] || 0), 0);
 
   const indexFromPointer = (clientX) => {
@@ -229,7 +242,8 @@ const ColumnChart = ({
               {data.map((d, i) => {
                 const last = i === data.length - 1;
                 if (!(i % labelEvery === 0 || last)) return null;
-                if (!last && data.length - 1 - i < labelEvery / 2) return null; // avoid colliding with the last label
+                // The last label is right-aligned, so it needs more room than a centred one
+                if (!last && data.length - 1 - i < labelEvery * 0.75) return null;
                 const left = i === 0 ? "0%" : last ? "100%" : `${((i + 0.5) / data.length) * 100}%`;
                 const shift = i === 0 ? "0" : last ? "-100%" : "-50%";
                 return (

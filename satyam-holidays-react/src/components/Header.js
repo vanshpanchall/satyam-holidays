@@ -73,17 +73,21 @@ const AnnouncementBar = () => {
 const Wordmark = ({ light }) => {
   const siteConfig = useSiteConfig();
   return (
-    <Link to="/" className="flex items-center gap-3" aria-label={`${siteConfig.company.name} home`}>
+    <Link
+      to="/"
+      className="flex min-w-0 items-center gap-2.5 sm:gap-3"
+      aria-label={`${siteConfig.company.name} home`}
+    >
       <img
         src={siteConfig.company.logo}
         alt=""
-        className="h-10 w-10 rounded-full bg-white object-contain p-1"
+        className="h-9 w-9 shrink-0 rounded-full bg-white object-contain p-1 sm:h-10 sm:w-10"
         width="40"
         height="40"
       />
-      <span className="leading-none">
+      <span className="min-w-0 leading-none">
         <span
-          className={`block font-display text-[1.35rem] tracking-tight ${
+          className={`block truncate font-display text-[1.15rem] tracking-tight min-[360px]:text-[1.35rem] ${
             light ? "text-white" : "text-fg"
           }`}
         >
@@ -113,13 +117,26 @@ const Header = ({ overlay = false }) => {
   useLayoutEffect(() => {
     const el = headerRef.current;
     if (!el) return undefined;
-    const update = () =>
-      document.documentElement.style.setProperty("--header-h", `${el.offsetHeight}px`);
+    const root = document.documentElement;
+    const update = () => {
+      const value = `${el.offsetHeight}px`;
+      if (root.style.getPropertyValue("--header-h") !== value)
+        root.style.setProperty("--header-h", value);
+    };
     update();
     if (typeof ResizeObserver === "undefined") return undefined;
-    const observer = new ResizeObserver(update);
+    // Writing the variable resizes <body>, which the page scrollbar observes; doing it inside this
+    // callback triggers "ResizeObserver loop completed with undelivered notifications".
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -164,10 +181,10 @@ const Header = ({ overlay = false }) => {
         }`}
       >
         <AnnouncementBar />
-        <div className="container-site flex h-[4.5rem] items-center justify-between gap-6">
+        <div className="container-site flex h-[4.5rem] items-center justify-between gap-3 sm:gap-6">
           <Wordmark light={transparent} />
 
-          <nav aria-label="Primary" className="hidden items-center gap-7 lg:flex">
+          <nav aria-label="Primary" className="hidden items-center gap-5 lg:flex xl:gap-7">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.label}
@@ -180,7 +197,7 @@ const Header = ({ overlay = false }) => {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <a
               href={toTel(phone)}
               className={`mr-2 hidden items-center gap-2 text-sm xl:flex ${

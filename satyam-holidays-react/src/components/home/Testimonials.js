@@ -204,7 +204,7 @@ const Testimonials = () => {
         />
 
         {items.length > 0 && (
-          <div className="-mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-4 scrollbar-none md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-3">
+          <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-5 overflow-x-auto px-4 pb-4 scrollbar-none md:mx-0 md:scroll-px-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-3">
             {items.map((t) => (
               <Card key={t.id} t={t} />
             ))}

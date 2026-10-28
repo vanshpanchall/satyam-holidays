@@ -16,6 +16,7 @@ import { toTel, toWhatsApp } from "../utils/format";
 import { BUDGETS } from "../pages/packagesFilters";
 import Accent from "./ui/Accent";
 import Select from "./ui/Select";
+import CaptchaFit from "./ui/CaptchaFit";
 import { DESTINATIONS } from "../config/enquiryOptions";
 
 const ReCAPTCHA = lazyWithRecovery(() => import("react-google-recaptcha"), "enquiry-recaptcha");
@@ -163,7 +164,7 @@ const Enquiry = ({ sectionId = "enquiry" }) => {
       <div className="container-site">
         <div className="grid overflow-hidden rounded-4xl border border-line lg:grid-cols-12">
           {/* Context panel */}
-          <aside className="flex flex-col justify-between gap-12 bg-raised p-7 md:p-12 lg:col-span-5">
+          <aside className="flex min-w-0 flex-col justify-between gap-10 bg-raised p-5 sm:p-7 md:gap-12 md:p-12 lg:col-span-5">
             <div>
               <p className="eyebrow mb-4">Plan a trip</p>
               <h2 className="heading text-balance">
@@ -205,7 +206,7 @@ const Enquiry = ({ sectionId = "enquiry" }) => {
           </aside>
 
           {/* Form */}
-          <div className="bg-surface p-7 md:p-12 lg:col-span-7">
+          <div className="min-w-0 bg-surface p-5 sm:p-7 md:p-12 lg:col-span-7">
             {submitStatus === "success" ? (
               <div
                 className="flex h-full flex-col items-start justify-center gap-5 py-10"
@@ -390,11 +391,13 @@ const Enquiry = ({ sectionId = "enquiry" }) => {
                       fallback={<p className="text-sm text-muted">Loading verification…</p>}
                     >
                       {PROVIDER === "hcaptcha" ? (
-                        <HCaptcha
-                          sitekey={HCAPTCHA_SITE_KEY}
-                          onVerify={(val) => setCaptchaToken(val || "")}
-                          onExpire={() => setCaptchaToken("")}
-                        />
+                        <CaptchaFit>
+                          <HCaptcha
+                            sitekey={HCAPTCHA_SITE_KEY}
+                            onVerify={(val) => setCaptchaToken(val || "")}
+                            onExpire={() => setCaptchaToken("")}
+                          />
+                        </CaptchaFit>
                       ) : PROVIDER === "recaptcha_v3" ? (
                         <>
                           <ReCAPTCHA
@@ -406,11 +409,13 @@ const Enquiry = ({ sectionId = "enquiry" }) => {
                           <p className="text-xs text-muted">Protected by reCAPTCHA.</p>
                         </>
                       ) : (
-                        <ReCAPTCHA
-                          sitekey={RECAPTCHA_SITE_KEY}
-                          onChange={(val) => setCaptchaToken(val || "")}
-                          onExpired={() => setCaptchaToken("")}
-                        />
+                        <CaptchaFit>
+                          <ReCAPTCHA
+                            sitekey={RECAPTCHA_SITE_KEY}
+                            onChange={(val) => setCaptchaToken(val || "")}
+                            onExpired={() => setCaptchaToken("")}
+                          />
+                        </CaptchaFit>
                       )}
                     </Suspense>
                   </div>

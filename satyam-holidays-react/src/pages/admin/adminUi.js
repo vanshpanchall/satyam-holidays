@@ -113,17 +113,19 @@ export const StatTile = ({
   const DeltaIcon = flat ? PiMinus : up ? PiArrowUpRight : PiArrowDownRight;
 
   return (
-    <div className="card flex flex-col justify-between gap-4 p-5">
+    <div className="card flex min-w-0 flex-col justify-between gap-3 p-4 sm:gap-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm text-muted">{label}</p>
+        <p className="text-[13px] leading-snug text-muted sm:text-sm">{label}</p>
         {Icon && (
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-raised text-muted">
+          <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-raised text-muted sm:flex">
             <Icon className="h-4 w-4" aria-hidden="true" />
           </span>
         )}
       </div>
       <div>
-        <p className="text-3xl font-semibold tracking-tight text-fg">{value}</p>
+        <p className="break-words text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
+          {value}
+        </p>
         {(hasDelta || hint) && (
           <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
             {hasDelta && (

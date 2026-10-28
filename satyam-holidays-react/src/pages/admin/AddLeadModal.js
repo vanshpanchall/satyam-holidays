@@ -87,7 +87,7 @@ const AddLeadModal = ({ onClose, onCreated }) => {
         aria-modal="true"
         aria-labelledby="add-lead-title"
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[94vh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl bg-page shadow-2xl sm:rounded-3xl"
+        className="flex max-h-[94vh] supports-[height:100dvh]:max-h-[94dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl bg-page shadow-2xl sm:rounded-3xl"
       >
         <div className="flex shrink-0 items-center justify-between border-b border-line px-6 py-4">
           <div>

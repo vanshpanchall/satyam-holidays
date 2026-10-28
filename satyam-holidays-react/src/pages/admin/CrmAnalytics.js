@@ -223,7 +223,7 @@ const CrmAnalytics = () => {
     ) : (
       <div className="space-y-6" role="status" aria-label="Loading report">
         <div className="skeleton h-12 w-64 rounded-full" />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="skeleton h-36 rounded-3xl" />
           ))}
@@ -265,7 +265,7 @@ const CrmAnalytics = () => {
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatTile
           label="Enquiries"
           value={kpis.enquiries}

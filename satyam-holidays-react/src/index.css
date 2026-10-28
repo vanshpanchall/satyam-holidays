@@ -247,6 +247,18 @@
   }
 }
 
+/* iOS Safari zooms the page when a focused control's text is under 16px. On touch screens text
+   controls get 16px; the element+:not() selector outranks Tailwind's smaller text-* classes, and
+   controls deliberately set larger are left alone. (Attribute selectors, not .text-2xl etc., because
+   Tailwind rewrites utility class selectors wherever that utility is @apply'd.) */
+@media (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [class~="text-lg"], [class~="text-xl"], [class~="text-2xl"], [class~="text-3xl"]),
+  select:not([class~="text-lg"], [class~="text-xl"]),
+  textarea:not([class~="text-lg"], [class~="text-xl"]) {
+    font-size: 16px;
+  }
+}
+
 /* ── Scroll reveal (see utils/useReveal.js) ── */
 .reveal {
   opacity: 0;

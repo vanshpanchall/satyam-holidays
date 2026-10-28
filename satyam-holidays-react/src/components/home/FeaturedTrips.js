@@ -68,7 +68,7 @@ const FeaturedTrips = ({ packages, loading, error, onRetry }) => {
             </button>
           </div>
         ) : (
-          <div className="-mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-4 scrollbar-none sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-x-6 sm:gap-y-12 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+          <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-5 overflow-x-auto px-4 pb-4 scrollbar-none sm:mx-0 sm:scroll-px-0 sm:grid sm:grid-cols-2 sm:gap-x-6 sm:gap-y-12 sm:overflow-visible sm:px-0 lg:grid-cols-4">
             {loading
               ? Array.from({ length: 4 }, (_, i) => (
                   <div key={i} className="w-[78vw] shrink-0 snap-start sm:w-auto">

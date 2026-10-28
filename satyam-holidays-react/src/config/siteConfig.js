@@ -158,21 +158,12 @@ export const safeJson = async (response) => {
   }
 };
 
-// Resolve image URL — handles relative /uploads/ paths, Cloudinary URLs, and external URLs.
-// External URLs are proxied through Cloudinary's fetch delivery type for CDN caching,
-// format/quality optimization, and to eliminate direct external image request failures.
-const CLOUDINARY_CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || "dfoznqeww";
-
+// Resolve image URL — relative /uploads/ paths go to the API; Cloudinary and other absolute URLs
+// are used as-is. (External URLs must not be routed through Cloudinary's `fetch` delivery type:
+// it is restricted on this account and answers 401, which broke every external image.)
 export const resolveImageUrl = (imageUrl) => {
   if (!imageUrl) return "";
-  // Relative upload path → resolve against API base
   if (imageUrl.startsWith("/uploads")) return apiUrl(imageUrl);
-  // Already a Cloudinary URL → return as-is
-  if (imageUrl.includes("cloudinary.com")) return imageUrl;
-  // Absolute external URL → proxy through Cloudinary fetch for CDN + optimization
-  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/fetch/w_800,q_auto,f_auto/${imageUrl}`;
-  }
   return imageUrl;
 };
 

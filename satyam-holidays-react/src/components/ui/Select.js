@@ -79,9 +79,11 @@ const Select = ({
     const below = window.innerHeight - rect.bottom - GAP;
     const above = rect.top - GAP;
     const dropUp = below < Math.min(MENU_MAX, 200) && above > below;
+    // Keep the (min 200px) menu inside the viewport when the trigger sits near the right edge
+    const width = Math.min(Math.max(rect.width, 200), window.innerWidth - GAP * 2);
     setPosition({
-      left: rect.left,
-      width: Math.max(rect.width, 200),
+      left: Math.max(GAP, Math.min(rect.left, window.innerWidth - width - GAP)),
+      width,
       maxHeight: Math.max(160, Math.min(MENU_MAX, (dropUp ? above : below) - 8)),
       ...(dropUp ? { bottom: window.innerHeight - rect.top + GAP } : { top: rect.bottom + GAP }),
     });

@@ -101,8 +101,18 @@ const AdminSettings = () => {
     );
   }
 
+  const savableTab = [
+    "company",
+    "contact",
+    "social",
+    "hero",
+    "homepage",
+    "legal",
+    "notifications",
+  ].includes(activeTab);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20 lg:pb-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -111,9 +121,7 @@ const AdminSettings = () => {
             Manage your website content & configuration
           </p>
         </div>
-        {["company", "contact", "social", "hero", "homepage", "legal", "notifications"].includes(
-          activeTab
-        ) && (
+        {savableTab && (
           <button
             onClick={handleSave}
             disabled={saving || !dirty}
@@ -128,7 +136,7 @@ const AdminSettings = () => {
       {/* Tabs + Content */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Tab Nav */}
-        <div className="lg:w-56 flex lg:flex-col gap-1 overflow-x-auto">
+        <div className="-mx-4 flex gap-1 overflow-x-auto px-4 scrollbar-none lg:mx-0 lg:w-56 lg:shrink-0 lg:flex-col lg:px-0">
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -145,7 +153,7 @@ const AdminSettings = () => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+        <div className="min-w-0 flex-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
           {activeTab === "company" && (
             <CompanyTab settings={settings} updateSetting={updateSetting} inputClass={inputClass} />
           )}
@@ -173,6 +181,21 @@ const AdminSettings = () => {
           {activeTab === "mfa" && <MfaTab inputClass={inputClass} />}
         </div>
       </div>
+
+      {/* The header button scrolls away on long tabs, so small screens get a pinned save bar */}
+      {savableTab && dirty && (
+        <div className="fixed inset-x-0 bottom-0 z-20 flex items-center justify-between gap-3 border-t border-line bg-page/95 px-4 py-3 backdrop-blur lg:hidden">
+          <p className="text-sm text-muted">Unsaved changes</p>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm shadow-sm transition-colors disabled:opacity-50"
+          >
+            {saving ? <FaSpinner className="animate-spin" /> : <FaSave />}
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

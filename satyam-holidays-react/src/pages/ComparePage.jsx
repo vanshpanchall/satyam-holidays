@@ -94,7 +94,7 @@ const Picker = ({ options, onPick, onClose }) => {
           onChange={(e) => setTerm(e.target.value)}
           placeholder="Search trips"
           aria-label="Search trips to compare"
-          className="w-full bg-transparent text-sm focus:outline-none"
+          className="w-full min-w-0 bg-transparent text-sm focus:outline-none"
         />
         <button
           type="button"
@@ -173,9 +173,17 @@ const ComparePage = () => {
 
       <div className="container-site py-12">
         <div className="-mx-4 overflow-x-auto px-4 pb-4">
-          <div className="grid min-w-[760px] grid-cols-[10rem_repeat(3,minmax(0,1fr))] gap-x-4">
+          {/* Row labels stay pinned while the trips scroll sideways on narrow screens; the label
+              column only exists once there are rows to label */}
+          <div
+            className={`grid gap-x-3 sm:gap-x-4 ${
+              selected.length > 0
+                ? "min-w-[620px] grid-cols-[6.5rem_repeat(3,minmax(0,1fr))] sm:min-w-[760px] sm:grid-cols-[10rem_repeat(3,minmax(0,1fr))]"
+                : "min-w-[540px] grid-cols-3 sm:min-w-0"
+            }`}
+          >
             {/* Header row */}
-            <div />
+            {selected.length > 0 && <div className="sticky left-0 z-10 bg-page" />}
             {slots.map((pkg, i) =>
               pkg ? (
                 <div key={pkgId(pkg)} className="relative">
@@ -224,7 +232,7 @@ const ComparePage = () => {
             {selected.length > 0 &&
               ROWS.map((row) => (
                 <React.Fragment key={row.label}>
-                  <div className="border-t border-line py-5 text-[11px] uppercase tracking-[0.16em] text-muted">
+                  <div className="sticky left-0 z-10 border-t border-line bg-page py-5 pr-2 text-[11px] uppercase tracking-[0.16em] text-muted">
                     {row.label}
                   </div>
                   {slots.map((pkg, i) => (
@@ -240,7 +248,7 @@ const ComparePage = () => {
 
             {selected.length > 0 && (
               <>
-                <div className="border-t border-line" />
+                <div className="sticky left-0 z-10 border-t border-line bg-page" />
                 {slots.map((pkg, i) => (
                   <div key={i} className="border-t border-line pt-6">
                     {pkg && (
