@@ -364,6 +364,36 @@ router.get("/slug/:slug", async (req, res) => {
   }
 });
 
+// GET /api/v1/packages/slug/:slug/itinerary.pdf — printable, shareable trip itinerary
+router.get("/slug/:slug/itinerary.pdf", async (req, res) => {
+  try {
+    const Package = require("../models/Package");
+    const quoteService = require("../services/quoteService");
+    const { buildItineraryPdf } = require("../utils/pdf");
+    const query = mongoose.isValidObjectId(req.params.slug)
+      ? { $or: [{ _id: req.params.slug }, { slug: req.params.slug }], isActive: true }
+      : { slug: req.params.slug, isActive: true };
+    const pkg = await Package.findOne(query).lean();
+    if (!pkg) {
+      return errorResponse(res, ApiErrors.notFound("Package"), req.id);
+    }
+    const { company, site } = await quoteService.getCompany();
+    const pdf = await buildItineraryPdf(pkg, company, {
+      pageUrl: `${site}/packages/${pkg.slug || pkg._id}`,
+    });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `${req.query.inline === "1" ? "inline" : "attachment"}; filename="${pkg.slug || "itinerary"}-itinerary.pdf"`
+    );
+    res.set("Cache-Control", "public, s-maxage=600, stale-while-revalidate=120");
+    return res.send(pdf);
+  } catch (error) {
+    logger.error("Itinerary PDF error:", error);
+    return errorResponse(res, ApiErrors.internal("Failed to create itinerary PDF"), req.id);
+  }
+});
+
 // POST /api/v1/packages/:id/calculate-price — calculate dynamic total price based on date, discount code and travelers
 router.post("/:id/calculate-price", async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {

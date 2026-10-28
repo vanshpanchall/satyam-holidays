@@ -413,6 +413,7 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /wishlist
+Disallow: /quote/
 
 Sitemap: ${SITE_URL}/sitemap.xml
 `;

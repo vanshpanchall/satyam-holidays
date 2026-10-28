@@ -13,6 +13,9 @@ const AdminPackages = lazyWithRecovery(() => import("./AdminPackages"), "admin-p
 const AdminSettings = lazyWithRecovery(() => import("./AdminSettings"), "admin-settings");
 const CrmAnalytics = lazyWithRecovery(() => import("./CrmAnalytics"), "crm-analytics");
 const ReviewModeration = lazyWithRecovery(() => import("./ReviewModeration"), "review-moderation");
+const AdminQuotes = lazyWithRecovery(() => import("./AdminQuotes"), "admin-quotes");
+const AdminInstagram = lazyWithRecovery(() => import("./AdminInstagram"), "admin-instagram");
+const QuoteBuilder = lazyWithRecovery(() => import("./QuoteBuilder"), "quote-builder");
 
 const AdminRouter = () => (
   <Suspense fallback={null}>
@@ -32,6 +35,9 @@ const AdminRouter = () => (
         <Route path="settings" element={<AdminSettings />} />
         <Route path="crm" element={<CrmAnalytics />} />
         <Route path="reviews" element={<ReviewModeration />} />
+        <Route path="quotes" element={<AdminQuotes />} />
+        <Route path="instagram" element={<AdminInstagram />} />
+        <Route path="quotes/:id" element={<QuoteBuilder />} />
       </Route>
       <Route path="*" element={<Navigate to="/admin/login" replace />} />
     </Routes>

@@ -17,7 +17,9 @@ async function loadCatalog() {
     const json = await res.json();
     if (!json.success || !Array.isArray(json.data)) throw new Error("Unexpected package data");
     all.push(...json.data);
-    if (!json.pagination?.hasNextPage) break;
+    // The API reports currentPage/totalPages (older builds sent hasNextPage)
+    const p = json.pagination || {};
+    if (!(p.hasNextPage || Number(p.currentPage) < Number(p.totalPages))) break;
   }
   return all;
 }

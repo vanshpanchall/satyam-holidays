@@ -1,99 +1,205 @@
-import React, { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { io } from "socket.io-client";
 import {
-  FaDownload,
-  FaClock,
-  FaPhoneAlt,
-  FaEnvelope,
-  FaMapMarkerAlt,
-  FaCalendarAlt,
-  FaUsers,
-  FaSearch,
-  FaTimes,
-  FaWhatsapp,
-  FaStickyNote,
-} from "react-icons/fa";
-import { apiUrl, fetchWithAuth, safeJson, toastApiError } from "../../config/siteConfig";
+  PiBellRinging,
+  PiCaretRight,
+  PiClockCountdown,
+  PiDownloadSimple,
+  PiFire,
+  PiKanban,
+  PiMagnifyingGlass,
+  PiPlus,
+  PiRows,
+  PiTray,
+  PiWallet,
+} from "react-icons/pi";
+import siteConfig, {
+  apiUrl,
+  fetchWithAuth,
+  safeJson,
+  toastApiError,
+} from "../../config/siteConfig";
+import Select from "../../components/ui/Select";
 import AddLeadModal from "./AddLeadModal";
-import { sourceLabel } from "./adminUi";
-import { ScrollArea } from "../../components/ui/Scrollbar";
+import EnquiryDrawer from "./EnquiryDrawer";
+import PipelineBoard from "./PipelineBoard";
+import {
+  Avatar,
+  Empty,
+  OPEN_STAGES,
+  PIPELINE,
+  SOURCE_LABELS,
+  StatTile,
+  StatusPill,
+  destinationLabel,
+  estimatedValue,
+  inrCompact,
+  isFollowUpDue,
+  leadTier,
+  pctChange,
+  stageLabel,
+  timeAgo,
+} from "./adminUi";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const SLA_MS = 2 * 60 * 60 * 1000;
+const POLL_MS = 30000;
+const VIEW_KEY = "admin.enquiries.view";
+const idOf = (e) => e._id || e.id;
+
+const QUICK_FILTERS = [
+  {
+    id: "hot",
+    label: "Hot leads",
+    icon: PiFire,
+    test: (e) => leadTier(e.leadScore).id === "hot" && OPEN_STAGES.includes(e.status),
+  },
+  { id: "due", label: "Follow-up due", icon: PiBellRinging, test: isFollowUpDue },
+  {
+    id: "waiting",
+    label: "Waiting > 2h",
+    icon: PiClockCountdown,
+    test: (e) => e.status === "pending" && Date.now() - new Date(e.createdAt) > SLA_MS,
+  },
+];
+
+const SORTS = [
+  { value: "newest", label: "Newest first" },
+  { value: "score", label: "Lead score" },
+  { value: "travel", label: "Travelling soonest" },
+  { value: "waiting", label: "Waiting longest" },
+];
+
+const sorters = {
+  newest: (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+  score: (a, b) => (b.leadScore || 0) - (a.leadScore || 0),
+  travel: (a, b) =>
+    (a.travelDate ? new Date(a.travelDate) : Infinity) -
+    (b.travelDate ? new Date(b.travelDate) : Infinity),
+  waiting: (a, b) =>
+    Number(OPEN_STAGES.includes(b.status)) - Number(OPEN_STAGES.includes(a.status)) ||
+    new Date(a.statusChangedAt || a.createdAt) - new Date(b.statusChangedAt || b.createdAt),
+};
+
+const readView = () => {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "board" ? "board" : "table";
+  } catch {
+    return "table";
+  }
+};
+
+/** The list endpoint caps pages at 100, so walk the cursor (bounded) to get every lead */
+const fetchAllEnquiries = async () => {
+  const all = [];
+  let cursor = "";
+  for (let page = 0; page < 20; page += 1) {
+    const res = await fetchWithAuth(
+      apiUrl(`/api/enquiries?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`)
+    );
+    const json = await safeJson(res);
+    if (!res.ok || !json.success) throw new Error(json.message || "Failed to load enquiries");
+    all.push(...(json.data || []));
+    if (!json.pagination?.hasNextPage || !json.pagination?.nextCursor) break;
+    cursor = json.pagination.nextCursor;
+  }
+  return all;
+};
 
 const AdminEnquiries = () => {
   const [enquiries, setEnquiries] = useState([]);
+  const [quotes, setQuotes] = useState({ list: [], stats: null });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedEnquiry, setSelectedEnquiry] = useState(null);
-  const [noteDraft, setNoteDraft] = useState("");
+  const [error, setError] = useState(null);
+  const [view, setView] = useState(readView);
+  const [stage, setStage] = useState("all");
+  const [quick, setQuick] = useState("");
+  const [source, setSource] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState(null);
   const [savingCrm, setSavingCrm] = useState(false);
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [showAddLead, setShowAddLead] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const loadRef = useRef(null);
 
-  useEffect(() => {
-    fetchEnquiries();
-    const pollInterval = setInterval(fetchEnquiries, 30000);
-    return () => clearInterval(pollInterval);
-  }, []);
-
-  const deepLinkId = searchParams.get("id");
-  useEffect(() => {
-    if (!deepLinkId || loading) return;
-    const found = enquiries.find((e) => (e._id || e.id) === deepLinkId);
-    if (found) {
-      setSelectedEnquiry(found);
-      return;
-    }
-    fetchWithAuth(apiUrl(`/api/enquiries/${deepLinkId}`))
-      .then(safeJson)
-      .then((json) => json.success && json.data && setSelectedEnquiry(json.data))
-      .catch(() => {});
-  }, [deepLinkId, loading, enquiries]);
-
-  const closeEnquiry = () => {
-    setSelectedEnquiry(null);
-    if (deepLinkId) {
-      searchParams.delete("id");
-      setSearchParams(searchParams, { replace: true });
-    }
-  };
-
-  useEffect(() => {
-    setNoteDraft("");
-  }, [selectedEnquiry?._id, selectedEnquiry?.id]);
-
-  useEffect(() => {
-    if (selectedEnquiry) {
-      document.body.classList.add("modal-open");
-    } else {
-      document.body.classList.remove("modal-open");
-    }
-    return () => document.body.classList.remove("modal-open");
-  }, [selectedEnquiry]);
-
-  const fetchEnquiries = async () => {
+  const load = useCallback(async () => {
     try {
-      setLoading(true);
-      const res = await fetchWithAuth(apiUrl("/api/enquiries?limit=100"));
-      if (res.status === 401) {
-        navigate("/admin/login", { replace: true });
-        return;
-      }
-      const json = await safeJson(res);
-      if (json.success) {
-        setEnquiries(json.data || []);
-      }
+      const [list, quoteRes] = await Promise.all([
+        fetchAllEnquiries(),
+        fetchWithAuth(apiUrl("/api/v1/quotes"))
+          .then(safeJson)
+          .catch(() => null),
+      ]);
+      setEnquiries(list);
+      if (quoteRes?.success) setQuotes({ list: quoteRes.data.quotes, stats: quoteRes.data.stats });
+      setError(null);
     } catch (err) {
-      toastApiError(err, "Failed to load enquiries");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
+  }, []);
+  loadRef.current = load;
+
+  useEffect(() => {
+    load();
+    const timer = setInterval(() => loadRef.current?.(), POLL_MS);
+    return () => clearInterval(timer);
+  }, [load]);
+
+  useEffect(() => {
+    const socket = io(siteConfig.api.baseUrl, { transports: ["websocket", "polling"] });
+    socket.on("new-enquiry", (e) => {
+      toast.info(`New enquiry from ${e?.name || "a visitor"}`);
+      loadRef.current?.();
+    });
+    socket.on("enquiry-updated", () => loadRef.current?.());
+    return () => socket.disconnect();
+  }, []);
+
+  // ?id=<enquiry> deep links (dashboard, notifications) open the drawer
+  const deepLinkId = searchParams.get("id");
+  useEffect(() => {
+    if (deepLinkId) setSelectedId(deepLinkId);
+  }, [deepLinkId]);
+  const selected = enquiries.find((e) => idOf(e) === selectedId) || null;
+  useEffect(() => {
+    // Deep-linked lead outside the loaded list: fetch it on its own
+    if (!selectedId || loading || selected) return;
+    fetchWithAuth(apiUrl(`/api/enquiries/${selectedId}`))
+      .then(safeJson)
+      .then((json) => json.success && json.data && setEnquiries((prev) => [json.data, ...prev]))
+      .catch(() => {});
+  }, [selectedId, loading, selected]);
+
+  const closeDrawer = useCallback(() => {
+    setSelectedId(null);
+    if (searchParams.get("id")) {
+      searchParams.delete("id");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  const changeView = (next) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      // ignore
+    }
   };
 
+  const replaceEnquiry = (updated) =>
+    setEnquiries((prev) => prev.map((e) => (idOf(e) === idOf(updated) ? { ...e, ...updated } : e)));
+
   const updateStatus = async (id, status) => {
+    const before = enquiries.find((e) => idOf(e) === id);
+    if (!before || before.status === status) return;
+    // Optimistic: the card moves immediately and snaps back if the server refuses
+    replaceEnquiry({ ...before, status, statusChangedAt: new Date().toISOString() });
     try {
       const res = await fetchWithAuth(apiUrl(`/api/enquiries/${id}/status`), {
         method: "PATCH",
@@ -101,586 +207,392 @@ const AdminEnquiries = () => {
         body: JSON.stringify({ status }),
       });
       const json = await safeJson(res);
-      if (res.ok && json.success) {
-        toast.success(`Status updated to ${status}`);
-        setEnquiries((prev) =>
-          prev.map((enq) => (enq._id === id || enq.id === id ? { ...enq, status } : enq))
-        );
-        if (selectedEnquiry && (selectedEnquiry._id === id || selectedEnquiry.id === id)) {
-          setSelectedEnquiry({ ...selectedEnquiry, status });
-        }
-      } else {
-        toastApiError(json, "Failed to update status");
-      }
+      if (!res.ok || !json.success) throw json;
+      replaceEnquiry(json.data);
+      toast.success(`${before.name} → ${stageLabel(status)}`);
     } catch (err) {
-      toastApiError(err, "Failed to update status");
+      replaceEnquiry(before);
+      toastApiError(err, "Couldn't update the stage");
     }
   };
 
   const saveCrm = async (payload) => {
-    if (!selectedEnquiry) return;
-    const id = selectedEnquiry._id || selectedEnquiry.id;
+    if (!selected) return false;
     setSavingCrm(true);
     try {
-      const res = await fetchWithAuth(apiUrl(`/api/enquiries/${id}/crm`), {
+      const res = await fetchWithAuth(apiUrl(`/api/enquiries/${idOf(selected)}/crm`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const json = await safeJson(res);
-      if (res.ok && json.success) {
-        toast.success(payload.note ? "Note added" : "Follow-up saved");
-        setNoteDraft("");
-        setSelectedEnquiry(json.data);
-        setEnquiries((prev) => prev.map((enq) => ((enq._id || enq.id) === id ? json.data : enq)));
-      } else {
-        toastApiError(json, "Failed to save");
-      }
+      if (!res.ok || !json.success) throw json;
+      replaceEnquiry(json.data);
+      toast.success(payload.note ? "Note added" : "Follow-up saved");
+      return true;
     } catch (err) {
-      toastApiError(err, "Failed to save");
+      toastApiError(err, "Couldn't save");
+      return false;
     } finally {
       setSavingCrm(false);
     }
   };
 
-  const handleExport = async () => {
+  const exportExcel = async () => {
     try {
       const res = await fetchWithAuth(apiUrl("/api/enquiries/export/excel"));
-      if (!res.ok) throw new Error("Export failed");
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      if (!res.ok)
+        throw new Error(res.status === 404 ? "No enquiries to export yet" : "Export failed");
+      const url = URL.createObjectURL(await res.blob());
       const a = document.createElement("a");
       a.href = url;
-      a.download = `enquiries_${new Date().toISOString().split("T")[0]}.xlsx`;
-      document.body.appendChild(a);
+      a.download = `enquiries_${new Date().toISOString().slice(0, 10)}.xlsx`;
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast.success("Downloaded successfully");
+      URL.revokeObjectURL(url);
     } catch (err) {
       toastApiError(err, "Export failed");
     }
   };
 
-  const statusConfig = {
-    pending: {
-      icon: <FaClock />,
-      color: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400",
-    },
-    contacted: {
-      icon: <FaPhoneAlt />,
-      color: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400",
-    },
-    confirmed: {
-      icon: <FaPhoneAlt />,
-      color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400",
-    },
-    cancelled: {
-      icon: <FaTimes />,
-      color: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400",
-    },
-  };
+  /* ── Insights ─────────────────────────────────────────── */
+  const insights = useMemo(() => {
+    const now = Date.now();
+    const age = (e) => now - new Date(e.createdAt);
+    const open = enquiries.filter((e) => OPEN_STAGES.includes(e.status));
+    const pending = enquiries.filter((e) => e.status === "pending");
+    return {
+      thisWeek: enquiries.filter((e) => age(e) < 7 * DAY_MS).length,
+      lastWeek: enquiries.filter((e) => age(e) >= 7 * DAY_MS && age(e) < 14 * DAY_MS).length,
+      pending: pending.length,
+      overSla: pending.filter((e) => age(e) > SLA_MS).length,
+      due: enquiries.filter(isFollowUpDue).length,
+      openCount: open.length,
+      openValue: open.reduce((s, e) => s + estimatedValue(e), 0),
+    };
+  }, [enquiries]);
 
-  const tabs = [
-    { id: "all", label: "All" },
-    { id: "pending", label: "Pending" },
-    { id: "contacted", label: "Contacted" },
-    { id: "confirmed", label: "Confirmed" },
-    { id: "cancelled", label: "Cancelled" },
-  ];
+  const latestQuote = useMemo(() => {
+    const map = new Map();
+    // list is newest first, so the first quote seen per enquiry is the latest
+    quotes.list.forEach((q) => q.enquiry && !map.has(q.enquiry) && map.set(q.enquiry, q));
+    return map;
+  }, [quotes.list]);
 
-  const parseMessage = (msg = "") => {
-    if (!msg) return { comment: "", metadata: null };
-    const metaIndex = msg.indexOf("[Inquired via");
-    if (metaIndex === -1) return { comment: msg, metadata: null };
-    const comment = msg.substring(0, metaIndex).trim();
-    const metaRaw = msg.substring(metaIndex);
-    const lines = metaRaw
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-    const metadata = {};
-    lines.forEach((line) => {
-      if (line.startsWith("[Inquired via")) {
-        metadata.page = line.replace("[Inquired via Page:", "").replace("]", "").trim();
-      } else if (line.startsWith("- ")) {
-        const parts = line.replace("- ", "").split(":");
-        if (parts.length >= 2) {
-          metadata[parts[0].trim()] = parts.slice(1).join(":").trim();
-        }
-      }
-    });
-    return { comment, metadata };
-  };
+  /* ── Filtering ────────────────────────────────────────── */
+  const sources = useMemo(
+    () => [...new Set(enquiries.map((e) => e.source || "website"))].sort(),
+    [enquiries]
+  );
+  const stageCounts = useMemo(() => {
+    const counts = { all: enquiries.length };
+    PIPELINE.forEach((s) => (counts[s.id] = enquiries.filter((e) => e.status === s.id).length));
+    return counts;
+  }, [enquiries]);
 
-  const filteredEnquiries = enquiries
-    .filter((enquiry) => activeTab === "all" || enquiry.status === activeTab)
-    .filter((enquiry) => {
-      const query = searchTerm.toLowerCase();
-      return (
-        !query ||
-        enquiry.name?.toLowerCase().includes(query) ||
-        enquiry.email?.toLowerCase().includes(query) ||
-        enquiry.phone?.includes(searchTerm) ||
-        enquiry.destination?.toLowerCase().includes(query)
-      );
-    });
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const quickTest = QUICK_FILTERS.find((f) => f.id === quick)?.test;
+    return enquiries
+      .filter((e) => view === "board" || stage === "all" || e.status === stage)
+      .filter((e) => !source || (e.source || "website") === source)
+      .filter((e) => !quickTest || quickTest(e))
+      .filter(
+        (e) =>
+          !q ||
+          [e.name, e.email, e.phone, e.destination, destinationLabel(e.destination)]
+            .filter(Boolean)
+            .some((v) => String(v).toLowerCase().includes(q))
+      )
+      .sort(sorters[sort]);
+  }, [enquiries, view, stage, source, quick, query, sort]);
 
-  const getCount = (status) =>
-    status === "all"
-      ? enquiries.length
-      : enquiries.filter((enquiry) => enquiry.status === status).length;
-
-  const selectedMessage = selectedEnquiry
-    ? parseMessage(selectedEnquiry.message)
-    : { comment: "", metadata: null };
-
-  const modalContent = selectedEnquiry ? (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-        onClick={closeEnquiry}
-      >
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden"
-        >
-          <div className="flex items-start justify-between gap-3 px-5 py-4 sm:px-6 sm:py-5">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                Enquiry Specification
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {sourceLabel(selectedEnquiry.source)} &nbsp;•&nbsp; Lead score{" "}
-                {selectedEnquiry.leadScore ?? 0} &nbsp;•&nbsp; Submitted:{" "}
-                {selectedEnquiry.createdAt
-                  ? new Date(selectedEnquiry.createdAt).toLocaleString()
-                  : "—"}
-              </p>
-            </div>
-            <button
-              onClick={closeEnquiry}
-              className="p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-colors text-slate-500 dark:text-slate-400"
-            >
-              <FaTimes className="text-lg" />
-            </button>
-          </div>
-
-          <ScrollArea className="max-h-[75vh]" contentClassName="p-4 sm:p-6 space-y-6">
-            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-100 dark:border-slate-800">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-2xl shadow-sm">
-                {selectedEnquiry.name?.charAt(0)?.toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white truncate">
-                  {selectedEnquiry.name}
-                </h3>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  <span className="flex items-center gap-1.5 truncate">
-                    <FaEnvelope className="text-amber-500" /> {selectedEnquiry.email}
-                  </span>
-                  {selectedEnquiry.phone && (
-                    <span className="flex items-center gap-1.5">
-                      <FaPhoneAlt className="text-amber-500" /> {selectedEnquiry.phone}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-100 dark:border-slate-800/80 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 text-lg flex-shrink-0">
-                  <FaPhoneAlt />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
-                    Phone Number
-                  </span>
-                  <span className="font-semibold text-slate-800 dark:text-white text-sm block">
-                    {selectedEnquiry.phone || "—"}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-100 dark:border-slate-800/80 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 text-lg flex-shrink-0">
-                  <FaMapMarkerAlt />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
-                    Destination
-                  </span>
-                  <span className="font-semibold text-slate-800 dark:text-white capitalize text-sm block">
-                    {selectedEnquiry.destination || "—"}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-100 dark:border-slate-800/80 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 text-lg flex-shrink-0">
-                  <FaCalendarAlt />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
-                    Travel Date
-                  </span>
-                  <span className="font-semibold text-slate-800 dark:text-white text-sm block">
-                    {selectedEnquiry.travelDate
-                      ? new Date(selectedEnquiry.travelDate).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })
-                      : "Flexible / Anytime"}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-100 dark:border-slate-800/80 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 text-lg flex-shrink-0">
-                  <FaUsers />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
-                    Travelers Count
-                  </span>
-                  <span className="font-semibold text-slate-800 dark:text-white text-sm block">
-                    {selectedEnquiry.travelers ? `${selectedEnquiry.travelers} Person(s)` : "—"}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-100 dark:border-slate-800/80 shadow-sm sm:col-span-2">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 text-lg flex-shrink-0">
-                  <FaClock />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-0.5">
-                    Expected Budget
-                  </span>
-                  <span className="font-semibold text-slate-800 dark:text-white text-sm block">
-                    {selectedEnquiry.budget || "Flexible"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {selectedMessage.metadata && (
-              <div className="p-4 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
-                <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                  Context Info (Inquired via Page)
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-slate-500 dark:text-slate-400 block text-xs">
-                      Package Source
-                    </span>
-                    <strong className="text-slate-800 dark:text-slate-200">
-                      {selectedMessage.metadata.page}
-                    </strong>
-                  </div>
-                  {Object.keys(selectedMessage.metadata)
-                    .filter((key) => key !== "page")
-                    .map((key) => (
-                      <div key={key}>
-                        <span className="text-slate-500 dark:text-slate-400 block text-xs capitalize">
-                          {key}
-                        </span>
-                        <strong className="text-slate-800 dark:text-slate-200">
-                          {selectedMessage.metadata[key]}
-                        </strong>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {selectedMessage.comment && (
-              <div className="p-5 bg-amber-50/50 dark:bg-amber-500/5 rounded-xl border-l-4 border-amber-500">
-                <span className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider block mb-2">
-                  Customer Personal Message
-                </span>
-                <p className="text-slate-800 dark:text-slate-300 leading-relaxed whitespace-pre-line text-sm font-medium">
-                  "{selectedMessage.comment}"
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                Follow-up reminder
-              </span>
-              <input
-                type="date"
-                value={
-                  selectedEnquiry.followUpDate ? selectedEnquiry.followUpDate.slice(0, 10) : ""
-                }
-                onChange={(e) => saveCrm({ followUpDate: e.target.value || null })}
-                disabled={savingCrm}
-                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-sm text-slate-800 dark:text-white"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <FaStickyNote /> Internal notes
-              </span>
-              {(selectedEnquiry.adminNotes || []).length > 0 && (
-                <ul className="space-y-2">
-                  {selectedEnquiry.adminNotes.map((n, i) => (
-                    <li
-                      key={n._id || i}
-                      className="p-3 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300"
-                    >
-                      <p className="whitespace-pre-line">{n.text}</p>
-                      <p className="mt-1 text-[11px] text-slate-400">
-                        {n.author || "admin"} · {new Date(n.createdAt).toLocaleString()}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="flex gap-2">
-                <input
-                  value={noteDraft}
-                  onChange={(e) => setNoteDraft(e.target.value)}
-                  onKeyDown={(e) =>
-                    e.key === "Enter" && noteDraft.trim() && saveCrm({ note: noteDraft.trim() })
-                  }
-                  maxLength={1000}
-                  placeholder="e.g. Called, wants Kedarnath in May"
-                  className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-sm text-slate-800 dark:text-white"
-                />
-                <button
-                  type="button"
-                  disabled={savingCrm || !noteDraft.trim()}
-                  onClick={() => saveCrm({ note: noteDraft.trim() })}
-                  className="px-4 py-2 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 rounded-lg text-sm font-medium disabled:opacity-50"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                Update Enquiry Status
-              </span>
-              <div className="flex flex-wrap gap-2.5">
-                {["pending", "contacted", "confirmed", "cancelled"].map((status) => {
-                  const config = statusConfig[status];
-                  const isActive = selectedEnquiry.status === status;
-                  return (
-                    <button
-                      key={status}
-                      onClick={() =>
-                        updateStatus(selectedEnquiry._id || selectedEnquiry.id, status)
-                      }
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold capitalize transition-all duration-200 ${isActive ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" : `${config.color} hover:bg-opacity-80`}`}
-                    >
-                      {config.icon} {status}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
-              <a
-                href={`mailto:${selectedEnquiry.email}`}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-sm shadow-sm transition-colors"
-              >
-                <FaEnvelope /> Send Email Reply
-              </a>
-              <a
-                href={`https://wa.me/${String(selectedEnquiry.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${selectedEnquiry.name}, this is Satyam Holidays regarding your travel enquiry.`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-sm transition-colors"
-              >
-                <FaWhatsapp /> WhatsApp
-              </a>
-              <a
-                href={`tel:${selectedEnquiry.phone}`}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-              >
-                <FaPhoneAlt /> Call Client
-              </a>
-            </div>
-          </ScrollArea>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  ) : null;
+  const filtersActive = quick || source || query || (view === "table" && stage !== "all");
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Intro + actions */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Enquiries</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Manage customer enquiries
+          <p className="text-sm text-muted">
+            Every lead from the website, phone and WhatsApp in one place.
           </p>
+          {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-full border border-line p-1" role="group" aria-label="View">
+            {[
+              ["table", "Table", PiRows],
+              ["board", "Board", PiKanban],
+            ].map(([id, label, Icon]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={view === id}
+                onClick={() => changeView(id)}
+                className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-sm transition ${
+                  view === id ? "bg-fg text-page" : "text-muted hover:text-fg"
+                }`}
+              >
+                <Icon className="h-4 w-4" /> {label}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             onClick={() => setShowAddLead(true)}
             className="btn btn-accent h-10"
           >
-            + Add lead
+            <PiPlus className="h-4 w-4" /> Add lead
           </button>
-          <button
-            onClick={handleExport}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm shadow-sm transition-colors"
-          >
-            <FaDownload /> Export
+          <button type="button" onClick={exportExcel} className="btn btn-ghost h-10">
+            <PiDownloadSimple className="h-4 w-4" /> Export
           </button>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="relative flex-1">
-            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* Insights */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatTile
+          label="New this week"
+          value={insights.thisWeek}
+          delta={pctChange(insights.thisWeek, insights.lastWeek)}
+          comparison="vs last week"
+          icon={PiTray}
+        />
+        <StatTile
+          label="Awaiting first reply"
+          value={insights.pending}
+          hint={insights.overSla ? `${insights.overSla} waiting over 2h` : "all within 2h"}
+          icon={PiClockCountdown}
+        />
+        <StatTile
+          label="Follow-ups due"
+          value={insights.due}
+          hint="today or overdue"
+          icon={PiBellRinging}
+        />
+        <StatTile
+          label="Open pipeline"
+          value={inrCompact(insights.openValue)}
+          hint={`${insights.openCount} open · ${quotes.stats?.awaiting || 0} quotes awaiting answer`}
+          icon={PiWallet}
+        />
+      </div>
+
+      {/* Filters */}
+      <div className="card space-y-3 p-3 sm:p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Search enquiries</span>
+            <PiMagnifyingGlass className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <input
-              type="text"
-              placeholder="Search by name, email, phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name, phone, email or destination"
+              className="field h-11 pl-11"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-2 lg:flex">
+            <Select
+              variant="pill"
+              value={source}
+              onChange={setSource}
+              aria-label="Source"
+              options={[
+                { value: "", label: "All sources" },
+                ...sources.map((s) => ({ value: s, label: SOURCE_LABELS[s] || s })),
+              ]}
+              className="w-full lg:w-44"
+            />
+            <Select
+              variant="pill"
+              value={sort}
+              onChange={setSort}
+              aria-label="Sort"
+              options={SORTS}
+              className="w-full lg:w-48"
             />
           </div>
-          <div className="flex flex-wrap gap-1 lg:flex-nowrap lg:overflow-x-auto lg:pb-1">
-            {tabs.map((tab) => (
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {view === "table" &&
+            [{ id: "all", label: "All" }, ...PIPELINE].map((s) => (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${activeTab === tab.id ? "bg-amber-500 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"}`}
+                key={s.id}
+                type="button"
+                aria-pressed={stage === s.id}
+                onClick={() => setStage(s.id)}
+                className={`chip h-8 px-3 text-[13px] ${stage === s.id ? "chip-active" : ""}`}
               >
-                {tab.label} ({getCount(tab.id)})
+                {s.label} <span className="text-xs opacity-60">{stageCounts[s.id]}</span>
               </button>
             ))}
-          </div>
+          {view === "table" && (
+            <span className="mx-1 hidden h-5 w-px bg-line sm:block" aria-hidden="true" />
+          )}
+          {QUICK_FILTERS.map(({ id, label, icon: Icon, test }) => {
+            const count = enquiries.filter(test).length;
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={quick === id}
+                onClick={() => setQuick(quick === id ? "" : id)}
+                className={`chip h-8 gap-1.5 px-3 text-[13px] ${quick === id ? "chip-active" : ""}`}
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {label}
+                <span className="text-xs opacity-60">{count}</span>
+              </button>
+            );
+          })}
+          {filtersActive && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuick("");
+                setSource("");
+                setQuery("");
+                setStage("all");
+              }}
+              className="ml-1 text-sm text-muted underline underline-offset-4 hover:text-fg"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-900/50">
-              <tr>
-                <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">
-                  Destination
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">
-                  Date
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden sm:table-cell">
-                  Status
-                </th>
-                <th className="px-4 sm:px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {filteredEnquiries.length > 0 ? (
-                filteredEnquiries.map((enquiry) => {
-                  const status = statusConfig[enquiry.status] || statusConfig.pending;
-                  return (
-                    <tr
-                      key={enquiry._id || enquiry.id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+      {/* Results */}
+      {loading ? (
+        <div className="space-y-3" role="status" aria-label="Loading enquiries">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="skeleton h-16 rounded-2xl" />
+          ))}
+        </div>
+      ) : view === "board" ? (
+        <>
+          <p className="text-xs text-muted">
+            Drag a card to change its stage — press and hold on touch screens, or use space and the
+            arrow keys.
+            {filtersActive ? ` Showing ${filtered.length} of ${enquiries.length}.` : ""}
+          </p>
+          <PipelineBoard
+            enquiries={filtered}
+            quotesByEnquiry={latestQuote}
+            onMove={updateStatus}
+            onOpen={(e) => setSelectedId(idOf(e))}
+          />
+        </>
+      ) : (
+        <section className="card overflow-hidden">
+          <div className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_6rem_7rem_6.5rem_1.25rem] gap-4 border-b border-line bg-raised px-5 py-3 text-[11px] uppercase tracking-[0.14em] text-muted md:grid">
+            <span>Customer</span>
+            <span>Trip</span>
+            <span>Lead</span>
+            <span>Stage</span>
+            <span>Received</span>
+            <span />
+          </div>
+          {filtered.length ? (
+            <ul className="divide-y divide-line">
+              {filtered.map((e) => {
+                const tier = leadTier(e.leadScore);
+                const quote = latestQuote.get(idOf(e));
+                return (
+                  <li key={idOf(e)}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(idOf(e))}
+                      className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5 text-left transition hover:bg-raised md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_6rem_7rem_6.5rem_1.25rem] md:gap-4 md:px-5"
                     >
-                      <td className="px-4 sm:px-5 py-4 w-full max-w-0 sm:w-auto sm:max-w-none">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                            {enquiry.name?.charAt(0)?.toUpperCase() || "?"}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-slate-800 dark:text-white truncate">
-                              {enquiry.name}
-                            </p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
-                              {enquiry.email}
-                            </p>
-                            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 sm:hidden">
-                              <span
-                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium capitalize ${status.color}`}
-                              >
-                                {status.icon} {enquiry.status}
-                              </span>
-                              {enquiry.createdAt && (
-                                <span className="text-xs text-slate-400">
-                                  {new Date(enquiry.createdAt).toLocaleDateString()}
-                                </span>
-                              )}
-                              {enquiry.followUpDate &&
-                                new Date(enquiry.followUpDate) <= new Date() &&
-                                enquiry.status !== "confirmed" &&
-                                enquiry.status !== "cancelled" && (
-                                  <span className="text-xs font-medium text-red-600 dark:text-red-400">
-                                    Follow-up due
-                                  </span>
-                                )}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 hidden md:table-cell">
-                        <span className="capitalize text-slate-700 dark:text-slate-300">
-                          {enquiry.destination || "—"}
+                      <span className="flex min-w-0 items-center gap-3 md:col-auto">
+                        <Avatar name={e.name} />
+                        <span className="hidden min-w-0 md:block">
+                          <span className="block truncate text-sm font-medium text-fg">
+                            {e.name}
+                          </span>
+                          <span className="block truncate text-xs text-muted">{e.phone}</span>
                         </span>
-                      </td>
-                      <td className="px-5 py-4 hidden lg:table-cell text-sm text-slate-500 dark:text-slate-400">
-                        {enquiry.createdAt ? new Date(enquiry.createdAt).toLocaleDateString() : "—"}
-                      </td>
-                      <td className="px-5 py-4 hidden sm:table-cell">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium capitalize ${status.color}`}
-                        >
-                          {status.icon} {enquiry.status}
+                      </span>
+                      {/* Phones: one stacked summary column */}
+                      <span className="min-w-0 md:hidden">
+                        <span className="block truncate text-sm font-medium text-fg">{e.name}</span>
+                        <span className="block truncate text-xs text-muted">
+                          {destinationLabel(e.destination)} · {timeAgo(e.createdAt)}
                         </span>
-                        {enquiry.followUpDate &&
-                          new Date(enquiry.followUpDate) <= new Date() &&
-                          enquiry.status !== "confirmed" &&
-                          enquiry.status !== "cancelled" && (
-                            <span className="ml-2 text-xs font-medium text-red-600 dark:text-red-400">
+                        <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          <StatusPill status={e.status} label={stageLabel(e.status)} />
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${tier.className}`}
+                          >
+                            {tier.label}
+                          </span>
+                          {isFollowUpDue(e) && (
+                            <span className="text-[11px] font-medium text-red-600 dark:text-red-400">
                               Follow-up due
                             </span>
                           )}
-                      </td>
-                      <td className="px-4 sm:px-5 py-4 text-right">
-                        <button
-                          onClick={() => setSelectedEnquiry(enquiry)}
-                          className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium text-sm"
+                        </span>
+                      </span>
+                      <span className="hidden min-w-0 md:block">
+                        <span className="block truncate text-sm text-fg">
+                          {destinationLabel(e.destination)}
+                        </span>
+                        <span className="block truncate text-xs text-muted">
+                          {e.travelDate
+                            ? new Date(e.travelDate).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "Dates flexible"}
+                          {quote ? ` · quote ${inrCompact(quote.totals?.total)}` : ""}
+                        </span>
+                      </span>
+                      <span className="hidden md:block">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${tier.className}`}
                         >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-slate-400">
-                    {loading ? "Loading enquiries..." : "No enquiries found"}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                          {tier.label}
+                        </span>
+                      </span>
+                      <span className="hidden md:block">
+                        <StatusPill status={e.status} label={stageLabel(e.status)} />
+                        {isFollowUpDue(e) && (
+                          <span className="mt-1 block text-[11px] font-medium text-red-600 dark:text-red-400">
+                            Follow-up due
+                          </span>
+                        )}
+                      </span>
+                      <span className="hidden text-xs text-muted md:block">
+                        {timeAgo(e.createdAt)}
+                      </span>
+                      <PiCaretRight className="h-4 w-4 text-muted" aria-hidden="true" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <Empty title={enquiries.length ? "No enquiries match" : "No enquiries yet"}>
+              {enquiries.length
+                ? "Try clearing a filter."
+                : "They'll appear here the moment someone submits a form or you add a lead."}
+            </Empty>
+          )}
+        </section>
+      )}
 
-      {typeof document !== "undefined" ? createPortal(modalContent, document.body) : modalContent}
+      {selected && (
+        <EnquiryDrawer
+          enquiry={selected}
+          onClose={closeDrawer}
+          onStatus={updateStatus}
+          onCrm={saveCrm}
+          saving={savingCrm}
+        />
+      )}
       {showAddLead && (
         <AddLeadModal
           onClose={() => setShowAddLead(false)}

@@ -132,6 +132,13 @@ const packageSchema = new mongoose.Schema(
         meals: { type: [String], default: [] },
       },
     ],
+    // Set when the package was created from a social post (see services/instagramService.js)
+    importSource: {
+      platform: { type: String },
+      mediaId: { type: String },
+      permalink: { type: String },
+      importedAt: { type: Date },
+    },
     promotions: [
       {
         code: { type: String, uppercase: true, trim: true },

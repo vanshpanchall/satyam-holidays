@@ -2,7 +2,7 @@ const Enquiry = require("../models/Enquiry");
 const logger = require("../utils/logger");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const OPEN_STATUSES = ["pending", "contacted"];
+const OPEN_STATUSES = ["pending", "contacted", "quoted"];
 // leadScore ranges ~10-170 (see models/Enquiry.js)
 const HOT_SCORE = 90;
 const WARM_SCORE = 60;
@@ -91,7 +91,7 @@ class CrmService {
       if (total === 0) {
         return {
           totalEnquiries: 0,
-          statusBreakdown: { pending: 0, contacted: 0, confirmed: 0, cancelled: 0 },
+          statusBreakdown: { pending: 0, contacted: 0, quoted: 0, confirmed: 0, cancelled: 0 },
           conversionRate: 0,
           activePipelineValue: 0,
           wonPipelineValue: 0,
@@ -101,10 +101,10 @@ class CrmService {
         };
       }
 
-      const statusBreakdown = { pending: 0, contacted: 0, confirmed: 0, cancelled: 0 };
+      const statusBreakdown = { pending: 0, contacted: 0, quoted: 0, confirmed: 0, cancelled: 0 };
       const destinationBreakdown = {};
 
-      let activePipelineValue = 0; // pending + contacted
+      let activePipelineValue = 0; // pending + contacted + quoted
       let wonPipelineValue = 0; // confirmed
       let lostPipelineValue = 0; // cancelled
 
@@ -126,7 +126,7 @@ class CrmService {
 
         // Value calculation
         const estValue = this.getEstimatedValue(enq);
-        if (status === "pending" || status === "contacted") {
+        if (OPEN_STATUSES.includes(status)) {
           activePipelineValue += estValue;
         } else if (status === "confirmed") {
           wonPipelineValue += estValue;
@@ -253,7 +253,7 @@ class CrmService {
         .sort((a, b) => b.enquiries - a.enquiries);
     };
 
-    const statusBreakdown = { pending: 0, contacted: 0, confirmed: 0, cancelled: 0 };
+    const statusBreakdown = { pending: 0, contacted: 0, quoted: 0, confirmed: 0, cancelled: 0 };
     current.forEach((e) => {
       const key = e.status || "pending";
       statusBreakdown[key] = (statusBreakdown[key] || 0) + 1;
@@ -269,7 +269,11 @@ class CrmService {
       statusBreakdown,
       funnel: [
         { stage: "Enquiries", count: current.length },
-        { stage: "Contacted", count: statusBreakdown.contacted + statusBreakdown.confirmed },
+        {
+          stage: "Contacted",
+          count: statusBreakdown.contacted + statusBreakdown.quoted + statusBreakdown.confirmed,
+        },
+        { stage: "Quoted", count: statusBreakdown.quoted + statusBreakdown.confirmed },
         { stage: "Confirmed", count: statusBreakdown.confirmed },
       ],
       byDestination: group(current, (e) => e.destination),

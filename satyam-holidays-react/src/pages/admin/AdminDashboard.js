@@ -28,6 +28,7 @@ import {
   Panel,
   StatTile,
   StatusPill,
+  stageLabel,
   destinationLabel,
   inrCompact,
   pctChange,
@@ -304,7 +305,7 @@ const AdminDashboard = () => {
                     <span className="hidden text-xs text-muted md:block">
                       {timeAgo(e.createdAt)}
                     </span>
-                    <StatusPill status={e.status} />
+                    <StatusPill status={e.status} label={stageLabel(e.status)} />
                   </button>
                 </li>
               ))}

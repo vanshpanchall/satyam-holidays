@@ -28,6 +28,42 @@ export const travellersLabel = (v) =>
   v ? (v === "5+" ? "5 or more" : `${v} ${v === "1" ? "person" : "people"}`) : "Not specified";
 export const sourceLabel = (v) => SOURCE_LABELS[v] || "Website";
 
+/* ── Pipeline ───────────────────────────────────────────── */
+
+/** Enquiry stages in pipeline order; "cancelled" is shown as Lost */
+export const PIPELINE = [
+  { id: "pending", label: "New", hint: "Not contacted yet" },
+  { id: "contacted", label: "Contacted", hint: "Talking, no quote yet" },
+  { id: "quoted", label: "Quoted", hint: "Quote sent, awaiting answer" },
+  { id: "confirmed", label: "Confirmed", hint: "Booked" },
+  { id: "cancelled", label: "Lost", hint: "Not going ahead" },
+];
+export const stageLabel = (status) => PIPELINE.find((s) => s.id === status)?.label || status;
+export const OPEN_STAGES = ["pending", "contacted", "quoted"];
+
+// Mirrors crmService.getEstimatedValue on the backend (budget midpoint × travellers)
+const BUDGET_VALUE = { "under-20k": 15000, "20k-50k": 35000, "50k-1l": 75000, "above-1l": 150000 };
+const TRAVELLER_COUNT = { 1: 1, 2: 2, 3: 3, 4: 4, "5+": 5 };
+export const estimatedValue = (e) =>
+  (BUDGET_VALUE[e?.budget] || 35000) * (TRAVELLER_COUNT[e?.travelers] || 2);
+
+// leadScore ranges ~10–170 (models/Enquiry.js); same cut-offs as the CRM report
+export const leadTier = (score = 0) =>
+  score >= 90
+    ? { id: "hot", label: "Hot", className: "bg-red-500/10 text-red-700 dark:text-red-300" }
+    : score >= 60
+      ? {
+          id: "warm",
+          label: "Warm",
+          className: "bg-saffron-500/10 text-saffron-800 dark:text-saffron-300",
+        }
+      : { id: "cold", label: "Cold", className: "bg-fg/5 text-muted" };
+
+export const isFollowUpDue = (e) =>
+  !!e?.followUpDate &&
+  OPEN_STAGES.includes(e.status) &&
+  new Date(e.followUpDate) <= new Date(new Date().setHours(23, 59, 59, 999));
+
 /* ── Formatting ─────────────────────────────────────────── */
 
 export const inrCompact = (n) =>
@@ -163,6 +199,12 @@ export const pctChange = (current, previous) => {
 const STATUS_STYLES = {
   pending: "bg-saffron-500/10 text-saffron-800 dark:text-saffron-300",
   contacted: "bg-series-2/10 text-[rgb(var(--series-2))]",
+  quoted: "bg-violet-500/10 text-violet-700 dark:text-violet-300",
+  draft: "bg-fg/5 text-muted",
+  sent: "bg-series-2/10 text-[rgb(var(--series-2))]",
+  accepted: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  declined: "bg-red-500/10 text-red-700 dark:text-red-400",
+  expired: "bg-fg/5 text-muted",
   confirmed: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   cancelled: "bg-fg/5 text-muted",
   approved: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
@@ -170,11 +212,11 @@ const STATUS_STYLES = {
   spam: "bg-red-500/10 text-red-700 dark:text-red-400",
 };
 
-export const StatusPill = ({ status }) => (
+export const StatusPill = ({ status, label }) => (
   <span
-    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[status] || STATUS_STYLES.cancelled}`}
+    className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[status] || STATUS_STYLES.cancelled}`}
   >
-    {status}
+    {label || status}
   </span>
 );
 

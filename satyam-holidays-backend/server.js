@@ -248,6 +248,8 @@ const authRoutes = require("./routes/auth");
 const settingsRoutes = require("./routes/settings");
 const crmRoutes = require("./routes/crm");
 const aiRoutes = require("./routes/ai");
+const quoteRoutes = require("./routes/quotes");
+const instagramRoutes = require("./routes/instagram");
 
 // Security middleware with production hardening
 app.use(
@@ -573,6 +575,8 @@ app.use("/api/v1/reviews", csrfUnlessAuthed, reviewRoutes);
 app.use("/api/v1/settings", csrfUnlessAuthed, settingsRoutes);
 app.use("/api/v1/crm", csrfUnlessAuthed, crmRoutes);
 app.use("/api/v1/ai", csrfUnlessAuthed, aiRoutes);
+app.use("/api/v1/quotes", csrfUnlessAuthed, quoteRoutes);
+app.use("/api/v1/instagram", csrfUnlessAuthed, instagramRoutes);
 
 // Legacy /api/* routes (backward compatibility - will be deprecated)
 app.use("/api/auth", authRoutes);

@@ -57,8 +57,12 @@ const enquirySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "contacted", "confirmed", "cancelled"],
+      enum: ["pending", "contacted", "quoted", "confirmed", "cancelled"],
       default: "pending",
+    },
+    // When the status last changed (pipeline board shows how long a lead has sat in its stage)
+    statusChangedAt: {
+      type: Date,
     },
     source: {
       type: String,
@@ -219,6 +223,9 @@ enquirySchema.pre("save", function (next) {
   // Manage SLA and Responded At
   if (this.isModified("status") && this.status !== "pending" && !this.respondedAt) {
     this.respondedAt = new Date();
+  }
+  if (this.isModified("status") || !this.statusChangedAt) {
+    this.statusChangedAt = new Date();
   }
 
   const createdTime = this.createdAt || new Date();

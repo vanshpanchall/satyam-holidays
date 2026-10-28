@@ -23,6 +23,7 @@ const WishlistPage = lazyWithRecovery(() => import("./pages/WishlistPage"), "wis
 const ComparePage = lazyWithRecovery(() => import("./pages/ComparePage"), "compare-page");
 const AiPlannerPage = lazyWithRecovery(() => import("./pages/AiPlannerPage"), "ai-planner-page");
 const LegalPage = lazyWithRecovery(() => import("./pages/LegalPage"), "legal-page");
+const QuotePage = lazyWithRecovery(() => import("./pages/QuotePage"), "quote-page");
 const NotFoundPage = lazyWithRecovery(() => import("./pages/NotFoundPage"), "not-found-page");
 
 const page = (element) => <PageTransition>{element}</PageTransition>;
@@ -89,6 +90,7 @@ function App() {
                   />
                   <Route path="/terms" element={page(<LegalPage page="terms" />)} />
                   <Route path="/refund-policy" element={page(<LegalPage page="refund-policy" />)} />
+                  <Route path="/quote/:token" element={page(<QuotePage />)} />
                   <Route path="*" element={page(<NotFoundPage />)} />
                 </Routes>
               </Suspense>

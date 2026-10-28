@@ -14,6 +14,7 @@ import {
   Panel,
   StatTile,
   StatusPill,
+  stageLabel,
   budgetLabel,
   destinationLabel,
   inrCompact,
@@ -131,7 +132,7 @@ const ExportPanel = () => {
           className="!h-[2.75rem] !text-sm"
           options={[
             { value: "", label: "Any status" },
-            ...["pending", "contacted", "confirmed", "cancelled"].map((s) => ({
+            ...["pending", "contacted", "quoted", "confirmed", "cancelled"].map((s) => ({
               value: s,
               label: s[0].toUpperCase() + s.slice(1),
             })),
@@ -399,7 +400,7 @@ const CrmAnalytics = () => {
                 <span className="hidden text-sm text-muted sm:block">
                   {inrCompact(e.estimatedValue)}
                 </span>
-                <StatusPill status={e.status} />
+                <StatusPill status={e.status} label={stageLabel(e.status)} />
                 <span className="flex gap-1.5">
                   <a
                     href={toTel(e.phone)}

@@ -145,6 +145,7 @@ const AddLeadModal = ({ onClose, onCreated }) => {
                 options={[
                   { value: "pending", label: "New — not contacted" },
                   { value: "contacted", label: "Contacted" },
+                  { value: "quoted", label: "Quote sent" },
                   { value: "confirmed", label: "Confirmed booking" },
                 ]}
               />

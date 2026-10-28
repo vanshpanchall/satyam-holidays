@@ -56,7 +56,9 @@ const manualEnquirySchema = enquirySchema.keys({
   source: Joi.string()
     .valid(...WEB_SOURCES, ...MANUAL_SOURCES)
     .default("phone"),
-  status: Joi.string().valid("pending", "contacted", "confirmed", "cancelled").default("pending"),
+  status: Joi.string()
+    .valid("pending", "contacted", "quoted", "confirmed", "cancelled")
+    .default("pending"),
   note: Joi.string().trim().max(1000).allow("").optional(),
 });
 
@@ -252,7 +254,9 @@ router.get("/", auth, async (req, res) => {
     const { value: parsed } = Joi.object({
       cursor: Joi.string().optional(),
       limit: Joi.number().integer().min(1).max(100).default(10),
-      status: Joi.string().valid("pending", "contacted", "confirmed", "cancelled").optional(),
+      status: Joi.string()
+        .valid("pending", "contacted", "quoted", "confirmed", "cancelled")
+        .optional(),
       destination: Joi.string().optional(),
       sortBy: Joi.string().valid("createdAt", "status", "destination").default("createdAt"),
       sortOrder: Joi.string().valid("asc", "desc").default("desc"),
@@ -383,7 +387,7 @@ router.patch("/:id/status", auth, async (req, res) => {
   try {
     const { status } = req.body;
 
-    if (!["pending", "contacted", "confirmed", "cancelled"].includes(status)) {
+    if (!["pending", "contacted", "quoted", "confirmed", "cancelled"].includes(status)) {
       return errorResponse(res, ApiErrors.badRequest("Invalid status"), req.id);
     }
 

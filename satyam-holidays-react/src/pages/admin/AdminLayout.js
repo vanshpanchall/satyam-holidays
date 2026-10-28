@@ -4,8 +4,10 @@ import {
   PiArrowSquareOut,
   PiChartLineUp,
   PiChatsCircle,
+  PiFileText,
   PiGear,
   PiHouseLine,
+  PiInstagramLogo,
   PiList,
   PiMoon,
   PiSignOut,
@@ -28,6 +30,7 @@ const NAV = [
     group: "Sales",
     items: [
       { name: "Enquiries", path: "/admin/enquiries", icon: PiTray, badge: true },
+      { name: "Quotes", path: "/admin/quotes", icon: PiFileText },
       { name: "CRM analytics", path: "/admin/crm", icon: PiChartLineUp },
     ],
   },
@@ -35,6 +38,7 @@ const NAV = [
     group: "Content",
     items: [
       { name: "Packages", path: "/admin/packages", icon: PiSuitcaseRolling },
+      { name: "Instagram import", path: "/admin/instagram", icon: PiInstagramLogo },
       { name: "Reviews", path: "/admin/reviews", icon: PiChatsCircle },
       { name: "Site settings", path: "/admin/settings", icon: PiGear },
     ],

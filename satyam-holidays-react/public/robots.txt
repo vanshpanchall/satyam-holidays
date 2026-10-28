@@ -3,5 +3,6 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /wishlist
+Disallow: /quote/
 
 Sitemap: https://satyamholidays.vercel.app/sitemap.xml

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   PiCopy,
@@ -853,8 +854,21 @@ const AdminPackages = () => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(undefined); // undefined = closed, null = new
   const [searchTerm, setSearchTerm] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filter, setFilter] = useState(() =>
+    searchParams.get("filter") === "draft" ? "draft" : "all"
+  );
   const [flyerPackage, setFlyerPackage] = useState(null);
+
+  // ?edit=<id> (e.g. "Review draft" from the Instagram import) opens that package once loaded
+  const editId = searchParams.get("edit");
+  useEffect(() => {
+    if (!editId || loading) return;
+    const target = packages.find((p) => (p._id || p.id) === editId);
+    if (target) setEditing(target);
+    searchParams.delete("edit");
+    setSearchParams(searchParams, { replace: true });
+  }, [editId, loading, packages, searchParams, setSearchParams]);
 
   const fetchPackages = async () => {
     try {
@@ -1054,6 +1068,17 @@ const AdminPackages = () => {
                   <p className="mt-1 text-sm text-muted">
                     {pkg.location} · {pkg.duration}
                   </p>
+                  {pkg.importSource?.permalink && (
+                    <a
+                      href={pkg.importSource.permalink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex w-fit items-center gap-1 text-xs text-accent hover:underline"
+                      title="Compare with the original post"
+                    >
+                      From Instagram ↗
+                    </a>
+                  )}
                   <p className="mt-3 text-sm text-fg">
                     From {formatINR(startingPrice(pkg))}
                     <span className="text-muted">

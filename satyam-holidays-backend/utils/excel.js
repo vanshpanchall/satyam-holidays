@@ -151,6 +151,7 @@ const formatStatus = (status) => {
   const statusMap = {
     pending: "Pending",
     contacted: "Contacted",
+    quoted: "Quoted",
     confirmed: "Confirmed",
     cancelled: "Cancelled",
   };
@@ -161,6 +162,7 @@ const getStatusColor = (status) => {
   const colorMap = {
     pending: "FFFFF3CD", // Light yellow
     contacted: "FFD1ECF1", // Light blue
+    quoted: "FFE8DAF5", // Light purple
     confirmed: "FFD4EDDA", // Light green
     cancelled: "FFF8D7DA", // Light red
   };

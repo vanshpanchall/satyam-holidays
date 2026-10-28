@@ -162,7 +162,12 @@ class EnquiryService {
 
   async updateEnquiryStatus(id, status) {
     logger.info("Service: updateEnquiryStatus invoked", { id, status });
-    const enquiry = await Enquiry.findByIdAndUpdate(id, { status }, { new: true });
+    // Load + save (not findByIdAndUpdate) so the model hook records respondedAt, statusChangedAt and SLA
+    const enquiry = await Enquiry.findById(id);
+    if (enquiry && enquiry.status !== status) {
+      enquiry.status = status;
+      await enquiry.save({ validateModifiedOnly: true });
+    }
 
     if (enquiry) {
       // Invalidate cache
@@ -210,6 +215,9 @@ class EnquiryService {
           contacted: {
             $sum: { $cond: [{ $eq: ["$status", "contacted"] }, 1, 0] },
           },
+          quoted: {
+            $sum: { $cond: [{ $eq: ["$status", "quoted"] }, 1, 0] },
+          },
           confirmed: {
             $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] },
           },
@@ -249,6 +257,7 @@ class EnquiryService {
         total: 0,
         pending: 0,
         contacted: 0,
+        quoted: 0,
         confirmed: 0,
         cancelled: 0,
       },

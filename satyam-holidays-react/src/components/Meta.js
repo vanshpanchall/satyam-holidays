@@ -3,7 +3,18 @@ import { useEffect } from "react";
 const SITE_URL = process.env.REACT_APP_SITE_URL || "https://satyamholidays.vercel.app";
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-cover.jpg`;
 
-function Meta({ title, description, image, url, canonical, keywords }) {
+function Meta({ title, description, image, url, canonical, keywords, noindex = false }) {
+  // Private pages (e.g. customer quote links) must stay out of search results
+  useEffect(() => {
+    if (!noindex) return undefined;
+    const el = document.querySelector('meta[name="robots"]');
+    const previous = el?.getAttribute("content");
+    setMetaTag('meta[name="robots"]', "name", "robots", "noindex, nofollow");
+    return () => {
+      if (previous) setMetaTag('meta[name="robots"]', "name", "robots", previous);
+    };
+  }, [noindex]);
+
   useEffect(() => {
     if (title) {
       document.title = title;
