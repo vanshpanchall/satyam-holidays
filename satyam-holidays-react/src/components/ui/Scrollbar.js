@@ -95,41 +95,61 @@ function useScrollThumb({ getScroller, target, observe, disabled }) {
     };
   }, [target, observe, schedule, wake]);
 
-  const onThumbPointerDown = (e) => {
-    const m = metrics();
-    if (!m) return;
+  // Scrollbar input must move the page immediately, like a native bar. html has
+  // `scroll-behavior: smooth` (for anchor links), which would otherwise animate every write.
+  const jumpTo = (el, top) => {
+    const root = document.documentElement;
+    const previous = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    el.scrollTop = top;
+    root.style.scrollBehavior = previous;
+  };
+
+  const startDrag = (e, startScroll) => {
     e.preventDefault();
-    e.stopPropagation();
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    drag.current = { startY: e.clientY, startScroll: m.el.scrollTop };
+    drag.current = { startY: e.clientY, startScroll };
     setActive(true);
   };
 
-  const onThumbPointerMove = (e) => {
+  const onThumbPointerDown = (e) => {
+    const m = metrics();
+    if (!m) return;
+    e.stopPropagation(); // not a track click
+    startDrag(e, m.el.scrollTop);
+  };
+
+  // Shared by thumb and track (thumb events bubble up to the track)
+  const onDragMove = (e) => {
     if (!drag.current) return;
     const m = metrics();
     if (!m || m.maxOffset <= 0) return;
     const delta = ((e.clientY - drag.current.startY) * m.maxScroll) / m.maxOffset;
-    m.el.scrollTop = drag.current.startScroll + delta;
+    jumpTo(m.el, drag.current.startScroll + delta);
   };
 
   const endDrag = (e) => {
     if (!drag.current) return;
     drag.current = null;
-    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    try {
+      e.target.releasePointerCapture?.(e.pointerId);
+    } catch {
+      // capture already released by the browser on pointerup
+    }
     wake();
   };
 
-  // Clicking the track jumps so the thumb centres on the pointer
+  // Clicking the track jumps straight there (thumb centred on the pointer); keep holding to drag on
   const onTrackPointerDown = (e) => {
-    if (e.target !== e.currentTarget) return;
+    if (e.target !== e.currentTarget || e.button !== 0) return;
     const m = metrics();
     if (!m) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const offset = e.clientY - rect.top - TRACK_PAD - m.thumbSize / 2;
     const ratio = Math.min(1, Math.max(0, offset / Math.max(1, m.maxOffset)));
-    m.el.scrollTo({ top: ratio * m.maxScroll, behavior: "smooth" });
-    wake();
+    const top = ratio * m.maxScroll;
+    jumpTo(m.el, top);
+    startDrag(e, top);
   };
 
   return {
@@ -138,13 +158,14 @@ function useScrollThumb({ getScroller, target, observe, disabled }) {
     visible,
     active,
     wake,
-    trackHandlers: { onPointerDown: onTrackPointerDown, onPointerEnter: wake },
-    thumbHandlers: {
-      onPointerDown: onThumbPointerDown,
-      onPointerMove: onThumbPointerMove,
+    trackHandlers: {
+      onPointerDown: onTrackPointerDown,
+      onPointerMove: onDragMove,
       onPointerUp: endDrag,
       onPointerCancel: endDrag,
+      onPointerEnter: wake,
     },
+    thumbHandlers: { onPointerDown: onThumbPointerDown },
     refresh: schedule,
   };
 }

@@ -1,3 +1,4 @@
+const path = require("path");
 const nodemailer = require("nodemailer");
 const logger = require("./logger");
 const settingService = require("../services/settingService");
@@ -10,10 +11,18 @@ function absoluteUrl(path, base) {
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-// Gmail and Outlook don't render SVG, so only use a raster logo; otherwise the wordmark stands alone
+// PNG render of assets/satyam-logo.svg, attached inline (cid:) so it shows without any image host
+const EMBEDDED_LOGO_PATH = path.join(__dirname, "..", "assets", "email-logo.png");
+const EMBEDDED_LOGO_CID = "brand-logo@satyamholidays";
+const isRaster = (url) => /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url || "");
+
+// Gmail and Outlook don't render SVG: use an explicit raster logo if one is configured,
+// otherwise the bundled PNG of the SVG logo
 function emailSafeLogo(settings, site) {
-  const candidate = process.env.EMAIL_BRAND_LOGO_URL || absoluteUrl(settings["company.logo"], site);
-  return /\.(png|jpe?g|gif|webp)(\?|$)/i.test(candidate) ? candidate : "";
+  if (isRaster(process.env.EMAIL_BRAND_LOGO_URL)) return process.env.EMAIL_BRAND_LOGO_URL;
+  const fromSettings = absoluteUrl(settings["company.logo"], site);
+  if (isRaster(fromSettings)) return fromSettings;
+  return `cid:${EMBEDDED_LOGO_CID}`;
 }
 
 function buildBrand(settings) {
@@ -116,6 +125,13 @@ const sendEmail = async ({ to, subject, template, data }) => {
       subject: emailContent.subject || subject,
       html: emailContent.html,
       text: emailContent.text,
+      ...(brand.LOGO_URL.startsWith("cid:")
+        ? {
+            attachments: [
+              { filename: "logo.png", path: EMBEDDED_LOGO_PATH, cid: EMBEDDED_LOGO_CID },
+            ],
+          }
+        : {}),
     };
 
     await ensureTransporter();
